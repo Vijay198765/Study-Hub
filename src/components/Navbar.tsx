@@ -3,13 +3,19 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 
-export default function Navbar() {
+interface NavbarProps {
+  isAdmin: boolean;
+  user: any;
+}
+
+export default function Navbar({ isAdmin, user }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -17,9 +23,13 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const navLinks = [
@@ -61,10 +71,15 @@ export default function Navbar() {
             </Link>
           ))}
           
-          {isAdmin ? (
-            <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5">
-              <LogOut className="w-4 h-4" /> Logout
-            </button>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-white/40 font-mono hidden lg:block">
+                {user.email}
+              </span>
+              <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5">
+                <LogOut className="w-4 h-4" /> Logout
+              </button>
+            </div>
           ) : (
             <Link to="/login" className="btn-neon flex items-center gap-2 py-1.5">
               <LogIn className="w-4 h-4" /> Login
@@ -98,7 +113,7 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            {isAdmin ? (
+            {user ? (
               <button onClick={() => { handleLogout(); setIsOpen(false); }} className="btn-neon w-full justify-center">
                 Logout
               </button>

@@ -25,6 +25,7 @@ const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAd
 export default function App() {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Scroll to top on route change
@@ -33,14 +34,15 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             setIsAdmin(userDoc.data().role === 'admin');
           } else {
-            if (user.email === 'vijayninama683@gmail.com') {
+            if (firebaseUser.email === 'vijayninama683@gmail.com') {
               setIsAdmin(true);
             } else {
               setIsAdmin(false);
@@ -77,7 +79,7 @@ export default function App() {
           </span>
         </div>
         
-        <Navbar isAdmin={isAdmin} />
+        <Navbar isAdmin={isAdmin} user={user} />
         
         <main className="flex-grow">
           <AnimatePresence mode="wait">
