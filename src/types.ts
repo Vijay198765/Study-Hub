@@ -24,6 +24,7 @@ export interface Chapter {
   quiz: QuizQuestion[];
   isImportant: boolean;
   enabled: boolean;
+  order?: number;
 }
 
 export interface Subject {
@@ -31,15 +32,17 @@ export interface Subject {
   classId: string;
   name: string;
   enabled: boolean;
+  order?: number;
 }
 
 export interface Class {
   id: string;
   name: string;
   enabled: boolean;
+  order?: number;
 }
 
-export interface UserProfile {
+export interface User {
   uid: string;
   email: string;
   role: 'admin' | 'student';
@@ -47,3 +50,5 @@ export interface UserProfile {
   photoURL?: string;
   createdAt: any;
 }
+
+export interface UserProfile extends User {}

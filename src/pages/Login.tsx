@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Lock, LogIn } from 'lucide-react';
+import { Lock, LogIn, AlertCircle } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // If user is already logged in, check their role and redirect
+        getDoc(doc(db, 'users', user.uid)).then((userDoc) => {
+          if (userDoc.exists() && userDoc.data().role === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -44,7 +61,15 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError('Failed to login with Google. Please try again.');
+      if (err.code === 'auth/popup-blocked') {
+        setError('Popup blocked by browser. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized for login. Please check Firebase console settings.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Google Login is not enabled in the Firebase console. Please enable it in Authentication > Sign-in method.');
+      } else {
+        setError('Failed to login with Google. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -85,13 +110,14 @@ export default function Login() {
             </button>
 
             {error && (
-              <motion.p 
+              <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-sm text-center font-medium"
+                className="flex items-center gap-2 p-3 rounded-lg bg-red-400/10 border border-red-400/20 text-red-400 text-sm font-medium"
               >
-                {error}
-              </motion.p>
+                <AlertCircle size={16} className="shrink-0" />
+                <p>{error}</p>
+              </motion.div>
             )}
           </div>
           

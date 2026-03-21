@@ -1,551 +1,1100 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Save, 
-  X, 
-  ChevronRight, 
-  BookOpen, 
-  Video, 
-  FileText, 
-  LayoutDashboard,
-  GraduationCap,
-  Layers,
-  Eye,
-  EyeOff,
-  Star,
-  PlusCircle
+  Plus, Edit2, Trash2, GripVertical, Save, X, 
+  ChevronRight, ChevronDown, Search, Users, 
+  BookOpen, Layers, BarChart3, CheckCircle2, 
+  AlertCircle, ExternalLink, FileText, HelpCircle,
+  ArrowUp, ArrowDown
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
-  Class, 
-  Subject, 
-  Chapter, 
-  Resource,
-  QuizQuestion
-} from '../types';
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell 
+} from 'recharts';
 import { 
-  getClasses, 
-  saveClass, 
-  removeClass,
-  getSubjectsByClass,
-  saveSubject,
-  removeSubject,
-  getChaptersBySubject,
-  saveChapter,
-  removeChapter
+  getClasses, saveClass, removeClass, 
+  getSubjectsByClass, saveSubject, removeSubject, 
+  getChaptersBySubject, saveChapter, removeChapter, 
+  getUsers, saveUser, removeUser 
 } from '../services/dataService';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion } from '../types';
+
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'stats';
+type EditTab = 'basic' | 'resources' | 'quiz';
+
+const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
+  const [activeTab, setActiveTab] = useState<AdminTab>('classes');
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   
-  const [isAddingClass, setIsAddingClass] = useState(false);
-  const [isAddingSubject, setIsAddingSubject] = useState(false);
-  const [isAddingChapter, setIsAddingChapter] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingEntity, setEditingEntity] = useState<any>(null);
+  const [editTab, setEditTab] = useState<EditTab>('basic');
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user', id: string, name: string } | null>(null);
 
-  const [newClassName, setNewClassName] = useState('');
-  const [newSubjectName, setNewSubjectName] = useState('');
-  
-  const [editingEntity, setEditingEntity] = useState<{type: 'class' | 'subject' | 'chapter', data: any} | null>(null);
-
+  // Load initial data
   useEffect(() => {
-    const unsubscribe = getClasses(setClasses);
-    return () => unsubscribe();
+    const unsubClasses = getClasses(setClasses);
+    const unsubUsers = getUsers(setUsers);
+    return () => {
+      unsubClasses();
+      unsubUsers();
+    };
   }, []);
 
+  // Load subjects when class changes
   useEffect(() => {
-    if (selectedClass) {
-      const unsubscribe = getSubjectsByClass(selectedClass, setSubjects);
-      return () => unsubscribe();
+    if (selectedClassId) {
+      const unsubSubjects = getSubjectsByClass(selectedClassId, setSubjects);
+      return () => unsubSubjects();
     } else {
       setSubjects([]);
-      setSelectedSubject(null);
+      setSelectedSubjectId('');
     }
-  }, [selectedClass]);
+  }, [selectedClassId]);
 
+  // Load chapters when subject changes
   useEffect(() => {
-    if (selectedSubject) {
-      const unsubscribe = getChaptersBySubject(selectedSubject, setChapters);
-      return () => unsubscribe();
+    if (selectedSubjectId) {
+      const unsubChapters = getChaptersBySubject(selectedSubjectId, setChapters);
+      return () => unsubChapters();
     } else {
       setChapters([]);
     }
-  }, [selectedSubject]);
+  }, [selectedSubjectId]);
 
-  const handleAddClass = async () => {
-    if (!newClassName.trim()) return;
-    const id = `class-${Date.now()}`;
-    await saveClass({
-      id,
-      name: newClassName,
-      enabled: true
-    });
-    setNewClassName('');
-    setIsAddingClass(false);
+  // Reordering functions
+  const handleMove = async (type: 'class' | 'subject' | 'chapter', index: number, direction: 'up' | 'down') => {
+    let list: any[] = [];
+    let saveFn: any;
+
+    if (type === 'class') {
+      list = [...classes];
+      saveFn = saveClass;
+    } else if (type === 'subject') {
+      list = [...subjects];
+      saveFn = saveSubject;
+    } else if (type === 'chapter') {
+      list = [...chapters];
+      saveFn = saveChapter;
+    }
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= list.length) return;
+
+    // Swap orders
+    const item1 = { ...list[index] };
+    const item2 = { ...list[newIndex] };
+    
+    const tempOrder = item1.order || index;
+    item1.order = item2.order || newIndex;
+    item2.order = tempOrder;
+
+    await saveFn(item1);
+    await saveFn(item2);
   };
 
-  const handleAddSubject = async () => {
-    if (!newSubjectName.trim() || !selectedClass) return;
-    const id = `subject-${Date.now()}`;
-    await saveSubject({
-      id,
-      classId: selectedClass,
-      name: newSubjectName,
-      enabled: true
-    });
-    setNewSubjectName('');
-    setIsAddingSubject(false);
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user', id: string, name: string) => {
+    setDeleteConfirm({ type, id, name });
   };
 
-  const handleAddChapter = async () => {
-    if (!selectedClass || !selectedSubject) return;
-    const id = `chapter-${Date.now()}`;
-    await saveChapter({
-      id,
-      subjectId: selectedSubject,
-      classId: selectedClass,
-      name: 'New Chapter',
-      enabled: true,
-      isImportant: false,
-      resources: [],
-      quiz: []
-    });
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const { type, id } = deleteConfirm;
+    
+    if (type === 'class') await removeClass(id);
+    else if (type === 'subject') await removeSubject(id);
+    else if (type === 'chapter') await removeChapter(id);
+    else if (type === 'user') await removeUser(id);
+    
+    setDeleteConfirm(null);
   };
 
-  const handleToggleEntity = async (type: 'class' | 'subject' | 'chapter', entity: any) => {
-    const updated = { ...entity, enabled: !entity.enabled };
-    if (type === 'class') await saveClass(updated);
-    if (type === 'subject') await saveSubject(updated);
-    if (type === 'chapter') await saveChapter(updated);
+  const handleEdit = (entity: any, type: string) => {
+    setEditingEntity({ ...entity, type });
+    setEditTab('basic');
   };
 
-  const handleSaveEdit = async () => {
+  const handleSave = async () => {
     if (!editingEntity) return;
-    const { type, data } = editingEntity;
-    if (type === 'class') await saveClass(data);
-    if (type === 'subject') await saveSubject(data);
-    if (type === 'chapter') await saveChapter(data);
-    setEditingEntity(null);
+    setIsSaving(true);
+    try {
+      if (editingEntity.type === 'class') await saveClass(editingEntity);
+      else if (editingEntity.type === 'subject') await saveSubject(editingEntity);
+      else if (editingEntity.type === 'chapter') await saveChapter(editingEntity);
+      setEditingEntity(null);
+    } catch (error) {
+      console.error("Error saving:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const addNew = (type: 'class' | 'subject' | 'chapter') => {
+    const id = Date.now().toString();
+    const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : chapters.length);
+    
+    let newEntity: any = { id, name: 'New ' + type, enabled: true, order };
+    
+    if (type === 'subject') {
+      if (!selectedClassId) {
+        alert("Please select a class first");
+        return;
+      }
+      newEntity.classId = selectedClassId;
+    } else if (type === 'chapter') {
+      if (!selectedSubjectId) {
+        alert("Please select a subject first");
+        return;
+      }
+      newEntity.subjectId = selectedSubjectId;
+      newEntity.classId = selectedClassId;
+      newEntity.resources = [];
+      newEntity.quiz = [];
+      newEntity.isImportant = false;
+    }
+    
+    setEditingEntity({ ...newEntity, type });
+    setEditTab('basic');
+  };
+
+  // Stats data
+  const statsData = [
+    { name: 'Classes', value: classes.length },
+    { name: 'Subjects', value: subjects.length },
+    { name: 'Chapters', value: chapters.length },
+    { name: 'Users', value: users.length },
+  ];
+
+  const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 bg-black">
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-12">
-          <div className="w-12 h-12 rounded-2xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
-            <LayoutDashboard size={24} />
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-display font-bold">Admin Dashboard</h1>
-            <p className="text-white/40">Manage your classes, subjects, and study materials.</p>
+            <h1 className="text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
+            <p className="text-white/40">Manage your educational ecosystem.</p>
+          </div>
+          <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto no-scrollbar max-w-full">
+            <button 
+              onClick={() => setActiveTab('classes')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'classes' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <Layers size={16} className="inline-block mr-1.5" />
+              Classes
+            </button>
+            <button 
+              onClick={() => setActiveTab('subjects')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'subjects' ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <BookOpen size={16} className="inline-block mr-1.5" />
+              Subjects
+            </button>
+            <button 
+              onClick={() => setActiveTab('chapters')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <FileText size={16} className="inline-block mr-1.5" />
+              Chapters
+            </button>
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-500 text-white shadow-[0_0_15_rgba(16,185,129,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <Users size={16} className="inline-block mr-1.5" />
+              Users
+            </button>
+            <button 
+              onClick={() => setActiveTab('stats')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+            >
+              <BarChart3 size={16} className="inline-block mr-1.5" />
+              Stats
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Classes Column */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <GraduationCap size={20} className="text-neon-blue" /> Classes
-              </h2>
-              <button 
-                onClick={() => setIsAddingClass(true)}
-                className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <AnimatePresence>
-                {isAddingClass && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-4 rounded-xl bg-white/5 border border-neon-blue/30 mb-4"
-                  >
-                    <input 
-                      autoFocus
-                      type="text"
-                      value={newClassName}
-                      onChange={(e) => setNewClassName(e.target.value)}
-                      placeholder="Class Name (e.g. Class 10)"
-                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2 mb-3 outline-none focus:border-neon-blue"
-                    />
-                    <div className="flex gap-2">
-                      <button onClick={handleAddClass} className="btn-neon py-1 px-4 text-sm">Save</button>
-                      <button onClick={() => setIsAddingClass(false)} className="text-white/40 hover:text-white text-sm">Cancel</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {classes.map((cls) => (
-                <div 
-                  key={cls.id}
-                  onClick={() => setSelectedClass(cls.id)}
-                  className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all ${
-                    selectedClass === cls.id ? 'bg-neon-blue/10 border border-neon-blue/30' : 'bg-white/5 border border-transparent hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`font-medium ${!cls.enabled && 'text-white/20 line-through'}`}>{cls.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); handleToggleEntity('class', cls); }} className="p-1 text-white/20 hover:text-neon-blue transition-colors">
-                      {cls.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); setEditingEntity({type: 'class', data: cls}); }} className="p-1 text-white/20 hover:text-neon-blue transition-colors">
-                      <Edit2 size={16} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); removeClass(cls.id); }} className="p-1 text-white/20 hover:text-red-400 transition-colors">
-                      <Trash2 size={16} />
-                    </button>
-                    <ChevronRight size={16} className={selectedClass === cls.id ? 'text-neon-blue' : 'text-white/20'} />
-                  </div>
+        {/* Content Area */}
+        <div className="glass-card p-6 min-h-[600px]">
+          {activeTab === 'classes' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search classes..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Subjects Column */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <BookOpen size={20} className="text-neon-purple" /> Subjects
-              </h2>
-              {selectedClass && (
                 <button 
-                  onClick={() => setIsAddingSubject(true)}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all"
+                  onClick={() => addNew('class')}
+                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center gap-2"
                 >
                   <Plus size={20} />
+                  Add Class
                 </button>
-              )}
-            </div>
-
-            {!selectedClass ? (
-              <div className="h-40 flex items-center justify-center text-white/20 text-sm italic">
-                Select a class first
               </div>
-            ) : (
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {isAddingSubject && (
+
+              <div className="grid gap-4">
+                {classes.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((cls, index) => (
                     <motion.div 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="p-4 rounded-xl bg-white/5 border border-neon-purple/30 mb-4"
+                      key={cls.id}
+                      layout
+                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group min-w-0 gap-4"
                     >
-                      <input 
-                        autoFocus
-                        type="text"
-                        value={newSubjectName}
-                        onChange={(e) => setNewSubjectName(e.target.value)}
-                        placeholder="Subject Name (e.g. Physics)"
-                        className="w-full bg-black/50 border border-white/10 rounded-lg p-2 mb-3 outline-none focus:border-neon-purple"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={handleAddSubject} className="btn-neon py-1 px-4 text-sm bg-neon-purple/20 border-neon-purple/50 text-neon-purple">Save</button>
-                        <button onClick={() => setIsAddingSubject(false)} className="text-white/40 hover:text-white text-sm">Cancel</button>
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button 
+                            onClick={() => handleMove('class', index, 'up')}
+                            disabled={index === 0}
+                            className="text-white/20 hover:text-neon-blue disabled:opacity-0"
+                          >
+                            <ArrowUp size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleMove('class', index, 'down')}
+                            disabled={index === classes.length - 1}
+                            className="text-white/20 hover:text-neon-blue disabled:opacity-0"
+                          >
+                            <ArrowDown size={16} />
+                          </button>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-medium text-white">{cls.name}</h3>
+                          <p className="text-xs text-white/40">ID: {cls.id}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <button 
+                          onClick={() => saveClass({ ...cls, enabled: !cls.enabled })}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${cls.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
+                        >
+                          {cls.enabled ? 'Enabled' : 'Disabled'}
+                        </button>
+                        <div className="flex items-center gap-2 transition-all">
+                          <a 
+                            href={`/class/${cls.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"
+                            title="View Page"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                          <button 
+                            onClick={() => handleEdit(cls, 'class')}
+                            className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete('class', cls.id, cls.name)}
+                            className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {subjects.map((sub) => (
-                  <div 
-                    key={sub.id}
-                    onClick={() => setSelectedSubject(sub.id)}
-                    className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all ${
-                      selectedSubject === sub.id ? 'bg-neon-purple/10 border border-neon-purple/30' : 'bg-white/5 border border-transparent hover:bg-white/10'
-                    }`}
-                  >
-                    <span className={`font-medium ${!sub.enabled && 'text-white/20 line-through'}`}>{sub.name}</span>
-                    <div className="flex items-center gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); handleToggleEntity('subject', sub); }} className="p-1 text-white/20 hover:text-neon-purple transition-colors">
-                        {sub.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setEditingEntity({type: 'subject', data: sub}); }} className="p-1 text-white/20 hover:text-neon-purple transition-colors">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); removeSubject(sub.id); }} className="p-1 text-white/20 hover:text-red-400 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                      <ChevronRight size={16} className={selectedSubject === sub.id ? 'text-neon-purple' : 'text-white/20'} />
-                    </div>
-                  </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Chapters Column */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Layers size={20} className="text-neon-pink" /> Chapters
-              </h2>
-              {selectedSubject && (
+          {activeTab === 'subjects' && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="w-full md:w-64">
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-purple outline-none transition-all"
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
+                  >
+                    <option value="" className="bg-dark-bg">Select Class</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search subjects..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-purple outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
                 <button 
-                  onClick={handleAddChapter}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-neon-pink/20 hover:text-neon-pink transition-all"
+                  onClick={() => addNew('subject')}
+                  className="btn-neon bg-neon-purple text-white px-6 py-2 flex items-center gap-2"
                 >
                   <Plus size={20} />
+                  Add Subject
                 </button>
+              </div>
+
+              {!selectedClassId ? (
+                <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                  <Layers size={48} className="mb-4" />
+                  <p>Select a class to manage subjects</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((subject, index) => (
+                    <motion.div 
+                      key={subject.id}
+                      layout
+                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-purple/50 transition-all group min-w-0 gap-4"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button 
+                            onClick={() => handleMove('subject', index, 'up')}
+                            disabled={index === 0}
+                            className="text-white/20 hover:text-neon-purple disabled:opacity-0"
+                          >
+                            <ArrowUp size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleMove('subject', index, 'down')}
+                            disabled={index === subjects.length - 1}
+                            className="text-white/20 hover:text-neon-purple disabled:opacity-0"
+                          >
+                            <ArrowDown size={16} />
+                          </button>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-medium text-white">{subject.name}</h3>
+                          <p className="text-xs text-white/40">ID: {subject.id}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <button 
+                          onClick={() => saveSubject({ ...subject, enabled: !subject.enabled })}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${subject.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
+                        >
+                          {subject.enabled ? 'Enabled' : 'Disabled'}
+                        </button>
+                        <div className="flex items-center gap-2 transition-all">
+                          <a 
+                            href={`/class/${selectedClassId}/subject/${subject.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-white/60 hover:text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all"
+                            title="View Page"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                          <button 
+                            onClick={() => handleEdit(subject, 'subject')}
+                            className="p-2 text-white/60 hover:text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete('subject', subject.id, subject.name)}
+                            className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </div>
+          )}
 
-            {!selectedSubject ? (
-              <div className="h-40 flex items-center justify-center text-white/20 text-sm italic">
-                Select a subject first
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {chapters.map((ch) => (
-                  <div 
-                    key={ch.id}
-                    className="p-4 rounded-xl bg-white/5 border border-transparent hover:border-white/10 transition-all"
+          {activeTab === 'chapters' && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="w-full md:w-48">
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-bold ${!ch.enabled && 'text-white/20 line-through'}`}>{ch.name}</span>
-                        {ch.isImportant && <Star size={12} className="text-neon-purple fill-neon-purple" />}
+                    <option value="" className="bg-dark-bg">Select Class</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-full md:w-48">
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    disabled={!selectedClassId}
+                  >
+                    <option value="" className="bg-dark-bg">Select Subject</option>
+                    {subjects.map(s => (
+                      <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search chapters..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-pink outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => addNew('chapter')}
+                  className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center gap-2"
+                >
+                  <Plus size={20} />
+                  Add Chapter
+                </button>
+              </div>
+
+              {!selectedSubjectId ? (
+                <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                  <BookOpen size={48} className="mb-4" />
+                  <p>Select a class and subject to manage chapters</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {chapters.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((chapter, index) => (
+                    <motion.div 
+                      key={chapter.id}
+                      layout
+                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group min-w-0 gap-4"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button 
+                            onClick={() => handleMove('chapter', index, 'up')}
+                            disabled={index === 0}
+                            className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                          >
+                            <ArrowUp size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleMove('chapter', index, 'down')}
+                            disabled={index === chapters.length - 1}
+                            className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                          >
+                            <ArrowDown size={16} />
+                          </button>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="text-lg font-medium text-white">{chapter.name}</h3>
+                            {chapter.isImportant && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink uppercase tracking-wider shrink-0">Important</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-white/40">{chapter.resources?.length || 0} Resources • {chapter.quiz?.length || 0} Quiz Questions</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleToggleEntity('chapter', ch)} className="p-1 text-white/20 hover:text-neon-pink transition-colors">
-                          {ch.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
+                      <div className="flex items-center gap-4 shrink-0">
+                        <button 
+                          onClick={() => saveChapter({ ...chapter, enabled: !chapter.enabled })}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${chapter.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
+                        >
+                          {chapter.enabled ? 'Enabled' : 'Disabled'}
                         </button>
-                        <button onClick={() => setEditingEntity({type: 'chapter', data: ch})} className="p-1 text-white/20 hover:text-neon-pink transition-colors">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => removeChapter(ch.id)} className="p-1 text-white/20 hover:text-red-400 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center gap-2 transition-all">
+                          <a 
+                            href={`/class/${selectedClassId}/subject/${selectedSubjectId}/chapter/${chapter.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
+                            title="View Page"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                          <button 
+                            onClick={() => handleEdit(chapter, 'chapter')}
+                            className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete('chapter', chapter.id, chapter.name)}
+                            className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-4 text-xs text-white/40">
-                      <span className="flex items-center gap-1"><FileText size={12} /> {ch.resources.length} Resources</span>
-                      <span className="flex items-center gap-1"><HelpCircle size={12} /> {ch.quiz.length} Quiz Qs</span>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search users..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-emerald-500 outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase()))).map((user) => (
+                      <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                              {user.photoURL ? (
+                                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white/40">
+                                  <Users size={20} />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-white font-medium">{user.name || 'Anonymous'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-white/60">{user.email}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-4">
+                            <button 
+                              onClick={() => {
+                                const newRole = user.role === 'admin' ? 'student' : 'admin';
+                                saveUser({ ...user, role: newRole });
+                              }}
+                              className="text-xs font-bold text-white/40 hover:text-white transition-all"
+                            >
+                              Toggle Role
+                            </button>
+                            {user.email !== 'vijayninama683@gmail.com' && (
+                              <button 
+                                onClick={() => handleDelete('user', user.uid, user.email)}
+                                className="text-red-400/40 hover:text-red-400 transition-all"
+                                title="Delete User"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'stats' && (
+            <div className="space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {statsData.map((stat, i) => (
+                  <div key={stat.name} className="p-6 bg-white/5 border border-white/10 rounded-2xl">
+                    <p className="text-sm font-medium text-white/40 mb-1">{stat.name}</p>
+                    <h3 className="text-3xl font-display font-bold text-white">{stat.value}</h3>
+                    <div className="w-full h-1 bg-white/10 mt-4 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full transition-all duration-1000" 
+                        style={{ width: '100%', backgroundColor: COLORS[i] }}
+                      ></div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
+                  <h3 className="text-lg font-medium text-white mb-6">Content Distribution</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={statsData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis dataKey="name" stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #ffffff20', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {statsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
+                  <h3 className="text-lg font-medium text-white mb-6">User Roles</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
+                          { name: 'Students', value: users.filter(u => u.role === 'student').length },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        <Cell fill="#00E5FF" />
+                        <Cell fill="#ffffff10" />
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #ffffff20', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Edit Modal */}
       <AnimatePresence>
         {editingEntity && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingEntity(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-dark-bg border border-white/10 rounded-3xl shadow-2xl flex flex-col"
             >
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold capitalize">Edit {editingEntity.type}</h2>
-                <button onClick={() => setEditingEntity(null)} className="p-2 hover:bg-white/10 rounded-lg">
+              <div className="p-6 border-b border-white/10 flex items-center justify-between shrink-0">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-white">
+                    Edit {editingEntity.type.charAt(0).toUpperCase() + editingEntity.type.slice(1)}
+                  </h2>
+                  <p className="text-sm text-white/40">ID: {editingEntity.id}</p>
+                </div>
+                <button 
+                  onClick={() => setEditingEntity(null)}
+                  className="p-2 text-white/40 hover:text-white transition-all"
+                >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm text-white/40 mb-2">Name / Title</label>
-                  <input 
-                    type="text"
-                    value={editingEntity.type === 'chapter' ? editingEntity.data.name : editingEntity.data.name}
-                    onChange={(e) => setEditingEntity({
-                      ...editingEntity,
-                      data: { ...editingEntity.data, name: e.target.value }
-                    })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:border-neon-blue"
-                  />
+              {editingEntity.type === 'chapter' && (
+                <div className="px-6 pt-4 flex items-center gap-4 border-b border-white/10 shrink-0">
+                  <button 
+                    onClick={() => setEditTab('basic')}
+                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'basic' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                  >
+                    Basic Info
+                    {editTab === 'basic' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                  </button>
+                  <button 
+                    onClick={() => setEditTab('resources')}
+                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'resources' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                  >
+                    Resources ({editingEntity.resources?.length || 0})
+                    {editTab === 'resources' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                  </button>
+                  <button 
+                    onClick={() => setEditTab('quiz')}
+                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'quiz' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                  >
+                    Quiz ({editingEntity.quiz?.length || 0})
+                    {editTab === 'quiz' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                  </button>
                 </div>
+              )}
 
-                {editingEntity.type === 'chapter' && (
-                  <>
-                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex-grow overflow-y-auto p-6 custom-scrollbar">
+                {editTab === 'basic' && (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/60">Name / Title</label>
                       <input 
-                        type="checkbox"
-                        id="isImportant"
-                        checked={editingEntity.data.isImportant}
-                        onChange={(e) => setEditingEntity({
-                          ...editingEntity,
-                          data: { ...editingEntity.data, isImportant: e.target.checked }
-                        })}
-                        className="w-5 h-5 accent-neon-purple"
+                        type="text" 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={editingEntity.name}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, name: e.target.value })}
                       />
-                      <label htmlFor="isImportant" className="font-medium flex items-center gap-2">
-                        <Star size={18} className="text-neon-purple" /> Mark as Important
-                      </label>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold flex items-center gap-2"><FileText size={18} /> Resources</h3>
-                        <button 
-                          onClick={() => {
-                            const newRes: Resource = { id: `res-${Date.now()}`, title: 'New Resource', type: 'pdf', url: '', enabled: true };
-                            setEditingEntity({
-                              ...editingEntity,
-                              data: { ...editingEntity.data, resources: [...editingEntity.data.resources, newRes] }
-                            });
-                          }}
-                          className="text-xs text-neon-blue flex items-center gap-1 hover:underline"
-                        >
-                          <PlusCircle size={14} /> Add Resource
-                        </button>
+                    {editingEntity.type === 'chapter' && (
+                      <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <input 
+                          type="checkbox" 
+                          id="isImportant"
+                          className="w-5 h-5 rounded border-white/10 bg-white/5 text-neon-pink focus:ring-neon-pink"
+                          checked={editingEntity.isImportant}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, isImportant: e.target.checked })}
+                        />
+                        <label htmlFor="isImportant" className="text-sm font-medium text-white">Mark as Important Chapter</label>
                       </div>
-                      
-                      {editingEntity.data.resources.map((res: Resource, idx: number) => (
-                        <div key={res.id} className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
-                          <div className="flex gap-4">
-                            <input 
-                              type="text"
-                              value={res.title}
-                              onChange={(e) => {
-                                const newResources = [...editingEntity.data.resources];
-                                newResources[idx] = { ...res, title: e.target.value };
-                                setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, resources: newResources } });
-                              }}
-                              placeholder="Resource Title"
-                              className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-sm"
-                            />
-                            <select 
-                              value={res.type}
-                              onChange={(e) => {
-                                const newResources = [...editingEntity.data.resources];
-                                newResources[idx] = { ...res, type: e.target.value as any };
-                                setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, resources: newResources } });
-                              }}
-                              className="bg-black/50 border border-white/10 rounded-lg p-2 text-sm"
-                            >
-                              <option value="pdf">PDF</option>
-                              <option value="notes">Notes</option>
-                              <option value="qa">Q&A</option>
-                              <option value="practice">Practice</option>
-                              <option value="test">Test</option>
-                            </select>
-                            <button 
-                              onClick={() => {
-                                const newResources = editingEntity.data.resources.filter((_: any, i: number) => i !== idx);
-                                setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, resources: newResources } });
-                              }}
-                              className="text-red-400 p-2"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <input 
-                            type="text"
-                            value={res.url}
-                            onChange={(e) => {
-                              const newResources = [...editingEntity.data.resources];
-                              newResources[idx] = { ...res, url: e.target.value };
-                              setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, resources: newResources } });
-                            }}
-                            placeholder="Resource URL (Google Drive / Direct Link)"
-                            className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    )}
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold flex items-center gap-2"><HelpCircle size={18} /> Quiz Questions</h3>
-                        <button 
-                          onClick={() => {
-                            const newQ: QuizQuestion = { id: `q-${Date.now()}`, question: 'New Question', options: ['', '', '', ''], correctAnswer: 0 };
-                            setEditingEntity({
-                              ...editingEntity,
-                              data: { ...editingEntity.data, quiz: [...editingEntity.data.quiz, newQ] }
-                            });
-                          }}
-                          className="text-xs text-neon-blue flex items-center gap-1 hover:underline"
-                        >
-                          <PlusCircle size={14} /> Add Question
-                        </button>
-                      </div>
-
-                      {editingEntity.data.quiz.map((q: QuizQuestion, qIdx: number) => (
-                        <div key={q.id} className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-4">
-                          <div className="flex gap-4">
-                            <textarea 
-                              value={q.question}
-                              onChange={(e) => {
-                                const newQuiz = [...editingEntity.data.quiz];
-                                newQuiz[qIdx] = { ...q, question: e.target.value };
-                                setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, quiz: newQuiz } });
-                              }}
-                              placeholder="Question text"
-                              className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-sm min-h-[60px]"
-                            />
-                            <button 
-                              onClick={() => {
-                                const newQuiz = editingEntity.data.quiz.filter((_: any, i: number) => i !== qIdx);
-                                setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, quiz: newQuiz } });
-                              }}
-                              className="text-red-400 p-2 h-fit"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {q.options.map((opt, oIdx) => (
-                              <div key={oIdx} className="flex items-center gap-2">
-                                <input 
-                                  type="radio"
-                                  name={`correct-${q.id}`}
-                                  checked={q.correctAnswer === oIdx}
-                                  onChange={() => {
-                                    const newQuiz = [...editingEntity.data.quiz];
-                                    newQuiz[qIdx] = { ...q, correctAnswer: oIdx };
-                                    setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, quiz: newQuiz } });
-                                  }}
-                                  className="accent-neon-green"
-                                />
-                                <input 
-                                  type="text"
-                                  value={opt}
-                                  onChange={(e) => {
-                                    const newOptions = [...q.options];
-                                    newOptions[oIdx] = e.target.value;
-                                    const newQuiz = [...editingEntity.data.quiz];
-                                    newQuiz[qIdx] = { ...q, options: newOptions };
-                                    setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, quiz: newQuiz } });
-                                  }}
-                                  placeholder={`Option ${oIdx + 1}`}
-                                  className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-xs"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+                      <input 
+                        type="checkbox" 
+                        id="enabled"
+                        className="w-5 h-5 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
+                        checked={editingEntity.enabled}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, enabled: e.target.checked })}
+                      />
+                      <label htmlFor="enabled" className="text-sm font-medium text-white">Enabled (Visible to students)</label>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                <div className="flex gap-4 pt-6">
-                  <button onClick={handleSaveEdit} className="btn-neon flex-1 py-3">
-                    <Save size={20} className="mr-2" /> Save Changes
-                  </button>
-                  <button onClick={() => setEditingEntity(null)} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all">
+                {editTab === 'resources' && editingEntity.type === 'chapter' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-white">Chapter Resources</h3>
+                      <button 
+                        onClick={() => {
+                          const newResource: Resource = {
+                            id: Date.now().toString(),
+                            title: 'New Resource',
+                            type: 'pdf',
+                            url: '',
+                            enabled: true
+                          };
+                          setEditingEntity({
+                            ...editingEntity,
+                            resources: [...(editingEntity.resources || []), newResource]
+                          });
+                        }}
+                        className="text-sm font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1"
+                      >
+                        <Plus size={16} /> Add Resource
+                      </button>
+                    </div>
+
+                    <DragDropContext onDragEnd={(result) => {
+                      if (!result.destination) return;
+                      const items = Array.from(editingEntity.resources || []);
+                      const [reorderedItem] = items.splice(result.source.index, 1);
+                      items.splice(result.destination.index, 0, reorderedItem);
+                      setEditingEntity({ ...editingEntity, resources: items });
+                    }}>
+                      <Droppable droppableId="resources">
+                        {(provided) => (
+                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                            {(editingEntity.resources || []).map((resource: Resource, index: number) => (
+                              <DraggableAny key={resource.id} draggableId={resource.id} index={index}>
+                                {(provided: any) => (
+                                  <div 
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-start gap-4"
+                                  >
+                                    <div {...provided.dragHandleProps} className="mt-1 text-white/20">
+                                      <GripVertical size={20} />
+                                    </div>
+                                    <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Title</label>
+                                        <input 
+                                          type="text" 
+                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
+                                          value={resource.title}
+                                          onChange={(e) => {
+                                            const newResources = [...editingEntity.resources];
+                                            newResources[index].title = e.target.value;
+                                            setEditingEntity({ ...editingEntity, resources: newResources });
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Type</label>
+                                        <select 
+                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
+                                          value={resource.type}
+                                          onChange={(e) => {
+                                            const newResources = [...editingEntity.resources];
+                                            newResources[index].type = e.target.value as any;
+                                            setEditingEntity({ ...editingEntity, resources: newResources });
+                                          }}
+                                        >
+                                          <option value="pdf" className="bg-dark-bg">PDF Document</option>
+                                          <option value="notes" className="bg-dark-bg">Study Notes</option>
+                                          <option value="qa" className="bg-dark-bg">Q&A</option>
+                                          <option value="practice" className="bg-dark-bg">Practice</option>
+                                          <option value="test" className="bg-dark-bg">Test</option>
+                                        </select>
+                                      </div>
+                                      <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">URL / Link</label>
+                                        <input 
+                                          type="text" 
+                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
+                                          value={resource.url}
+                                          onChange={(e) => {
+                                            const newResources = [...editingEntity.resources];
+                                            newResources[index].url = e.target.value;
+                                            setEditingEntity({ ...editingEntity, resources: newResources });
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => {
+                                        const newResources = editingEntity.resources.filter((_: any, i: number) => i !== index);
+                                        setEditingEntity({ ...editingEntity, resources: newResources });
+                                      }}
+                                      className="mt-1 p-2 text-white/20 hover:text-red-400 transition-all"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                )}
+                              </DraggableAny>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+                )}
+
+                {editTab === 'quiz' && editingEntity.type === 'chapter' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-white">Quiz Questions</h3>
+                      <button 
+                        onClick={() => {
+                          const newQuestion: QuizQuestion = {
+                            id: Date.now().toString(),
+                            question: 'New Question',
+                            options: ['', '', '', ''],
+                            correctAnswer: 0
+                          };
+                          setEditingEntity({
+                            ...editingEntity,
+                            quiz: [...(editingEntity.quiz || []), newQuestion]
+                          });
+                        }}
+                        className="text-sm font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1"
+                      >
+                        <Plus size={16} /> Add Question
+                      </button>
+                    </div>
+
+                    <DragDropContext onDragEnd={(result) => {
+                      if (!result.destination) return;
+                      const items = Array.from(editingEntity.quiz || []);
+                      const [reorderedItem] = items.splice(result.source.index, 1);
+                      items.splice(result.destination.index, 0, reorderedItem);
+                      setEditingEntity({ ...editingEntity, quiz: items });
+                    }}>
+                      <Droppable droppableId="quiz">
+                        {(provided) => (
+                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                            {(editingEntity.quiz || []).map((question: QuizQuestion, qIndex: number) => (
+                              <DraggableAny key={question.id} draggableId={question.id} index={qIndex}>
+                                {(provided: any) => (
+                                  <div 
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+                                  >
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div {...provided.dragHandleProps} className="mt-1 text-white/20">
+                                        <GripVertical size={20} />
+                                      </div>
+                                      <div className="flex-grow space-y-2">
+                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Question {qIndex + 1}</label>
+                                        <textarea 
+                                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none resize-none"
+                                          rows={2}
+                                          value={question.question}
+                                          onChange={(e) => {
+                                            const newQuiz = [...editingEntity.quiz];
+                                            newQuiz[qIndex].question = e.target.value;
+                                            setEditingEntity({ ...editingEntity, quiz: newQuiz });
+                                          }}
+                                        />
+                                      </div>
+                                      <button 
+                                        onClick={() => {
+                                          const newQuiz = editingEntity.quiz.filter((_: any, i: number) => i !== qIndex);
+                                          setEditingEntity({ ...editingEntity, quiz: newQuiz });
+                                        }}
+                                        className="mt-1 p-2 text-white/20 hover:text-red-400 transition-all"
+                                      >
+                                        <Trash2 size={18} />
+                                      </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      {question.options.map((option, oIndex) => (
+                                        <div key={oIndex} className="flex items-center gap-3">
+                                          <button 
+                                            onClick={() => {
+                                              const newQuiz = [...editingEntity.quiz];
+                                              newQuiz[qIndex].correctAnswer = oIndex;
+                                              setEditingEntity({ ...editingEntity, quiz: newQuiz });
+                                            }}
+                                            className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${question.correctAnswer === oIndex ? 'bg-neon-pink border-neon-pink text-white' : 'border-white/20 text-transparent hover:border-neon-pink/50'}`}
+                                          >
+                                            <CheckCircle2 size={14} />
+                                          </button>
+                                          <input 
+                                            type="text" 
+                                            placeholder={`Option ${oIndex + 1}`}
+                                            className="flex-grow bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-white/30"
+                                            value={option}
+                                            onChange={(e) => {
+                                              const newQuiz = [...editingEntity.quiz];
+                                              newQuiz[qIndex].options[oIndex] = e.target.value;
+                                              setEditingEntity({ ...editingEntity, quiz: newQuiz });
+                                            }}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </DraggableAny>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-white/10 flex items-center justify-between shrink-0">
+                <button 
+                  onClick={() => {
+                    handleDelete(editingEntity.type, editingEntity.id, editingEntity.name);
+                    setEditingEntity(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-xl transition-all flex items-center gap-2"
+                >
+                  <Trash2 size={18} />
+                  Delete {editingEntity.type}
+                </button>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setEditingEntity(null)}
+                    className="px-6 py-2 text-sm font-medium text-white/60 hover:text-white transition-all"
+                  >
                     Cancel
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="btn-neon bg-white text-black px-8 py-2 flex items-center gap-2"
+                  >
+                    {isSaving ? (
+                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Save size={18} />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirm(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-dark-card border border-white/10 rounded-3xl p-8 shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 mb-2">
+                  <Trash2 size={32} />
+                </div>
+                <h3 className="text-2xl font-display font-bold text-white">Confirm Delete</h3>
+                <p className="text-white/60">
+                  Are you sure you want to delete <span className="text-white font-medium">"{deleteConfirm.name}"</span>? 
+                  This action cannot be undone and will remove all associated data.
+                </p>
+                <div className="flex items-center gap-4 w-full pt-4">
+                  <button 
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 px-6 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={confirmDelete}
+                    className="flex-1 px-6 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                  >
+                    Delete Now
                   </button>
                 </div>
               </div>
@@ -555,8 +1104,4 @@ export default function AdminPanel() {
       </AnimatePresence>
     </div>
   );
-}
-
-function HelpCircle({ size, className }: { size?: number, className?: string }) {
-  return <FileText size={size} className={className} />;
 }

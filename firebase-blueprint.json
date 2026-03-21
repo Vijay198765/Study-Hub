@@ -7,9 +7,10 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "enabled": { "type": "boolean" }
+        "enabled": { "type": "boolean" },
+        "order": { "type": "number" }
       },
-      "required": ["id", "name", "enabled"]
+      "required": ["id", "name", "enabled", "order"]
     },
     "Subject": {
       "title": "Subject",
@@ -19,9 +20,10 @@
         "id": { "type": "string" },
         "classId": { "type": "string" },
         "name": { "type": "string" },
-        "enabled": { "type": "boolean" }
+        "enabled": { "type": "boolean" },
+        "order": { "type": "number" }
       },
-      "required": ["id", "classId", "name", "enabled"]
+      "required": ["id", "classId", "name", "enabled", "order"]
     },
     "Chapter": {
       "title": "Chapter",
@@ -35,9 +37,10 @@
         "resources": { "type": "array" },
         "quiz": { "type": "array" },
         "isImportant": { "type": "boolean" },
-        "enabled": { "type": "boolean" }
+        "enabled": { "type": "boolean" },
+        "order": { "type": "number" }
       },
-      "required": ["id", "subjectId", "classId", "name", "resources", "quiz", "isImportant", "enabled"]
+      "required": ["id", "subjectId", "classId", "name", "resources", "quiz", "isImportant", "enabled", "order"]
     },
     "User": {
       "title": "User",

@@ -58,7 +58,8 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'name', 'enabled']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.enabled is bool;
+             data.enabled is bool &&
+             (!('order' in data) || data.order is number);
     }
 
     function isValidSubject(data) {
@@ -66,7 +67,8 @@ service cloud.firestore {
              data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
              data.classId is string && data.classId.size() > 0 && data.classId.size() < 50 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.enabled is bool;
+             data.enabled is bool &&
+             (!('order' in data) || data.order is number);
     }
 
     function isValidChapter(data) {
@@ -78,7 +80,8 @@ service cloud.firestore {
              data.resources is list &&
              data.quiz is list &&
              data.isImportant is bool &&
-             data.enabled is bool;
+             data.enabled is bool &&
+             (!('order' in data) || data.order is number);
     }
 
     function isValidUser(data) {
@@ -94,7 +97,8 @@ service cloud.firestore {
 
     match /classes/{classId} {
       allow get, list: if true;
-      allow write: if isAdmin() && isValidClass(request.resource.data);
+      allow create, update: if isAdmin() && isValidClass(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /test/{docId} {
@@ -103,12 +107,14 @@ service cloud.firestore {
 
     match /subjects/{subjectId} {
       allow get, list: if true;
-      allow write: if isAdmin() && isValidSubject(request.resource.data);
+      allow create, update: if isAdmin() && isValidSubject(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /chapters/{chapterId} {
       allow get, list: if true;
-      allow write: if isAdmin() && isValidChapter(request.resource.data);
+      allow create, update: if isAdmin() && isValidChapter(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {

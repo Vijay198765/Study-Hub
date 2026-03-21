@@ -9,15 +9,17 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Class, Subject, Chapter } from '../types';
+import { Class, Subject, Chapter, User } from '../types';
 
 // Classes
 export const getClasses = (callback: (classes: Class[]) => void) => {
   const path = 'classes';
-  const q = query(collection(db, path), orderBy('name'));
+  const q = query(collection(db, path), orderBy('order', 'asc'));
   return onSnapshot(q, (snapshot) => {
     const classes = snapshot.docs.map(doc => doc.data() as Class);
-    callback(classes);
+    // Fallback to name if order is missing
+    const sorted = classes.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+    callback(sorted);
   }, (error) => handleFirestoreError(error, OperationType.GET, path));
 };
 
@@ -42,10 +44,11 @@ export const removeClass = async (id: string) => {
 // Subjects
 export const getSubjectsByClass = (classId: string, callback: (subjects: Subject[]) => void) => {
   const path = 'subjects';
-  const q = query(collection(db, path), where('classId', '==', classId), orderBy('name'));
+  const q = query(collection(db, path), where('classId', '==', classId));
   return onSnapshot(q, (snapshot) => {
     const subjects = snapshot.docs.map(doc => doc.data() as Subject);
-    callback(subjects);
+    const sorted = subjects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+    callback(sorted);
   }, (error) => handleFirestoreError(error, OperationType.GET, path));
 };
 
@@ -70,10 +73,11 @@ export const removeSubject = async (id: string) => {
 // Chapters
 export const getChaptersBySubject = (subjectId: string, callback: (chapters: Chapter[]) => void) => {
   const path = 'chapters';
-  const q = query(collection(db, path), where('subjectId', '==', subjectId), orderBy('name'));
+  const q = query(collection(db, path), where('subjectId', '==', subjectId));
   return onSnapshot(q, (snapshot) => {
     const chapters = snapshot.docs.map(doc => doc.data() as Chapter);
-    callback(chapters);
+    const sorted = chapters.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+    callback(sorted);
   }, (error) => handleFirestoreError(error, OperationType.GET, path));
 };
 
@@ -90,6 +94,33 @@ export const removeChapter = async (id: string) => {
   const path = `chapters/${id}`;
   try {
     await deleteDoc(doc(db, 'chapters', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+// Users
+export const getUsers = (callback: (users: User[]) => void) => {
+  const path = 'users';
+  return onSnapshot(collection(db, path), (snapshot) => {
+    const users = snapshot.docs.map(doc => doc.data() as User);
+    callback(users);
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
+
+export const saveUser = async (user: User) => {
+  const path = `users/${user.uid}`;
+  try {
+    await setDoc(doc(db, 'users', user.uid), user);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const removeUser = async (uid: string) => {
+  const path = `users/${uid}`;
+  try {
+    await deleteDoc(doc(db, 'users', uid));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
