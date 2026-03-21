@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "Class": {
+      "title": "Class",
+      "description": "A school class (e.g., Class 10, Class 12)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["id", "name", "enabled"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A subject within a class (e.g., Physics, Maths)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "classId": { "type": "string" },
+        "name": { "type": "string" },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["id", "classId", "name", "enabled"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "A chapter within a subject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "classId": { "type": "string" },
+        "name": { "type": "string" },
+        "resources": { "type": "array" },
+        "quiz": { "type": "array" },
+        "isImportant": { "type": "boolean" },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["id", "subjectId", "classId", "name", "resources", "quiz", "isImportant", "enabled"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Collection of classes"
+    },
+    "/subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "Collection of subjects"
+    },
+    "/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Collection of chapters"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    }
+  }
+}
