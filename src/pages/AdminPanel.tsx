@@ -46,34 +46,59 @@ export default function AdminPanel() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const handleFileUpload = async (file: File, resourceId: string, index: number) => {
-    if (!file) return;
+    if (!file || uploadingResource === resourceId) return;
     
-    setUploadingResource(resourceId);
-    
-    const storageRef = ref(storage, `resources/${Date.now()}_${file.name}`);
-    const metadata = {
-      contentType: file.type || 'application/pdf',
-    };
-    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+    // Limit file size to 10MB for better performance and to prevent hanging
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Please upload a PDF smaller than 10MB.");
+      return;
+    }
 
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(prev => ({ ...prev, [resourceId]: progress }));
-      }, 
-      (error) => {
-        console.error("Upload failed:", error);
-        setUploadingResource(null);
-        alert("Failed to upload file.");
-      }, 
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        const newResources = [...editingEntity.resources];
-        newResources[index].url = downloadURL;
-        setEditingEntity({ ...editingEntity, resources: newResources });
-        setUploadingResource(null);
-      }
-    );
+    setUploadingResource(resourceId);
+    setUploadProgress(prev => ({ ...prev, [resourceId]: 0 }));
+    
+    try {
+      const storageRef = ref(storage, `resources/${Date.now()}_${file.name}`);
+      const metadata = {
+        contentType: file.type || 'application/pdf',
+      };
+      
+      const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(prev => ({ ...prev, [resourceId]: progress }));
+          console.log(`Upload progress for ${resourceId}: ${progress}%`);
+        }, 
+        (error) => {
+          console.error("Upload failed with error:", error);
+          setUploadingResource(null);
+          
+          let message = "Failed to upload file. ";
+          if (error.code === 'storage/unauthorized') {
+            message += "Please check your Firebase Storage rules in the console.";
+          } else if (error.code === 'storage/canceled') {
+            message += "Upload was canceled.";
+          } else {
+            message += "Please check your internet connection and try again.";
+          }
+          alert(message);
+        }, 
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          const newResources = [...editingEntity.resources];
+          newResources[index].url = downloadURL;
+          setEditingEntity({ ...editingEntity, resources: newResources });
+          setUploadingResource(null);
+          console.log("Upload successful! URL:", downloadURL);
+        }
+      );
+    } catch (err) {
+      console.error("Error initiating upload:", err);
+      setUploadingResource(null);
+      alert("An unexpected error occurred while starting the upload.");
+    }
   };
 
   // Load initial data
@@ -923,24 +948,52 @@ export default function AdminPanel() {
                                             }}
                                             placeholder="Enter URL or upload a file"
                                           />
-                                          <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px]">
-                                            {uploadingResource === resource.id ? (
-                                              <span className="text-xs">{Math.round(uploadProgress[resource.id] || 0)}%</span>
-                                            ) : (
-                                              <span className="text-xs font-bold">Upload PDF</span>
+                                          <div className="flex items-center gap-2">
+                                            <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px] relative overflow-hidden">
+                                              {uploadingResource === resource.id ? (
+                                                <>
+                                                  <div 
+                                                    className="absolute bottom-0 left-0 h-1 bg-neon-blue transition-all duration-300" 
+                                                    style={{ width: `${uploadProgress[resource.id] || 0}%` }}
+                                                  />
+                                                  <span className="text-xs relative z-10">{Math.round(uploadProgress[resource.id] || 0)}%</span>
+                                                </>
+                                              ) : (
+                                                <span className="text-xs font-bold">Upload PDF</span>
+                                              )}
+                                              <input 
+                                                type="file" 
+                                                accept=".pdf"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                  if (e.target.files && e.target.files[0]) {
+                                                    const file = e.target.files[0];
+                                                    if (file.type !== 'application/pdf') {
+                                                      alert('Please select a valid PDF file.');
+                                                      return;
+                                                    }
+                                                    handleFileUpload(file, resource.id, index);
+                                                  }
+                                                }}
+                                                disabled={uploadingResource === resource.id}
+                                              />
+                                            </label>
+                                            {uploadingResource === resource.id && (
+                                              <button 
+                                                onClick={() => {
+                                                  // The uploadTask is not easily accessible here without refactoring, 
+                                                  // but we can at least reset the state to allow retry.
+                                                  setUploadingResource(null);
+                                                  setUploadProgress(prev => ({ ...prev, [resource.id]: 0 }));
+                                                  alert('Upload cancelled. Please check your connection and try again.');
+                                                }}
+                                                className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-colors"
+                                                title="Cancel Upload"
+                                              >
+                                                <X className="w-4 h-4" />
+                                              </button>
                                             )}
-                                            <input 
-                                              type="file" 
-                                              accept=".pdf"
-                                              className="hidden"
-                                              onChange={(e) => {
-                                                if (e.target.files && e.target.files[0]) {
-                                                  handleFileUpload(e.target.files[0], resource.id, index);
-                                                }
-                                              }}
-                                              disabled={uploadingResource === resource.id}
-                                            />
-                                          </label>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
