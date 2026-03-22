@@ -1,5 +1,5 @@
 import React from 'react';
-import { Github, Twitter, Instagram, Mail, Heart } from 'lucide-react';
+import { Mail, Heart } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -12,17 +12,6 @@ export default function Footer() {
             Empowering students with futuristic learning tools and high-quality study materials. 
             Join our mission to revolutionize education.
           </p>
-          <div className="flex gap-4">
-            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-neon-blue/20 hover:text-neon-blue transition-all">
-              <Twitter className="w-5 h-5" />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-neon-blue/20 hover:text-neon-blue transition-all">
-              <Instagram className="w-5 h-5" />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-neon-blue/20 hover:text-neon-blue transition-all">
-              <Github className="w-5 h-5" />
-            </a>
-          </div>
         </div>
         
         <div>
@@ -38,7 +27,7 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-bold mb-4">Contact</h4>
           <ul className="space-y-2 text-white/50">
-            <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> support@vijayninama.com</li>
+            <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> vijayninam683@gmail.com</li>
             <li className="text-xs mt-4">Made with <Heart className="w-3 h-3 inline text-neon-pink" /> for students worldwide.</li>
           </ul>
         </div>

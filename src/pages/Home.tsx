@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Class } from '../types';
 import { getClasses } from '../services/dataService';
 
@@ -9,12 +9,24 @@ export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [displayText, setDisplayText] = useState('');
+  const location = useLocation();
   const fullText = "The Future of Learning is Here.";
 
   useEffect(() => {
     const unsubscribe = getClasses(setClasses);
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/classes') {
+      setTimeout(() => {
+        const el = document.getElementById('classes-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else if (location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     let i = 0;
@@ -78,7 +90,7 @@ export default function Home() {
       </section>
 
       {/* Class Grid */}
-      <section className="max-w-7xl mx-auto">
+      <section id="classes-section" className="max-w-7xl mx-auto scroll-mt-24">
         <div className="flex items-center justify-between mb-10">
           <h2 className="text-3xl font-display font-bold flex items-center gap-3">
             <GraduationCap className="text-neon-blue" />

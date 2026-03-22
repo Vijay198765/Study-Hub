@@ -107,6 +107,9 @@ export default function ChapterDetail() {
     if (url.includes('drive.google.com')) {
       return url.replace('/view', '/preview').replace('/edit', '/preview');
     }
+    if (url.includes('firebasestorage.googleapis.com')) {
+      return url;
+    }
     if (url.toLowerCase().endsWith('.pdf')) {
       return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
     }

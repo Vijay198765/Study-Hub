@@ -8,6 +8,8 @@ import {
   ArrowUp, ArrowDown
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { storage } from '../firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
@@ -40,6 +42,39 @@ export default function AdminPanel() {
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user', id: string, name: string } | null>(null);
+  const [uploadingResource, setUploadingResource] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+
+  const handleFileUpload = async (file: File, resourceId: string, index: number) => {
+    if (!file) return;
+    
+    setUploadingResource(resourceId);
+    
+    const storageRef = ref(storage, `resources/${Date.now()}_${file.name}`);
+    const metadata = {
+      contentType: file.type || 'application/pdf',
+    };
+    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(prev => ({ ...prev, [resourceId]: progress }));
+      }, 
+      (error) => {
+        console.error("Upload failed:", error);
+        setUploadingResource(null);
+        alert("Failed to upload file.");
+      }, 
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        const newResources = [...editingEntity.resources];
+        newResources[index].url = downloadURL;
+        setEditingEntity({ ...editingEntity, resources: newResources });
+        setUploadingResource(null);
+      }
+    );
+  };
 
   // Load initial data
   useEffect(() => {
@@ -875,17 +910,38 @@ export default function AdminPanel() {
                                         </select>
                                       </div>
                                       <div className="md:col-span-2 space-y-2">
-                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">URL / Link</label>
-                                        <input 
-                                          type="text" 
-                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
-                                          value={resource.url}
-                                          onChange={(e) => {
-                                            const newResources = [...editingEntity.resources];
-                                            newResources[index].url = e.target.value;
-                                            setEditingEntity({ ...editingEntity, resources: newResources });
-                                          }}
-                                        />
+                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">URL / Link or Upload PDF</label>
+                                        <div className="flex gap-2">
+                                          <input 
+                                            type="text" 
+                                            className="flex-grow bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
+                                            value={resource.url}
+                                            onChange={(e) => {
+                                              const newResources = [...editingEntity.resources];
+                                              newResources[index].url = e.target.value;
+                                              setEditingEntity({ ...editingEntity, resources: newResources });
+                                            }}
+                                            placeholder="Enter URL or upload a file"
+                                          />
+                                          <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px]">
+                                            {uploadingResource === resource.id ? (
+                                              <span className="text-xs">{Math.round(uploadProgress[resource.id] || 0)}%</span>
+                                            ) : (
+                                              <span className="text-xs font-bold">Upload PDF</span>
+                                            )}
+                                            <input 
+                                              type="file" 
+                                              accept=".pdf"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                  handleFileUpload(e.target.files[0], resource.id, index);
+                                                }
+                                              }}
+                                              disabled={uploadingResource === resource.id}
+                                            />
+                                          </label>
+                                        </div>
                                       </div>
                                     </div>
                                     <button 

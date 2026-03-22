@@ -17,7 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 
 // --- Types ---
-type GameState = 'start' | 'playing' | 'end';
+type GameState = 'start' | 'memorizing' | 'playing' | 'end';
 
 interface Game {
   id: string;
@@ -188,16 +188,21 @@ const MemoryMatrix = () => {
   const initGame = () => {
     const deck = [...icons, ...icons]
       .sort(() => Math.random() - 0.5)
-      .map((value, index) => ({ id: index, value, flipped: false, matched: false }));
+      .map((value, index) => ({ id: index, value, flipped: true, matched: false }));
     setCards(deck);
     setFlippedIndices([]);
     setMoves(0);
     setMatches(0);
-    setGameState('playing');
+    setGameState('memorizing');
+
+    setTimeout(() => {
+      setCards(prev => prev.map(c => ({ ...c, flipped: false })));
+      setGameState('playing');
+    }, 3000);
   };
 
   const handleCardClick = (index: number) => {
-    if (flippedIndices.length === 2 || cards[index].flipped || cards[index].matched) return;
+    if (gameState !== 'playing' || flippedIndices.length === 2 || cards[index].flipped || cards[index].matched) return;
 
     const newCards = [...cards];
     newCards[index].flipped = true;
@@ -245,12 +250,17 @@ const MemoryMatrix = () => {
         </div>
       )}
 
-      {gameState === 'playing' && (
+      {(gameState === 'playing' || gameState === 'memorizing') && (
         <div className="w-full max-w-md">
           <div className="flex justify-between mb-8 text-xl font-mono">
             <span>Matches: {matches}/{icons.length}</span>
             <span>Moves: {moves}</span>
           </div>
+          {gameState === 'memorizing' && (
+            <div className="text-center text-yellow-400 mb-4 animate-pulse font-bold">
+              Memorize the cards!
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-3">
             {cards.map((card, idx) => (
               <motion.div
@@ -461,7 +471,7 @@ const SpeedClicker = () => {
             initial={false}
             animate={{ top: targetPos.top, left: targetPos.left }}
             onClick={handleClick}
-            className="absolute w-16 h-16 rounded-full bg-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)] border-4 border-white flex items-center justify-center -translate-x-1/2 -translate-y-1/2 z-10"
+            className="absolute w-16 h-16 rounded-full bg-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.6)] border-4 border-white flex items-center justify-center -translate-x-1/2 -translate-y-1/2 z-30"
           >
             <Target className="text-white" />
           </motion.button>
@@ -488,7 +498,7 @@ const WordScramble = () => {
   const [word, setWord] = useState({ original: '', scrambled: '' });
   const [userInput, setUserInput] = useState('');
 
-  const words = ['REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'FIREBASE', 'STUDY', 'LEARNING', 'EDUCATION', 'KNOWLEDGE', 'FUTURE'];
+  const words = ['REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'FIREBASE', 'STUDY', 'LEARNING', 'EDUCATION', 'KNOWLEDGE', 'FUTURE', 'MATH', 'BOOK', 'READ', 'TEST', 'EXAM', 'PASS', 'QUIZ', 'CODE', 'DATA', 'FILE', 'USER'];
 
   const generateWord = useCallback(() => {
     const original = words[Math.floor(Math.random() * words.length)];

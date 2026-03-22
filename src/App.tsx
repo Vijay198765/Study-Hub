@@ -12,6 +12,7 @@ import AdminPanel from './pages/AdminPanel';
 import StudyTips from './pages/StudyTips';
 import Games from './pages/Games';
 import ErrorBoundary from './components/ErrorBoundary';
+import WelcomeOverlay from './components/WelcomeOverlay';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -27,6 +28,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -34,6 +36,12 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
+    // Check if we need to show welcome screen
+    const hasSkipped = localStorage.getItem('hasSkippedLogin');
+    if (!hasSkipped && !auth.currentUser) {
+      setShowWelcome(true);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -56,6 +64,9 @@ export default function App() {
         setIsAdmin(false);
       }
       setLoading(false);
+      if (firebaseUser) {
+        setShowWelcome(false);
+      }
     });
 
     return () => unsubscribe();
@@ -71,6 +82,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
       <div className="flex flex-col min-h-screen relative overflow-hidden">
         {/* Background Watermark */}
         <div className="fixed inset-0 pointer-events-none z-[-1] flex items-center justify-center opacity-[0.03] select-none">
