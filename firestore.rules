@@ -122,6 +122,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (request.resource.data.role == 'student' || (request.resource.data.role == 'admin' && request.auth.token.email == "vijayninama683@gmail.com"));
       allow update: if isAdmin() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }

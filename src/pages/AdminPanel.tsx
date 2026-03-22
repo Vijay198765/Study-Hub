@@ -228,8 +228,8 @@ export default function AdminPanel() {
         <div className="glass-card p-6 min-h-[600px]">
           {activeTab === 'classes' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="relative flex-grow max-w-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input 
                     type="text" 
@@ -241,7 +241,7 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => addNew('class')}
-                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center gap-2"
+                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Plus size={20} />
                   Add Class
@@ -253,9 +253,9 @@ export default function AdminPanel() {
                     <motion.div 
                       key={cls.id}
                       layout
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group min-w-0 gap-4"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group gap-4"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="flex flex-col gap-1 shrink-0">
                           <button 
                             onClick={() => handleMove('class', index, 'up')}
@@ -272,12 +272,12 @@ export default function AdminPanel() {
                             <ArrowDown size={16} />
                           </button>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-medium text-white">{cls.name}</h3>
-                          <p className="text-xs text-white/40">ID: {cls.id}</p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium text-white truncate">{cls.name}</h3>
+                          <p className="text-xs text-white/40 truncate">ID: {cls.id}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <button 
                           onClick={() => saveClass({ ...cls, enabled: !cls.enabled })}
                           className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${cls.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
@@ -318,8 +318,8 @@ export default function AdminPanel() {
 
           {activeTab === 'subjects' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="w-full md:w-64">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-full sm:w-64">
                   <select 
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-purple outline-none transition-all"
                     value={selectedClassId}
@@ -331,7 +331,7 @@ export default function AdminPanel() {
                     ))}
                   </select>
                 </div>
-                <div className="relative flex-grow max-w-md">
+                <div className="relative flex-grow max-w-md w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input 
                     type="text" 
@@ -343,7 +343,7 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => addNew('subject')}
-                  className="btn-neon bg-neon-purple text-white px-6 py-2 flex items-center gap-2"
+                  className="btn-neon bg-neon-purple text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Plus size={20} />
                   Add Subject
@@ -361,9 +361,9 @@ export default function AdminPanel() {
                     <motion.div 
                       key={subject.id}
                       layout
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-purple/50 transition-all group min-w-0 gap-4"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-purple/50 transition-all group gap-4"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="flex flex-col gap-1 shrink-0">
                           <button 
                             onClick={() => handleMove('subject', index, 'up')}
@@ -380,12 +380,12 @@ export default function AdminPanel() {
                             <ArrowDown size={16} />
                           </button>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-medium text-white">{subject.name}</h3>
-                          <p className="text-xs text-white/40">ID: {subject.id}</p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium text-white truncate">{subject.name}</h3>
+                          <p className="text-xs text-white/40 truncate">ID: {subject.id}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <button 
                           onClick={() => saveSubject({ ...subject, enabled: !subject.enabled })}
                           className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${subject.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
@@ -427,8 +427,8 @@ export default function AdminPanel() {
 
           {activeTab === 'chapters' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="w-full md:w-48">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-full sm:w-48">
                   <select 
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
                     value={selectedClassId}
@@ -440,7 +440,7 @@ export default function AdminPanel() {
                     ))}
                   </select>
                 </div>
-                <div className="w-full md:w-48">
+                <div className="w-full sm:w-48">
                   <select 
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
                     value={selectedSubjectId}
@@ -453,7 +453,7 @@ export default function AdminPanel() {
                     ))}
                   </select>
                 </div>
-                <div className="relative flex-grow max-w-md">
+                <div className="relative flex-grow max-w-md w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input 
                     type="text" 
@@ -465,7 +465,7 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => addNew('chapter')}
-                  className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center gap-2"
+                  className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Plus size={20} />
                   Add Chapter
@@ -483,9 +483,9 @@ export default function AdminPanel() {
                     <motion.div 
                       key={chapter.id}
                       layout
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group min-w-0 gap-4"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="flex flex-col gap-1 shrink-0">
                           <button 
                             onClick={() => handleMove('chapter', index, 'up')}
@@ -502,17 +502,17 @@ export default function AdminPanel() {
                             <ArrowDown size={16} />
                           </button>
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-lg font-medium text-white">{chapter.name}</h3>
+                            <h3 className="text-lg font-medium text-white truncate">{chapter.name}</h3>
                             {chapter.isImportant && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink uppercase tracking-wider shrink-0">Important</span>
                             )}
                           </div>
-                          <p className="text-xs text-white/40">{chapter.resources?.length || 0} Resources • {chapter.quiz?.length || 0} Quiz Questions</p>
+                          <p className="text-xs text-white/40 truncate">{chapter.resources?.length || 0} Resources • {chapter.quiz?.length || 0} Quiz Questions</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <button 
                           onClick={() => saveChapter({ ...chapter, enabled: !chapter.enabled })}
                           className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${chapter.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
