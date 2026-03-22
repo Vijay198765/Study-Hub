@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, FileText, Download, Eye, HelpCircle, 
   CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw,
-  Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck
+  Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
+  ExternalLink, ChevronRight
 } from 'lucide-react';
 import { Class, Subject, Chapter } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
@@ -25,6 +26,8 @@ export default function ChapterDetail() {
   const [score, setScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
@@ -68,6 +71,13 @@ export default function ChapterDetail() {
   const handleOptionSelect = (idx: number) => {
     if (selectedOption !== null) return;
     setSelectedOption(idx);
+    
+    setUserAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIdx] = idx;
+      return next;
+    });
+
     if (idx === chapter.quiz[currentQuestionIdx].correctAnswer) {
       setScore(prev => prev + 1);
     }
@@ -89,6 +99,13 @@ export default function ChapterDetail() {
     setSelectedOption(null);
     setScore(0);
     setTimeLeft(60);
+    setUserAnswers([]);
+    setShowReview(false);
+  };
+
+  const startQuiz = () => {
+    setQuizStarted(true);
+    setUserAnswers(new Array(chapter.quiz.length).fill(null));
   };
 
   const getResourceIcon = (type: string) => {
@@ -104,13 +121,32 @@ export default function ChapterDetail() {
 
   const getPreviewUrl = (url: string) => {
     if (!url) return '';
+    // Handle Google Drive links
     if (url.includes('drive.google.com')) {
-      return url.replace('/view', '/preview').replace('/edit', '/preview');
-    }
-    if (url.includes('firebasestorage.googleapis.com')) {
+      // Convert /view or /edit to /preview
+      let baseUrl = url.split('?')[0];
+      if (baseUrl.endsWith('/view')) return baseUrl.replace('/view', '/preview');
+      if (baseUrl.endsWith('/edit')) return baseUrl.replace('/edit', '/preview');
+      
+      // Handle /file/d/ID/view?usp=sharing
+      if (url.includes('/file/d/')) {
+        const idMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+          return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+        }
+      }
+      
+      // Handle /d/ID/view
+      if (url.includes('/d/')) {
+        const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+          return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+        }
+      }
       return url;
     }
-    if (url.toLowerCase().endsWith('.pdf')) {
+    // For direct PDF links (including Firebase), Google Docs Viewer is often more reliable for iframes
+    if (url.toLowerCase().includes('.pdf') || url.includes('firebasestorage.googleapis.com')) {
       return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
     }
     return url;
@@ -131,19 +167,25 @@ export default function ChapterDetail() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to={`/class/${classId}/subject/${subjectId}`} className="inline-flex items-center gap-2 text-white/50 hover:text-neon-blue mb-8 transition-colors">
-          <ArrowLeft size={18} /> Back to {subject?.name || 'Subject'}
-        </Link>
+        <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
+          <Link to="/" className="hover:text-neon-blue transition-colors">Home</Link>
+          <ChevronRight size={12} />
+          <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
+          <ChevronRight size={12} />
+          <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
+          <ChevronRight size={12} />
+          <span className="text-white/60">{chapter.name}</span>
+        </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-4xl font-display font-bold">{chapter.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-display font-bold truncate">{chapter.name}</h1>
             </div>
-            <p className="text-white/50">{subject?.name} • {currentClass?.name}</p>
+            <p className="text-white/50 truncate">{subject?.name} • {currentClass?.name}</p>
           </div>
           
-          <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+          <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
             <button 
               onClick={() => setActiveTab('resources')}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'resources' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
@@ -169,32 +211,42 @@ export default function ChapterDetail() {
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               {enabledResources.map((res) => (
-                <div key={res.id} className="glass-card p-6 flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
+                <div key={res.id} className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4">
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                       {getResourceIcon(res.type)}
                     </div>
-                    <div>
-                      <h3 className="font-bold capitalize">{res.title}</h3>
-                      <p className="text-xs text-white/40 uppercase tracking-widest">{res.type}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold capitalize truncate" title={res.title}>{res.title}</h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest">{res.type}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <button 
                       onClick={() => setPreviewUrl(res.url)}
                       className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
                       title="Preview"
                     >
-                      <Eye size={18} />
-                      <span className="text-xs font-bold hidden sm:inline">Preview</span>
+                      <Eye size={16} />
+                      <span className="text-xs font-bold">Preview</span>
                     </button>
+                    <a 
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
+                      title="Open in New Tab"
+                    >
+                      <ExternalLink size={16} />
+                      <span className="text-xs font-bold hidden sm:inline">Open</span>
+                    </a>
                     <button 
                       onClick={() => handleDownload(res.url, res.title)}
                       className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
                       title="Download"
                     >
-                      <Download size={18} />
-                      <span className="text-xs font-bold hidden sm:inline">Download</span>
+                      <Download size={16} />
+                      <span className="text-xs font-bold hidden sm:inline">Save</span>
                     </button>
                   </div>
                 </div>
@@ -218,16 +270,24 @@ export default function ChapterDetail() {
                   <div className="w-20 h-20 rounded-full bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
                     <HelpCircle size={40} />
                   </div>
-                  <h2 className="text-3xl font-display font-bold mb-4">Ready for a Challenge?</h2>
-                  <p className="text-white/50 mb-8">
-                    Test your understanding of <strong>{chapter.name}</strong>. 
-                    You have 60 seconds to answer {chapter.quiz.length} questions.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onClick={() => setQuizStarted(true)} className="btn-neon px-10 py-3 text-lg">
-                      Start Quiz
-                    </button>
-                  </div>
+                  {chapter.quiz.length > 0 ? (
+                    <>
+                      <h2 className="text-3xl font-display font-bold mb-4">Ready for a Challenge?</h2>
+                      <p className="text-white/50 mb-8">
+                        Test your understanding of <strong>{chapter.name}</strong>. 
+                        You have 60 seconds to answer {chapter.quiz.length} questions.
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button onClick={startQuiz} className="btn-neon px-10 py-3 text-lg">
+                          Start Quiz
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="py-10">
+                      <p className="text-white/30 italic">No quiz questions available for this chapter yet.</p>
+                    </div>
+                  )}
                 </div>
               ) : quizFinished ? (
                 <div className="glass-card p-12 text-center">
@@ -245,10 +305,49 @@ export default function ChapterDetail() {
                     <button onClick={resetQuiz} className="btn-neon flex items-center gap-2">
                       <RefreshCcw size={18} /> Try Again
                     </button>
+                    <button 
+                      onClick={() => setShowReview(!showReview)} 
+                      className="px-6 py-2 rounded-full border border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 transition-all"
+                    >
+                      {showReview ? 'Hide Review' : 'Review Answers'}
+                    </button>
                     <button onClick={() => setActiveTab('resources')} className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-all">
                       Back to Resources
                     </button>
                   </div>
+
+                  {showReview && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mt-12 space-y-6 text-left"
+                    >
+                      <h3 className="text-xl font-bold border-b border-white/10 pb-4">Detailed Review</h3>
+                      {chapter.quiz.map((q, qIdx) => (
+                        <div key={qIdx} className="p-6 rounded-2xl bg-white/5 border border-white/10">
+                          <p className="font-bold mb-4 text-lg">{qIdx + 1}. {q.question}</p>
+                          <div className="grid gap-2">
+                            {q.options.map((opt, oIdx) => {
+                              const isCorrect = oIdx === q.correctAnswer;
+                              const isUserAnswer = oIdx === userAnswers[qIdx];
+                              
+                              let statusClass = "text-white/40";
+                              if (isCorrect) statusClass = "text-green-400 font-bold";
+                              else if (isUserAnswer && !isCorrect) statusClass = "text-red-400 line-through";
+
+                              return (
+                                <div key={oIdx} className={`flex items-center gap-2 text-sm ${statusClass}`}>
+                                  {isCorrect && <CheckCircle2 size={14} />}
+                                  {isUserAnswer && !isCorrect && <AlertCircle size={14} />}
+                                  {opt}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 </div>
               ) : (
                 <div className="glass-card p-8">
@@ -314,27 +413,59 @@ export default function ChapterDetail() {
             >
               <div className="w-full max-w-6xl h-[90vh] glass-card flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                  <div className="flex items-center gap-4">
-                    <h3 className="font-bold flex items-center gap-2">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <h3 className="font-bold flex items-center gap-2 text-sm md:text-base">
                       <Eye size={18} className="text-neon-blue" /> Document Preview
                     </h3>
-                    <button 
-                      onClick={() => handleDownload(previewUrl, 'document')}
-                      className="text-xs flex items-center gap-1 text-white/40 hover:text-green-400 transition-colors"
-                    >
-                      <Download size={14} /> Download PDF
-                    </button>
+                    <div className="hidden sm:flex items-center gap-2">
+                      <button 
+                        onClick={() => handleDownload(previewUrl, 'document')}
+                        className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/40 hover:text-green-400 transition-colors bg-white/5 px-2 py-1 rounded"
+                      >
+                        <Download size={12} /> Save
+                      </button>
+                      <a 
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/40 hover:text-neon-purple transition-colors bg-white/5 px-2 py-1 rounded"
+                      >
+                        <ExternalLink size={12} /> Open Full
+                      </a>
+                    </div>
                   </div>
-                  <button onClick={() => setPreviewUrl(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                  <button onClick={() => setPreviewUrl(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white">
                     <X size={24} />
                   </button>
                 </div>
-                <div className="flex-1 bg-[#525659]">
+                <div className="flex-1 bg-[#525659] relative">
+                  <div className="absolute inset-0 flex items-center justify-center text-white/20 pointer-events-none">
+                    <div className="text-center">
+                      <RefreshCcw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                      <p className="text-xs">Loading Preview...</p>
+                    </div>
+                  </div>
                   <iframe 
                     src={getPreviewUrl(previewUrl)} 
-                    className="w-full h-full border-none"
+                    className="w-full h-full border-none relative z-10"
                     title="PDF Preview"
                   />
+                </div>
+                <div className="p-3 bg-black/40 border-t border-white/10 flex sm:hidden justify-center gap-4">
+                  <button 
+                    onClick={() => handleDownload(previewUrl, 'document')}
+                    className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/60"
+                  >
+                    <Download size={14} /> Save
+                  </button>
+                  <a 
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/60"
+                  >
+                    <ExternalLink size={14} /> Open Full
+                  </a>
                 </div>
               </div>
             </motion.div>

@@ -35,6 +35,7 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
       }
       
       localStorage.setItem('studentName', result.user.displayName || name || 'Student');
+      localStorage.removeItem('hasSkippedLogin');
       onComplete();
     } catch (error) {
       console.error("Login error:", error);

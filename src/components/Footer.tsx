@@ -27,7 +27,7 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-bold mb-4">Contact</h4>
           <ul className="space-y-2 text-white/50">
-            <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> vijayninam683@gmail.com</li>
+            <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> vijayninama683@gmail.com</li>
             <li className="text-xs mt-4">Made with <Heart className="w-3 h-3 inline text-neon-pink" /> for students worldwide.</li>
           </ul>
         </div>

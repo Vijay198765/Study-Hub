@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronDown, Search, Users, 
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage } from '../firebase';
@@ -934,32 +934,101 @@ export default function AdminPanel() {
                                           <option value="test" className="bg-dark-bg">Test</option>
                                         </select>
                                       </div>
-                                      <div className="md:col-span-2 space-y-2">
-                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">URL / Link or Upload PDF</label>
-                                        <div className="flex gap-2">
-                                          <input 
-                                            type="text" 
-                                            className="flex-grow bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
-                                            value={resource.url}
-                                            onChange={(e) => {
-                                              const newResources = [...editingEntity.resources];
-                                              newResources[index].url = e.target.value;
-                                              setEditingEntity({ ...editingEntity, resources: newResources });
-                                            }}
-                                            placeholder="Enter URL or upload a file"
-                                          />
-                                          <div className="flex items-center gap-2">
-                                            <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px] relative overflow-hidden">
+                                      <div className="md:col-span-2 space-y-4">
+                                        <div className="p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-2xl">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-8 h-8 rounded-lg bg-neon-blue/20 flex items-center justify-center text-neon-blue">
+                                              <ExternalLink size={18} />
+                                            </div>
+                                            <div>
+                                              <h4 className="text-sm font-bold text-white">Drive Link System</h4>
+                                              <p className="text-[10px] text-white/40 uppercase tracking-widest">Recommended Alternative</p>
+                                            </div>
+                                          </div>
+                                          <p className="text-xs text-white/60 mb-3 leading-relaxed">
+                                            Since your Firebase Storage is not yet provisioned (as seen in your screenshot), we recommend using **Google Drive**. Just paste the "Anyone with link" URL below.
+                                          </p>
+                                          <div className="flex flex-wrap gap-2">
+                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">Auto-Preview</span>
+                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">No Upload Limit</span>
+                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">Faster Loading</span>
+                                          </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
+                                            <button 
+                                              onClick={() => alert("1. Upload PDF to Google Drive\n2. Right-click > Share\n3. Set to 'Anyone with the link'\n4. Copy and paste here!\n\nOur system will automatically fix the link for a perfect preview.")}
+                                              className="text-[10px] text-neon-blue hover:underline flex items-center gap-1"
+                                            >
+                                              <Info size={10} /> How to get Drive link?
+                                            </button>
+                                          </div>
+                                          <div className="flex flex-col sm:flex-row gap-2">
+                                            <div className="relative flex-grow">
+                                              <input 
+                                                type="text" 
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white outline-none focus:border-neon-blue transition-all font-mono"
+                                                value={resource.url}
+                                                onChange={(e) => {
+                                                  const newResources = [...editingEntity.resources];
+                                                  newResources[index].url = e.target.value;
+                                                  setEditingEntity({ ...editingEntity, resources: newResources });
+                                                }}
+                                                placeholder="Paste Google Drive link (e.g. https://drive.google.com/...)"
+                                              />
+                                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                {resource.url && (
+                                                  <div className="flex items-center gap-1">
+                                                    <button 
+                                                      onClick={() => {
+                                                        navigator.clipboard.writeText(resource.url);
+                                                        alert('Link copied!');
+                                                      }}
+                                                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-neon-blue"
+                                                      title="Copy Link"
+                                                    >
+                                                      <Plus size={12} className="rotate-45" />
+                                                    </button>
+                                                    <a 
+                                                      href={resource.url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-neon-purple"
+                                                      title="Test Link"
+                                                    >
+                                                      <Eye size={12} />
+                                                    </a>
+                                                  </div>
+                                                )}
+                                                {resource.url.includes('drive.google.com') ? <ExternalLink size={14} className="text-neon-blue" /> : <Layers size={14} className="text-white/20" />}
+                                              </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 my-2">
+                                              <div className="h-px flex-grow bg-white/10"></div>
+                                              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">OR UPLOAD TO FIREBASE</span>
+                                              <div className="h-px flex-grow bg-white/10"></div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                            <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px] relative overflow-hidden h-full">
                                               {uploadingResource === resource.id ? (
                                                 <>
                                                   <div 
                                                     className="absolute bottom-0 left-0 h-1 bg-neon-blue transition-all duration-300" 
                                                     style={{ width: `${uploadProgress[resource.id] || 0}%` }}
                                                   />
-                                                  <span className="text-xs relative z-10">{Math.round(uploadProgress[resource.id] || 0)}%</span>
+                                                  <span className="text-xs relative z-10 flex items-center gap-2">
+                                                    <RefreshCcw className="w-3 h-3 animate-spin" />
+                                                    {Math.round(uploadProgress[resource.id] || 0)}%
+                                                  </span>
                                                 </>
                                               ) : (
-                                                <span className="text-xs font-bold">Upload PDF</span>
+                                                <span className="text-xs font-bold flex items-center gap-2">
+                                                  <Upload size={14} /> Upload PDF
+                                                </span>
                                               )}
                                               <input 
                                                 type="file" 
@@ -978,21 +1047,30 @@ export default function AdminPanel() {
                                                 disabled={uploadingResource === resource.id}
                                               />
                                             </label>
-                                            {uploadingResource === resource.id && (
-                                              <button 
-                                                onClick={() => {
-                                                  // The uploadTask is not easily accessible here without refactoring, 
-                                                  // but we can at least reset the state to allow retry.
-                                                  setUploadingResource(null);
-                                                  setUploadProgress(prev => ({ ...prev, [resource.id]: 0 }));
-                                                  alert('Upload cancelled. Please check your connection and try again.');
-                                                }}
-                                                className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-colors"
-                                                title="Cancel Upload"
-                                              >
-                                                <X className="w-4 h-4" />
-                                              </button>
-                                            )}
+                                              {uploadingResource === resource.id && (
+                                                <button 
+                                                  onClick={() => {
+                                                    setUploadingResource(null);
+                                                    setUploadProgress(prev => ({ ...prev, [resource.id]: 0 }));
+                                                    alert('Upload cancelled.');
+                                                  }}
+                                                  className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-colors"
+                                                >
+                                                  <X className="w-4 h-4" />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-[9px] text-white/20 italic">
+                                              * Note: Direct upload requires Firebase Storage setup (see your screenshot).
+                                            </p>
+                                            <button 
+                                              onClick={() => alert("FIREBASE STORAGE FIX:\n1. Go to your Firebase Console > Storage.\n2. Click 'Get started' (as shown in your screenshot).\n3. Choose 'Start in test mode' and a location.\n4. Once created, uploads will work!")}
+                                              className="text-[9px] text-neon-pink hover:underline font-bold"
+                                            >
+                                              Fix 0% Upload Issue
+                                            </button>
                                           </div>
                                         </div>
                                       </div>

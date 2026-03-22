@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2 } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
+import SearchModal from './SearchModal';
 
 interface NavbarProps {
   isAdmin: boolean;
@@ -14,6 +15,7 @@ interface NavbarProps {
 export default function Navbar({ isAdmin, user }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,6 +59,13 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="p-2 text-white/70 hover:text-neon-blue transition-colors flex items-center gap-2 text-sm font-medium"
+          >
+            <Search className="w-4 h-4" />
+            Search
+          </button>
           {navLinks.map((link) => (
             <Link
               key={link.path}
@@ -88,10 +97,17 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
         </div>
 
         {/* Mobile Toggle */}
-        <button className="md:hidden text-white" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X /> : <Menu />}
-        </button>
+        <div className="flex items-center gap-4 md:hidden">
+          <button onClick={() => setIsSearchOpen(true)} className="text-white/70 hover:text-neon-blue p-2">
+            <Search size={20} />
+          </button>
+          <button className="text-white" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
+
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Mobile Nav */}
       <AnimatePresence>
