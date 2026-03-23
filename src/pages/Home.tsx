@@ -5,6 +5,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Class, TestResult } from '../types';
 import { getClasses, getGlobalLeaderboard } from '../services/dataService';
 
+import { calculateRanks } from '../utils/ranking';
+
 export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
@@ -193,36 +195,40 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 glass-card p-8">
               <div className="space-y-4">
-                {leaderboard.map((result, idx) => (
-                  <motion.div
-                    key={result.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 ${
-                        idx === 0 ? 'bg-yellow-500 text-black' :
-                        idx === 1 ? 'bg-gray-300 text-black' :
-                        idx === 2 ? 'bg-amber-600 text-black' :
-                        'bg-white/10 text-white/60'
-                      }`}>
-                        {idx + 1}
+                {(() => {
+                  const displayLeaderboard = leaderboard.slice(0, 10);
+                  const ranks = calculateRanks(displayLeaderboard);
+                  return displayLeaderboard.map((result, idx) => (
+                    <motion.div
+                      key={result.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 ${
+                          ranks[idx] === 1 ? 'bg-yellow-500 text-black' :
+                          ranks[idx] === 2 ? 'bg-gray-300 text-black' :
+                          ranks[idx] === 3 ? 'bg-amber-600 text-black' :
+                          'bg-white/10 text-white/60'
+                        }`}>
+                          {ranks[idx]}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold truncate" title={result.studentName}>{result.studentName}</div>
+                          <div className="text-xs text-white/40 truncate">{result.testTitle}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-bold truncate" title={result.studentName}>{result.studentName}</div>
-                        <div className="text-xs text-white/40 truncate">{result.testTitle}</div>
+                      <div className="text-right shrink-0 ml-4">
+                        <div className="text-neon-blue font-bold">{result.score}%</div>
+                        <div className="text-[10px] text-white/20 uppercase tracking-widest">
+                          {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <div className="text-neon-blue font-bold">{result.score}%</div>
-                      <div className="text-[10px] text-white/20 uppercase tracking-widest">
-                        {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ));
+                })()}
               </div>
             </div>
             <div className="glass-card p-8 flex flex-col items-center justify-center text-center">

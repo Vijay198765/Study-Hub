@@ -4,6 +4,7 @@ import { ClipboardList, Trophy, Timer, CheckCircle2, XCircle, ArrowRight, Star, 
 import { getTests, saveTestResult, getTestResults } from '../services/dataService';
 import { Test, TestResult } from '../types';
 import { auth } from '../firebase';
+import { calculateRanks } from '../utils/ranking';
 
 export default function Tests() {
   const [tests, setTests] = useState<Test[]>([]);
@@ -18,6 +19,16 @@ export default function Tests() {
   const [studentName, setStudentName] = useState(localStorage.getItem('student_name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [testToStart, setTestToStart] = useState<Test | null>(null);
+
+  useEffect(() => {
+    if (auth.currentUser && !studentName) {
+      const name = auth.currentUser.displayName || '';
+      if (name) {
+        setStudentName(name);
+        localStorage.setItem('student_name', name);
+      }
+    }
+  }, [auth.currentUser]);
 
   useEffect(() => {
     const unsub = getTests((data) => {
@@ -53,8 +64,10 @@ export default function Tests() {
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (studentName.trim() && testToStart) {
-      localStorage.setItem('student_name', studentName.trim());
+    const trimmedName = studentName.trim();
+    if (trimmedName && testToStart) {
+      localStorage.setItem('student_name', trimmedName);
+      setStudentName(trimmedName);
       const test = testToStart;
       setTestToStart(null);
       setShowNamePrompt(false);
@@ -95,16 +108,29 @@ export default function Tests() {
     setTestCompleted(true);
 
     // Save result
+    const nameToSave = studentName.trim() || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Anonymous';
+    
     const result: TestResult = {
       id: crypto.randomUUID(),
       testId: activeTest.id,
       testTitle: activeTest.title,
-      studentName: studentName || (auth.currentUser?.displayName || auth.currentUser?.email || 'Anonymous'),
+      studentName: nameToSave,
       score: Math.round((finalScore / activeTest.questions.length) * 100),
       total: activeTest.questions.length,
       completedAt: new Date()
     };
-    await saveTestResult(result);
+    
+    try {
+      await saveTestResult(result);
+      // Refresh leaderboard for the current test
+      const unsub = getTestResults(activeTest.id, (results) => {
+        setLeaderboard(results);
+      });
+      // We don't need to keep this unsub as it's just a one-time refresh or short-lived
+      setTimeout(unsub, 2000); 
+    } catch (error) {
+      console.error("Error saving test result:", error);
+    }
   };
 
   if (loading) {
@@ -174,59 +200,108 @@ export default function Tests() {
           )}
         </AnimatePresence>
 
-        {!activeTest ? (
+        {(!activeTest || testCompleted) ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Test List */}
+            {/* Test List or Results */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-neon-blue/20 flex items-center justify-center text-neon-blue">
-                  <ClipboardList size={28} />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-display font-bold text-white">Available Tests</h1>
-                  <p className="text-white/40">Test your knowledge and climb the leaderboard</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                {tests.map((test) => (
-                  <motion.div 
-                    key={test.id}
-                    whileHover={{ scale: 1.01 }}
-                    className={`p-6 bg-white/5 border rounded-2xl transition-all cursor-pointer ${selectedTest?.id === test.id ? 'border-neon-blue bg-neon-blue/5' : 'border-white/10 hover:border-white/20'}`}
-                    onClick={() => setSelectedTest(test)}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/60">
-                          <Medal size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-medium text-white">{test.title}</h3>
-                          <p className="text-sm text-white/40">
-                            {test.questions.length} Questions • {test.questions.length * 1} min
-                          </p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startTest(test);
-                        }}
-                        className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center gap-2"
-                      >
-                        Start <ArrowRight size={18} />
-                      </button>
+              {testCompleted && activeTest ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="glass-card p-8 text-center space-y-8"
+                >
+                  <div className="relative inline-block">
+                    <div className="w-24 h-24 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue mx-auto mb-4">
+                      <Trophy size={48} />
                     </div>
-                  </motion.div>
-                ))}
-                {tests.length === 0 && (
-                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
-                    <ClipboardList size={48} className="mx-auto text-white/10 mb-4" />
-                    <p className="text-white/30 italic">No active tests available at the moment.</p>
+                    <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-neon-pink flex items-center justify-center text-white shadow-lg">
+                      <Star size={16} />
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white mb-2">Test Completed!</h2>
+                    <p className="text-white/40">Great job, <span className="text-neon-blue font-bold">{studentName}</span>! Here's your performance:</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                      <p className="text-[10px] font-bold text-white/40 uppercase mb-1">Score</p>
+                      <p className="text-3xl font-bold text-neon-blue">{score}/{activeTest.questions.length}</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                      <p className="text-[10px] font-bold text-white/40 uppercase mb-1">Accuracy</p>
+                      <p className="text-3xl font-bold text-neon-pink">
+                        {Math.round((score / activeTest.questions.length) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <button 
+                      onClick={() => {
+                        setActiveTest(null);
+                        setTestCompleted(false);
+                      }}
+                      className="btn-neon bg-neon-blue text-black px-12 py-3 font-bold w-full sm:w-auto"
+                    >
+                      Back to All Tests
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-neon-blue/20 flex items-center justify-center text-neon-blue">
+                      <ClipboardList size={28} />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-display font-bold text-white">Available Tests</h1>
+                      <p className="text-white/40">Test your knowledge and climb the leaderboard</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4">
+                    {tests.map((test) => (
+                      <motion.div 
+                        key={test.id}
+                        whileHover={{ scale: 1.01 }}
+                        className={`p-6 bg-white/5 border rounded-2xl transition-all cursor-pointer ${selectedTest?.id === test.id ? 'border-neon-blue bg-neon-blue/5' : 'border-white/10 hover:border-white/20'}`}
+                        onClick={() => setSelectedTest(test)}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/60">
+                              <Medal size={20} />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-medium text-white">{test.title}</h3>
+                              <p className="text-sm text-white/40">
+                                {test.questions.length} Questions • {test.questions.length * 1} min
+                              </p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startTest(test);
+                            }}
+                            className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center gap-2"
+                          >
+                            Start <ArrowRight size={18} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {tests.length === 0 && (
+                      <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                        <ClipboardList size={48} className="mx-auto text-white/10 mb-4" />
+                        <p className="text-white/30 italic">No active tests available at the moment.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Leaderboard Sidebar */}
@@ -237,37 +312,44 @@ export default function Tests() {
                   <h2 className="text-xl font-bold text-white">Leaderboard</h2>
                 </div>
 
-                {selectedTest ? (
+                {(selectedTest || (testCompleted && activeTest)) ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-white/40 mb-4">Top performers for: <span className="text-neon-blue">{selectedTest.title}</span></p>
+                    <p className="text-sm text-white/40 mb-4">Top performers for: <span className="text-neon-blue">{(testCompleted && activeTest) ? activeTest.title : selectedTest?.title}</span></p>
                     {leaderboard.length > 0 ? (
                       <div className="space-y-3">
-                        {leaderboard.slice(0, 10).map((result, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-neon-blue/30 transition-all">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                idx === 0 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
-                                idx === 1 ? 'bg-slate-300 text-black' : 
-                                idx === 2 ? 'bg-amber-600 text-white' : 
-                                'bg-white/10 text-white/40'
-                              }`}>
-                                {idx + 1}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-sm text-white font-medium truncate" title={result.studentName}>{result.studentName}</p>
-                                <p className="text-[10px] text-white/20 uppercase tracking-tighter">
-                                  {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}
-                                </p>
+                        {(() => {
+                          const displayLeaderboard = leaderboard.slice(0, 10);
+                          const ranks = calculateRanks(displayLeaderboard);
+                          return displayLeaderboard.map((result, idx) => (
+                            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentName === studentName ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                  ranks[idx] === 1 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
+                                  ranks[idx] === 2 ? 'bg-slate-300 text-black' : 
+                                  ranks[idx] === 3 ? 'bg-amber-600 text-white' : 
+                                  'bg-white/10 text-white/40'
+                                }`}>
+                                  {ranks[idx]}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className={`text-sm font-medium truncate ${result.studentName === studentName ? 'text-neon-blue' : 'text-white'}`} title={result.studentName}>
+                                    {result.studentName}
+                                    {result.studentName === studentName && <span className="ml-2 text-[8px] uppercase bg-neon-blue/20 px-1 rounded">You</span>}
+                                  </p>
+                                  <p className="text-[10px] text-white/20 uppercase tracking-tighter">
+                                    {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0 ml-2">
+                                <div className="flex items-center gap-1 text-neon-blue font-bold">
+                                  <span>{result.score}</span>
+                                  <span className="text-[10px] text-white/40">/{result.total}</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right shrink-0 ml-2">
-                              <div className="flex items-center gap-1 text-neon-blue font-bold">
-                                <span>{result.score}</span>
-                                <span className="text-[10px] text-white/40">/{result.total}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                          ));
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-10 opacity-40 italic text-sm">
@@ -397,16 +479,14 @@ export default function Tests() {
 
                   <div className="space-y-4 pt-8">
                     <button 
-                      onClick={() => setActiveTest(null)}
+                      onClick={() => {
+                        setActiveTest(null);
+                        setTestCompleted(false);
+                      }}
                       className="btn-neon bg-neon-blue text-black px-12 py-4 text-lg font-bold w-full sm:w-auto"
                     >
                       Back to Tests
                     </button>
-                    {!auth.currentUser && (
-                      <p className="text-xs text-white/30 italic">
-                        Note: You must be logged in to save your results to the leaderboard.
-                      </p>
-                    )}
                   </div>
                 </motion.div>
               )}
