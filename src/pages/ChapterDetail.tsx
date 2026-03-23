@@ -174,15 +174,15 @@ export default function ChapterDetail() {
           <ChevronRight size={12} />
           <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
           <ChevronRight size={12} />
-          <span className="text-white/60">{chapter.name}</span>
+          <span className="text-white/60 break-words">{chapter.name}</span>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl md:text-4xl font-display font-bold truncate">{chapter.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-display font-bold break-words">{chapter.name}</h1>
             </div>
-            <p className="text-white/50 truncate">{subject?.name} • {currentClass?.name}</p>
+            <p className="text-white/50 break-words">{subject?.name} • {currentClass?.name}</p>
           </div>
           
           <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">

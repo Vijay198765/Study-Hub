@@ -50,13 +50,13 @@ export default function SubjectDetail() {
           <ChevronRight size={12} />
           <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
           <ChevronRight size={12} />
-          <span className="text-white/60">{subject.name}</span>
+          <span className="text-white/60 break-words">{subject.name}</span>
         </div>
 
         <div className="glass-card p-6 md:p-8 mb-8 md:mb-12 relative overflow-hidden">
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-neon-blue/10 rounded-full blur-3xl"></div>
           <div className="relative z-10">
-            <h1 className="text-3xl md:text-4xl font-display font-bold mb-2 truncate">{subject.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-display font-bold mb-2 break-words">{subject.name}</h1>
             <p className="text-sm md:text-base text-white/50">Comprehensive chapter-wise study resources and practice papers.</p>
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function SubjectDetail() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="text-lg md:text-xl font-bold group-hover:neon-text transition-colors truncate max-w-[200px] md:max-w-none" title={chapter.name}>
+                        <h3 className="text-lg md:text-xl font-bold group-hover:neon-text transition-colors break-words" title={chapter.name}>
                           {chapter.name}
                         </h3>
                         {chapter.isImportant && (

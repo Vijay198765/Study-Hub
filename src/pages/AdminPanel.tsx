@@ -333,7 +333,7 @@ export default function AdminPanel() {
                           </button>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-medium text-white truncate">{cls.name}</h3>
+                          <h3 className="text-lg font-medium text-white break-words">{cls.name}</h3>
                           <p className="text-xs text-white/40 truncate">ID: {cls.id}</p>
                         </div>
                       </div>
@@ -441,7 +441,7 @@ export default function AdminPanel() {
                           </button>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-medium text-white truncate">{subject.name}</h3>
+                          <h3 className="text-lg font-medium text-white break-words">{subject.name}</h3>
                           <p className="text-xs text-white/40 truncate">ID: {subject.id}</p>
                         </div>
                       </div>
@@ -564,7 +564,7 @@ export default function AdminPanel() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-lg font-medium text-white truncate">{chapter.name}</h3>
+                            <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
                             {chapter.isImportant && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink uppercase tracking-wider shrink-0">Important</span>
                             )}
