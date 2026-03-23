@@ -34,6 +34,9 @@ const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('classes');
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void, singleButton?: boolean } | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -57,7 +60,7 @@ export default function AdminPanel() {
     
     // Limit file size to 10MB for better performance and to prevent hanging
     if (file.size > 10 * 1024 * 1024) {
-      alert("File is too large. Please upload a PDF smaller than 10MB.");
+      setToast({ message: "File is too large. Please upload a PDF smaller than 10MB.", type: 'error' });
       return;
     }
 
@@ -90,7 +93,7 @@ export default function AdminPanel() {
           } else {
             message += "Please check your internet connection and try again.";
           }
-          alert(message);
+          setToast({ message, type: 'error' });
         }, 
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -104,9 +107,17 @@ export default function AdminPanel() {
     } catch (err) {
       console.error("Error initiating upload:", err);
       setUploadingResource(null);
-      alert("An unexpected error occurred while starting the upload.");
+      setToast({ message: "An unexpected error occurred while starting the upload.", type: 'error' });
     }
   };
+
+  // Toast timer
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Load initial data
   useEffect(() => {
@@ -225,13 +236,13 @@ export default function AdminPanel() {
     
     if (type === 'subject') {
       if (!selectedClassId) {
-        alert("Please select a class first");
+        setToast({ message: "Please select a class first", type: 'error' });
         return;
       }
       newEntity.classId = selectedClassId;
     } else if (type === 'chapter') {
       if (!selectedSubjectId) {
-        alert("Please select a subject first");
+        setToast({ message: "Please select a subject first", type: 'error' });
         return;
       }
       newEntity.subjectId = selectedSubjectId;
@@ -241,7 +252,7 @@ export default function AdminPanel() {
       newEntity.isImportant = false;
     } else if (type === 'test') {
       if (tests.length > 0) {
-        alert("Only one test can exist at a time. Please delete the existing test before creating a new one.");
+        setToast({ message: "Only one test can exist at a time. Please delete the existing test before creating a new one.", type: 'error' });
         return;
       }
       newEntity = {
@@ -766,10 +777,20 @@ export default function AdminPanel() {
                         </div>
                       </div>
                       <button 
-                        onClick={async () => {
-                          if (window.confirm('Delete this comment?')) {
-                            await deleteDoc(doc(db, 'siteComments', comment.id));
-                          }
+                        onClick={() => {
+                          setConfirmAction({
+                            title: 'Delete Comment',
+                            message: 'Are you sure you want to delete this comment?',
+                            onConfirm: async () => {
+                              try {
+                                await deleteDoc(doc(db, 'siteComments', comment.id));
+                                setToast({ message: 'Comment deleted!', type: 'success' });
+                              } catch (err) {
+                                setToast({ message: 'Failed to delete comment.', type: 'error' });
+                              }
+                              setConfirmAction(null);
+                            }
+                          });
                         }}
                         className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                         title="Delete Abusive Comment"
@@ -1022,12 +1043,32 @@ export default function AdminPanel() {
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-white/60">Name / Title</label>
-                      <input 
-                        type="text" 
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={editingEntity.type === 'test' ? editingEntity.title : editingEntity.name}
-                        onChange={(e) => setEditingEntity({ ...editingEntity, [editingEntity.type === 'test' ? 'title' : 'name']: e.target.value })}
-                      />
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.type === 'test' ? editingEntity.title : editingEntity.name}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, [editingEntity.type === 'test' ? 'title' : 'name']: e.target.value })}
+                        />
+                        <button 
+                          onClick={async () => {
+                            const field = editingEntity.type === 'test' ? 'title' : 'name';
+                            if (editingEntity[field]) {
+                              setEditingEntity({ ...editingEntity, [field]: '' });
+                            } else {
+                              try {
+                                const text = await navigator.clipboard.readText();
+                                if (text) setEditingEntity({ ...editingEntity, [field]: text });
+                              } catch (err) {
+                                setToast({ message: 'Could not access clipboard', type: 'error' });
+                              }
+                            }
+                          }}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
+                        >
+                          {(editingEntity.type === 'test' ? editingEntity.title : editingEntity.name) ? <X size={18} /> : <ClipboardList size={18} />}
+                        </button>
+                      </div>
                     </div>
 
                     {editingEntity.type === 'test' && (
@@ -1088,24 +1129,69 @@ export default function AdminPanel() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-white">Chapter Resources</h3>
-                      <button 
-                        onClick={() => {
-                          const newResource: Resource = {
-                            id: Date.now().toString(),
-                            title: 'New Resource',
-                            type: 'pdf',
-                            url: '',
-                            enabled: true
-                          };
-                          setEditingEntity({
-                            ...editingEntity,
-                            resources: [...(editingEntity.resources || []), newResource]
-                          });
-                        }}
-                        className="text-sm font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1"
-                      >
-                        <Plus size={16} /> Add Resource
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => {
+                            setConfirmAction({
+                              title: 'Delete All Resources',
+                              message: 'Are you sure you want to delete ALL resources for this chapter? This cannot be undone.',
+                              onConfirm: () => {
+                                setEditingEntity({ ...editingEntity, resources: [] });
+                                setConfirmAction(null);
+                              }
+                            });
+                          }}
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-all flex items-center gap-1 uppercase tracking-widest"
+                        >
+                          <Trash2 size={12} /> Delete All
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const text = await navigator.clipboard.readText();
+                              if (text && (text.includes('drive.google.com') || text.includes('http'))) {
+                                const newResource: Resource = {
+                                  id: Date.now().toString(),
+                                  title: 'New Resource (Pasted)',
+                                  type: 'pdf',
+                                  url: text,
+                                  enabled: true
+                                };
+                                setEditingEntity({
+                                  ...editingEntity,
+                                  resources: [...(editingEntity.resources || []), newResource]
+                                });
+                                setToast({ message: 'Resource added from clipboard!', type: 'success' });
+                              } else {
+                                setToast({ message: 'Please copy a valid link first!', type: 'error' });
+                              }
+                            } catch (err) {
+                              setToast({ message: 'Could not access clipboard. Please paste manually.', type: 'error' });
+                            }
+                          }}
+                          className="text-[10px] font-bold text-neon-blue hover:text-neon-blue/80 transition-all flex items-center gap-1 uppercase tracking-widest"
+                        >
+                          <Plus size={12} /> Paste Drive Link
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const newResource: Resource = {
+                              id: Date.now().toString(),
+                              title: 'New Resource',
+                              type: 'pdf',
+                              url: '',
+                              enabled: true
+                            };
+                            setEditingEntity({
+                              ...editingEntity,
+                              resources: [...(editingEntity.resources || []), newResource]
+                            });
+                          }}
+                          className="text-[10px] font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1 uppercase tracking-widest"
+                        >
+                          <Plus size={12} /> Add Resource
+                        </button>
+                      </div>
                     </div>
 
                     <DragDropContext onDragEnd={(result) => {
@@ -1132,16 +1218,37 @@ export default function AdminPanel() {
                                     <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-2">
                                         <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Title</label>
-                                        <input 
-                                          type="text" 
-                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
-                                          value={resource.title}
-                                          onChange={(e) => {
-                                            const newResources = [...editingEntity.resources];
-                                            newResources[index].title = e.target.value;
-                                            setEditingEntity({ ...editingEntity, resources: newResources });
-                                          }}
-                                        />
+                                        <div className="relative">
+                                          <input 
+                                            type="text" 
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-3 pr-8 text-sm text-white outline-none focus:border-white/30"
+                                            value={resource.title}
+                                            onChange={(e) => {
+                                              const newResources = [...editingEntity.resources];
+                                              newResources[index].title = e.target.value;
+                                              setEditingEntity({ ...editingEntity, resources: newResources });
+                                            }}
+                                          />
+                                          <button 
+                                                  onClick={async () => {
+                                                    const newResources = [...editingEntity.resources];
+                                                    if (resource.title) {
+                                                      newResources[index].title = '';
+                                                    } else {
+                                                      try {
+                                                        const text = await navigator.clipboard.readText();
+                                                        if (text) newResources[index].title = text;
+                                                      } catch (err) {
+                                                        setToast({ message: 'Could not access clipboard', type: 'error' });
+                                                      }
+                                                    }
+                                                    setEditingEntity({ ...editingEntity, resources: newResources });
+                                                  }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
+                                          >
+                                            {resource.title ? <X size={14} /> : <ClipboardList size={14} />}
+                                          </button>
+                                        </div>
                                       </div>
                                       <div className="space-y-2">
                                         <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Type</label>
@@ -1183,15 +1290,42 @@ export default function AdminPanel() {
                                         </div>
 
                                         <div className="space-y-2">
-                                          <div className="flex items-center justify-between">
-                                            <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
-                                            <button 
-                                              onClick={() => alert("1. Upload PDF to Google Drive\n2. Right-click > Share\n3. Set to 'Anyone with the link'\n4. Copy and paste here!\n\nOur system will automatically fix the link for a perfect preview.")}
-                                              className="text-[10px] text-neon-blue hover:underline flex items-center gap-1"
-                                            >
-                                              <Info size={10} /> How to get Drive link?
-                                            </button>
-                                          </div>
+                                            <div className="flex items-center justify-between">
+                                              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
+                                              <div className="flex items-center gap-3">
+                                                <button 
+                                                  onClick={async () => {
+                                                    const newResources = [...editingEntity.resources];
+                                                    if (resource.url) {
+                                                      newResources[index].url = '';
+                                                    } else {
+                                                      try {
+                                                        const text = await navigator.clipboard.readText();
+                                                        if (text) newResources[index].url = text;
+                                                      } catch (err) {
+                                                        setToast({ message: 'Could not access clipboard. Please paste manually.', type: 'error' });
+                                                      }
+                                                    }
+                                                    setEditingEntity({ ...editingEntity, resources: newResources });
+                                                  }}
+                                                  className="text-[10px] text-neon-blue hover:underline flex items-center gap-1"
+                                                >
+                                                  {resource.url ? <X size={10} /> : <Plus size={10} />}
+                                                  {resource.url ? 'Clear Link' : 'Paste Link'}
+                                                </button>
+                                                <button 
+                                                  onClick={() => setConfirmAction({
+                                                    title: 'Google Drive Help',
+                                                    message: "1. Upload PDF to Google Drive\n2. Right-click > Share\n3. Set to 'Anyone with the link'\n4. Copy and paste here!\n\nOur system will automatically fix the link for a perfect preview.",
+                                                    onConfirm: () => setConfirmAction(null),
+                                                    singleButton: true
+                                                  })}
+                                                  className="text-[10px] text-white/40 hover:text-white flex items-center gap-1"
+                                                >
+                                                  <Info size={10} /> Help
+                                                </button>
+                                              </div>
+                                            </div>
                                           <div className="flex flex-col sm:flex-row gap-2">
                                             <div className="relative flex-grow">
                                               <input 
@@ -1211,7 +1345,7 @@ export default function AdminPanel() {
                                                     <button 
                                                       onClick={() => {
                                                         navigator.clipboard.writeText(resource.url);
-                                                        alert('Link copied!');
+                                                        setToast({ message: 'Link copied!', type: 'success' });
                                                       }}
                                                       className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-neon-blue"
                                                       title="Copy Link"
@@ -1265,7 +1399,7 @@ export default function AdminPanel() {
                                                   if (e.target.files && e.target.files[0]) {
                                                     const file = e.target.files[0];
                                                     if (file.type !== 'application/pdf') {
-                                                      alert('Please select a valid PDF file.');
+                                                      setToast({ message: 'Please select a valid PDF file.', type: 'error' });
                                                       return;
                                                     }
                                                     handleFileUpload(file, resource.id, index);
@@ -1279,7 +1413,7 @@ export default function AdminPanel() {
                                                   onClick={() => {
                                                     setUploadingResource(null);
                                                     setUploadProgress(prev => ({ ...prev, [resource.id]: 0 }));
-                                                    alert('Upload cancelled.');
+                                                    setToast({ message: 'Upload cancelled.', type: 'info' });
                                                   }}
                                                   className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-colors"
                                                 >
@@ -1293,7 +1427,12 @@ export default function AdminPanel() {
                                               * Note: Direct upload requires Firebase Storage setup (see your screenshot).
                                             </p>
                                             <button 
-                                              onClick={() => alert("FIREBASE STORAGE FIX:\n1. Go to your Firebase Console > Storage.\n2. Click 'Get started' (as shown in your screenshot).\n3. Choose 'Start in test mode' and a location.\n4. Once created, uploads will work!")}
+                                              onClick={() => setConfirmAction({
+                                                title: 'Firebase Storage Fix',
+                                                message: "FIREBASE STORAGE FIX:\n1. Go to your Firebase Console > Storage.\n2. Click 'Get started' (as shown in your screenshot).\n3. Choose 'Start in test mode' and a location.\n4. Once created, uploads will work!",
+                                                onConfirm: () => setConfirmAction(null),
+                                                singleButton: true
+                                              })}
                                               className="text-[9px] text-neon-pink hover:underline font-bold"
                                             >
                                               Fix 0% Upload Issue
@@ -1596,6 +1735,71 @@ export default function AdminPanel() {
                     className="flex-1 px-6 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
                   >
                     Delete Now
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md border ${
+              toast.type === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-400' :
+              toast.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-400' :
+              'bg-neon-blue/20 border-neon-blue/50 text-neon-blue'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 size={20} /> : 
+             toast.type === 'error' ? <AlertCircle size={20} /> : 
+             <Info size={20} />}
+            <span className="font-medium">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Generic Confirmation Modal */}
+      <AnimatePresence>
+        {confirmAction && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmAction(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-dark-card border border-white/10 rounded-3xl p-8 shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue mb-2">
+                  <HelpCircle size={32} />
+                </div>
+                <h3 className="text-2xl font-display font-bold text-white">{confirmAction.title}</h3>
+                <p className="text-white/60">{confirmAction.message}</p>
+                <div className="flex items-center gap-4 w-full pt-4">
+                  {!confirmAction.singleButton && (
+                    <button 
+                      onClick={() => setConfirmAction(null)}
+                      className="flex-1 px-6 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button 
+                    onClick={confirmAction.onConfirm}
+                    className="flex-1 px-6 py-3 rounded-xl bg-neon-blue text-white font-bold hover:bg-neon-blue/80 transition-all shadow-lg shadow-neon-blue/20"
+                  >
+                    {confirmAction.singleButton ? 'Got it' : 'Confirm'}
                   </button>
                 </div>
               </div>

@@ -13,6 +13,11 @@ export default function Footer() {
             Empowering students with futuristic learning tools and high-quality study materials. 
             Join our mission to revolutionize education.
           </p>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 max-w-md">
+            <p className="text-[10px] text-white/40 leading-relaxed italic">
+              <span className="text-neon-blue font-bold not-italic">Disclaimer:</span> All study materials and content provided on this platform are collected from publicly available sources. Original rights and credits belong to their respective authors and authorities. If you have any concerns regarding the content, please contact us.
+            </p>
+          </div>
         </div>
         
         <div>
