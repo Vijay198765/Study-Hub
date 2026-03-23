@@ -316,11 +316,10 @@ export default function Tests() {
                   <div className="space-y-4">
                     <p className="text-sm text-white/40 mb-4">Top performers for: <span className="text-neon-blue">{(testCompleted && activeTest) ? activeTest.title : selectedTest?.title}</span></p>
                     {leaderboard.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                         {(() => {
-                          const displayLeaderboard = leaderboard.slice(0, 10);
-                          const ranks = calculateRanks(displayLeaderboard);
-                          return displayLeaderboard.map((result, idx) => (
+                          const ranks = calculateRanks(leaderboard);
+                          return leaderboard.map((result, idx) => (
                             <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentName === studentName ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
