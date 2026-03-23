@@ -79,7 +79,7 @@ export default function Home() {
           🚀 Welcome to Study-hub
         </motion.div>
         
-        <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight leading-tight">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
             {displayText}
           </span>
@@ -201,8 +201,8 @@ export default function Home() {
                     transition={{ delay: idx * 0.05 }}
                     className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 ${
                         idx === 0 ? 'bg-yellow-500 text-black' :
                         idx === 1 ? 'bg-gray-300 text-black' :
                         idx === 2 ? 'bg-amber-600 text-black' :
@@ -210,12 +210,12 @@ export default function Home() {
                       }`}>
                         {idx + 1}
                       </div>
-                      <div>
-                        <div className="font-bold">{result.studentName}</div>
-                        <div className="text-xs text-white/40">{result.testTitle}</div>
+                      <div className="min-w-0">
+                        <div className="font-bold truncate" title={result.studentName}>{result.studentName}</div>
+                        <div className="text-xs text-white/40 truncate">{result.testTitle}</div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0 ml-4">
                       <div className="text-neon-blue font-bold">{result.score}%</div>
                       <div className="text-[10px] text-white/20 uppercase tracking-widest">
                         {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}

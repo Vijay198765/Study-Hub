@@ -42,17 +42,34 @@ export const removeTest = async (id: string) => {
 // Test Results
 export const getTestResults = (testId: string, callback: (results: TestResult[]) => void) => {
   const path = 'testResults';
-  const q = query(collection(db, path), where('testId', '==', testId), orderBy('completedAt', 'desc'));
+  // Order by score descending. Note: This may require a composite index in Firestore.
+  // We'll also sort client-side in the callback to ensure correctness.
+  const q = query(collection(db, path), where('testId', '==', testId));
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+    const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult));
+    const sorted = results.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+      const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+      return timeB - timeA;
+    });
+    callback(sorted);
   }, (error) => handleFirestoreError(error, OperationType.GET, path));
 };
 
 export const getGlobalLeaderboard = (callback: (results: TestResult[]) => void) => {
   const path = 'testResults';
-  const q = query(collection(db, path), orderBy('score', 'desc'), limit(10));
+  const q = query(collection(db, path), orderBy('score', 'desc'), limit(20));
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+    const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult));
+    // Ensure strict sorting client-side as well
+    const sorted = results.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+      const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+      return timeB - timeA;
+    });
+    callback(sorted.slice(0, 10));
   }, (error) => handleFirestoreError(error, OperationType.GET, path));
 };
 

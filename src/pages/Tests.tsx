@@ -15,6 +15,9 @@ export default function Tests() {
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [studentName, setStudentName] = useState(localStorage.getItem('student_name') || '');
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [testToStart, setTestToStart] = useState<Test | null>(null);
 
   useEffect(() => {
     const unsub = getTests((data) => {
@@ -36,11 +39,32 @@ export default function Tests() {
   }, [selectedTest]);
 
   const startTest = (test: Test) => {
+    if (!studentName.trim()) {
+      setTestToStart(test);
+      setShowNamePrompt(true);
+      return;
+    }
     setActiveTest(test);
     setCurrentQuestionIdx(0);
     setAnswers(new Array(test.questions.length).fill(-1));
     setTestCompleted(false);
     setScore(0);
+  };
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (studentName.trim() && testToStart) {
+      localStorage.setItem('student_name', studentName.trim());
+      const test = testToStart;
+      setTestToStart(null);
+      setShowNamePrompt(false);
+      
+      setActiveTest(test);
+      setCurrentQuestionIdx(0);
+      setAnswers(new Array(test.questions.length).fill(-1));
+      setTestCompleted(false);
+      setScore(0);
+    }
   };
 
   const handleAnswer = (optionIdx: number) => {
@@ -70,19 +94,17 @@ export default function Tests() {
     setScore(finalScore);
     setTestCompleted(true);
 
-    // Save result if logged in
-    if (auth.currentUser) {
-      const result: TestResult = {
-        id: crypto.randomUUID(),
-        testId: activeTest.id,
-        testTitle: activeTest.title,
-        studentName: auth.currentUser.displayName || auth.currentUser.email || 'Anonymous',
-        score: Math.round((finalScore / activeTest.questions.length) * 100),
-        total: activeTest.questions.length,
-        completedAt: new Date()
-      };
-      await saveTestResult(result);
-    }
+    // Save result
+    const result: TestResult = {
+      id: crypto.randomUUID(),
+      testId: activeTest.id,
+      testTitle: activeTest.title,
+      studentName: studentName || (auth.currentUser?.displayName || auth.currentUser?.email || 'Anonymous'),
+      score: Math.round((finalScore / activeTest.questions.length) * 100),
+      total: activeTest.questions.length,
+      completedAt: new Date()
+    };
+    await saveTestResult(result);
   };
 
   if (loading) {
@@ -96,6 +118,62 @@ export default function Tests() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
+        {/* Name Prompt Modal */}
+        <AnimatePresence>
+          {showNamePrompt && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative w-full max-w-md bg-dark-card border border-white/10 rounded-3xl p-8 shadow-2xl"
+              >
+                <div className="text-center space-y-6">
+                  <div className="w-16 h-16 rounded-2xl bg-neon-blue/20 flex items-center justify-center text-neon-blue mx-auto">
+                    <Users size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-display font-bold text-white">Enter Your Name</h3>
+                    <p className="text-white/40">Please provide your name to start the test and appear on the leaderboard.</p>
+                  </div>
+                  <form onSubmit={handleNameSubmit} className="space-y-4">
+                    <input 
+                      type="text" 
+                      autoFocus
+                      placeholder="Your Full Name"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-center"
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      required
+                    />
+                    <div className="flex gap-3">
+                      <button 
+                        type="button"
+                        onClick={() => setShowNamePrompt(false)}
+                        className="flex-1 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="flex-1 py-3 rounded-xl bg-neon-blue text-black font-bold hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all"
+                      >
+                        Start Test
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {!activeTest ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Test List */}
@@ -163,20 +241,34 @@ export default function Tests() {
                   <div className="space-y-4">
                     <p className="text-sm text-white/40 mb-4">Top performers for: <span className="text-neon-blue">{selectedTest.title}</span></p>
                     {leaderboard.length > 0 ? (
-                      leaderboard.slice(0, 10).map((result, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                          <div className="flex items-center gap-3">
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-slate-300 text-black' : idx === 2 ? 'bg-amber-600 text-white' : 'bg-white/10 text-white/40'}`}>
-                              {idx + 1}
-                            </span>
-                            <span className="text-sm text-white font-medium truncate max-w-[120px]">{result.studentName}</span>
+                      <div className="space-y-3">
+                        {leaderboard.slice(0, 10).map((result, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-neon-blue/30 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                idx === 0 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
+                                idx === 1 ? 'bg-slate-300 text-black' : 
+                                idx === 2 ? 'bg-amber-600 text-white' : 
+                                'bg-white/10 text-white/40'
+                              }`}>
+                                {idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-white font-medium truncate" title={result.studentName}>{result.studentName}</p>
+                                <p className="text-[10px] text-white/20 uppercase tracking-tighter">
+                                  {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              <div className="flex items-center gap-1 text-neon-blue font-bold">
+                                <span>{result.score}</span>
+                                <span className="text-[10px] text-white/40">/{result.total}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-neon-blue font-bold">
-                            <span>{result.score}</span>
-                            <span className="text-[10px] text-white/40">/{result.total}</span>
-                          </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       <div className="text-center py-10 opacity-40 italic text-sm">
                         No results yet. Be the first!

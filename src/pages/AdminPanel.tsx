@@ -240,6 +240,10 @@ export default function AdminPanel() {
       newEntity.quiz = [];
       newEntity.isImportant = false;
     } else if (type === 'test') {
+      if (tests.length > 0) {
+        alert("Only one test can exist at a time. Please delete the existing test before creating a new one.");
+        return;
+      }
       newEntity = {
         id: crypto.randomUUID(),
         classId: selectedClassId || (classes[0]?.id || ''),
@@ -868,11 +872,11 @@ export default function AdminPanel() {
 
           {activeTab === 'stats' && (
             <div className="space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {statsData.map((stat, i) => (
-                  <div key={stat.name} className="p-6 bg-white/5 border border-white/10 rounded-2xl">
-                    <p className="text-sm font-medium text-white/40 mb-1">{stat.name}</p>
-                    <h3 className="text-3xl font-display font-bold text-white">{stat.value}</h3>
+                  <div key={stat.name} className="p-4 sm:p-6 bg-white/5 border border-white/10 rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-white/40 mb-1">{stat.name}</p>
+                    <h3 className="text-2xl sm:text-3xl font-display font-bold text-white">{stat.value}</h3>
                     <div className="w-full h-1 bg-white/10 mt-4 rounded-full overflow-hidden">
                       <div 
                         className="h-full transition-all duration-1000" 

@@ -60,7 +60,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-6">
           <button 
             onClick={() => setIsSearchOpen(true)}
             className="p-2 text-white/70 hover:text-neon-blue transition-colors flex items-center gap-2 text-sm font-medium"
@@ -73,38 +73,38 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
               key={link.path}
               to={link.path}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2",
+                "text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap",
                 location.pathname === link.path ? "text-neon-blue" : "text-white/70"
               )}
             >
-              <link.icon className="w-4 h-4" />
+              <link.icon className="w-4 h-4 flex-shrink-0" />
               {link.name}
             </Link>
           ))}
           
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-xs text-white/40 font-mono hidden lg:block">
+            <div className="flex items-center gap-4 ml-4">
+              <span className="text-xs text-white/40 font-mono hidden xl:block max-w-[150px] truncate">
                 {user.email}
               </span>
-              <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5">
-                <LogOut className="w-4 h-4" /> Logout
+              <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5 px-4 text-xs">
+                <LogOut className="w-3 h-3" /> Logout
               </button>
             </div>
           ) : (
-            <Link to="/login" className="btn-neon flex items-center gap-2 py-1.5">
-              <LogIn className="w-4 h-4" /> Login
+            <Link to="/login" className="btn-neon flex items-center gap-2 py-1.5 px-4 text-xs ml-4">
+              <LogIn className="w-3 h-3" /> Login
             </Link>
           )}
         </div>
 
         {/* Mobile Toggle */}
-        <div className="flex items-center gap-4 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <button onClick={() => setIsSearchOpen(true)} className="text-white/70 hover:text-neon-blue p-2">
             <Search size={20} />
           </button>
-          <button className="text-white" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <X /> : <Menu />}
+          <button className="text-white p-2" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
