@@ -36,7 +36,7 @@ const GAMES: Game[] = [
   { id: 'word-scramble', name: 'Word Scramble', description: 'Unscramble the words as fast as you can!', icon: RotateCcw, color: 'from-indigo-500 to-violet-500' },
   { id: 'space-dodge', name: 'Space Dodge', description: 'Dodge asteroids in deep space!', icon: Target, color: 'from-slate-700 to-slate-900' },
   { id: 'capital-finder', name: 'Capital Finder', description: 'Test your geography knowledge!', icon: Target, color: 'from-orange-500 to-red-500' },
-  { id: 'number-guess', name: 'Number Guess', description: 'Guess the secret number!', icon: Hash, color: 'from-pink-500 to-rose-500' },
+  { id: 'guess-ans', name: 'Guess Ans', description: 'Guess the correct answer from options!', icon: Hash, color: 'from-pink-500 to-rose-500' },
 ];
 
 // --- Sub-components (Games) ---
@@ -325,7 +325,11 @@ const ColorRush = () => {
     const textColor = colors[Math.floor(Math.random() * colors.length)];
     setTarget({ word: wordColor.name, color: textColor.name, colorClass: textColor.text });
 
-    const shuffled = [...colors].sort(() => Math.random() - 0.5);
+    const shuffled = [...colors].sort(() => Math.random() - 0.5).slice(0, 4);
+    // Ensure the correct answer is in the options
+    if (!shuffled.find(c => c.name === wordColor.name)) {
+      shuffled[Math.floor(Math.random() * 4)] = wordColor;
+    }
     setOptions(shuffled.map(c => ({ color: c.name, colorClass: c.class })));
   }, []);
 
@@ -389,14 +393,14 @@ const ColorRush = () => {
             {target.word}
           </motion.div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {options.map((opt, idx) => (
               <motion.button
                 key={idx}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => handleAnswer(opt.color)}
-                className={`h-20 rounded-2xl shadow-lg border-2 border-white/10 ${opt.colorClass}`}
+                className={`h-24 rounded-2xl shadow-lg border-2 border-white/10 ${opt.colorClass}`}
               />
             ))}
           </div>
@@ -748,38 +752,57 @@ const CapitalFinder = () => {
   );
 };
 
-// 8. Number Guess
-const NumberGuess = () => {
+// 8. Guess Ans
+const GuessAns = () => {
   const [gameState, setGameState] = useState<GameState>('start');
-  const [target, setTarget] = useState(0);
-  const [guess, setGuess] = useState('');
-  const [message, setMessage] = useState('Guess a number between 1 and 100');
-  const [attempts, setAttempts] = useState(0);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [problem, setProblem] = useState({ question: '', answer: '' });
+  const [options, setOptions] = useState<string[]>([]);
 
-  const startNewGame = () => {
-    setTarget(Math.floor(Math.random() * 100) + 1);
-    setAttempts(0);
-    setGuess('');
-    setMessage('Guess a number between 1 and 100');
+  const data = [
+    { q: 'What is 5 + 7?', a: '12', o: ['10', '11', '13'] },
+    { q: 'What is the capital of India?', a: 'New Delhi', o: ['Mumbai', 'Kolkata', 'Chennai'] },
+    { q: 'Which planet is known as the Red Planet?', a: 'Mars', o: ['Venus', 'Jupiter', 'Saturn'] },
+    { q: 'What is the largest ocean?', a: 'Pacific', o: ['Atlantic', 'Indian', 'Arctic'] },
+    { q: 'How many continents are there?', a: '7', o: ['5', '6', '8'] },
+    { q: 'What is the square root of 64?', a: '8', o: ['6', '7', '9'] },
+    { q: 'Which gas do plants absorb?', a: 'CO2', o: ['Oxygen', 'Nitrogen', 'Hydrogen'] },
+    { q: 'Who wrote "Romeo and Juliet"?', a: 'Shakespeare', o: ['Dickens', 'Hemingway', 'Austen'] },
+  ];
+
+  const generateRound = useCallback(() => {
+    const item = data[Math.floor(Math.random() * data.length)];
+    const shuffledOptions = [item.a, ...item.o].sort(() => Math.random() - 0.5);
+    setProblem({ question: item.q, answer: item.a });
+    setOptions(shuffledOptions);
+  }, []);
+
+  useEffect(() => {
+    if (gameState === 'playing' && timeLeft > 0) {
+      const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0) {
+      setGameState('end');
+      if (score > 5) confetti();
+    }
+  }, [gameState, timeLeft, score]);
+
+  const startGame = () => {
+    setScore(0);
+    setTimeLeft(30);
     setGameState('playing');
+    generateRound();
   };
 
-  const handleGuess = (e: React.FormEvent) => {
-    e.preventDefault();
-    const num = parseInt(guess);
-    if (isNaN(num)) return;
-
-    setAttempts(prev => prev + 1);
-    if (num === target) {
-      setMessage(`Correct! You found it in ${attempts + 1} attempts.`);
-      setGameState('end');
-      confetti();
-    } else if (num < target) {
-      setMessage('Higher! ⬆️');
+  const handleAnswer = (selected: string) => {
+    if (selected === problem.answer) {
+      setScore(prev => prev + 1);
+      generateRound();
     } else {
-      setMessage('Lower! ⬇️');
+      setTimeLeft(prev => Math.max(0, prev - 2));
+      generateRound();
     }
-    setGuess('');
   };
 
   return (
@@ -787,33 +810,44 @@ const NumberGuess = () => {
       {gameState === 'start' && (
         <div className="text-center">
           <Hash size={64} className="mx-auto mb-6 text-pink-400" />
-          <h2 className="text-3xl font-bold mb-4">Number Guess</h2>
-          <button onClick={startNewGame} className="btn-neon px-8 py-3">Start Game</button>
+          <h2 className="text-3xl font-bold mb-4">Guess Ans</h2>
+          <p className="text-white/60 mb-8">Quickly guess the correct answer from 4 options!</p>
+          <button onClick={startGame} className="btn-neon px-8 py-3">Start Game</button>
         </div>
       )}
 
       {gameState === 'playing' && (
-        <div className="w-full text-center">
-          <h2 className="text-2xl font-bold mb-8">{message}</h2>
-          <form onSubmit={handleGuess} className="space-y-6">
-            <input
-              autoFocus
-              type="number"
-              value={guess}
-              onChange={(e) => setGuess(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-4xl text-center outline-none focus:neon-border transition-all"
-            />
-            <button type="submit" className="btn-neon w-full py-4 text-xl">Guess</button>
-          </form>
-          <p className="mt-8 text-white/40">Attempts: {attempts}</p>
+        <div className="w-full">
+          <div className="flex justify-between items-center mb-12">
+            <div className="text-pink-400 font-mono text-2xl">Time: {timeLeft}s</div>
+            <div className="text-emerald-400 font-mono text-2xl">Score: {score}</div>
+          </div>
+
+          <motion.div 
+            key={problem.question}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-3xl font-bold text-center mb-12"
+          >
+            {problem.question}
+          </motion.div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {options.map((opt, idx) => (
+              <button key={idx} onClick={() => handleAnswer(opt)} className="glass-card p-6 text-lg font-bold hover:neon-border transition-all">
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {gameState === 'end' && (
         <div className="text-center">
           <Trophy size={80} className="mx-auto mb-6 text-yellow-400" />
-          <h2 className="text-3xl font-bold mb-8">{message}</h2>
-          <button onClick={startNewGame} className="btn-neon px-8 py-3">Play Again</button>
+          <h2 className="text-4xl font-bold mb-4">Time's Up!</h2>
+          <p className="text-xl text-white/60 mb-8">Score: <span className="text-white font-bold">{score}</span></p>
+          <button onClick={startGame} className="btn-neon px-8 py-3">Play Again</button>
         </div>
       )}
     </div>
@@ -913,7 +947,7 @@ export default function Games() {
       case 'word-scramble': return <WordScramble />;
       case 'space-dodge': return <SpaceDodge />;
       case 'capital-finder': return <CapitalFinder />;
-      case 'number-guess': return <NumberGuess />;
+      case 'guess-ans': return <GuessAns />;
       default: return null;
     }
   };

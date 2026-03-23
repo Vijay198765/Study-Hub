@@ -118,7 +118,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 right-0 bg-dark-bg border-b border-white/10 p-4 flex flex-col gap-4 md:hidden"
+            className="absolute top-full left-0 right-0 bg-dark-bg border-b border-white/10 p-4 flex flex-col gap-4 lg:hidden"
           >
             {navLinks.map((link) => (
               <Link
