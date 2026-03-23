@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { auth } from '../firebase';
@@ -37,6 +37,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
+    { name: 'Tests', path: '/tests', icon: ClipboardList },
     { name: 'Study Tips', path: '/tips', icon: Lightbulb },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Wall', path: '/comments', icon: MessageSquare },

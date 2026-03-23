@@ -152,8 +152,7 @@ service cloud.firestore {
     }
 
     function isValidComment(data) {
-      return data.keys().hasAll(['id', 'chapterId', 'userId', 'userName', 'text', 'createdAt']) &&
-             data.id is string && data.id.size() > 0 &&
+      return data.keys().hasAll(['chapterId', 'userId', 'userName', 'text', 'createdAt']) &&
              data.chapterId is string && data.chapterId.size() > 0 &&
              data.userId is string && data.userId == request.auth.uid &&
              data.userName is string && data.userName.size() > 0 &&
@@ -180,8 +179,7 @@ service cloud.firestore {
     }
 
     function isValidSiteComment(data) {
-      return data.keys().hasAll(['id', 'userName', 'text', 'likes', 'likedBy', 'createdAt']) &&
-             data.id is string && data.id.size() > 0 &&
+      return data.keys().hasAll(['userName', 'text', 'likes', 'likedBy', 'createdAt']) &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.text is string && data.text.size() > 0 && data.text.size() < 2000 &&
              data.likes is number &&

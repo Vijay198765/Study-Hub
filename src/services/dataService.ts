@@ -6,10 +6,55 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Class, Subject, Chapter, User } from '../types';
+import { Class, Subject, Chapter, User, Test, TestResult } from '../types';
+
+// Tests
+export const getTests = (callback: (tests: Test[]) => void) => {
+  const path = 'tests';
+  const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => doc.data() as Test));
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
+
+export const saveTest = async (test: Test) => {
+  const path = `tests/${test.id}`;
+  try {
+    await setDoc(doc(db, 'tests', test.id), test);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const removeTest = async (id: string) => {
+  const path = `tests/${id}`;
+  try {
+    await deleteDoc(doc(db, 'tests', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+// Test Results
+export const getTestResults = (testId: string, callback: (results: TestResult[]) => void) => {
+  const path = 'testResults';
+  const q = query(collection(db, path), where('testId', '==', testId), orderBy('completedAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
+
+export const getGlobalLeaderboard = (callback: (results: TestResult[]) => void) => {
+  const path = 'testResults';
+  const q = query(collection(db, path), orderBy('score', 'desc'), limit(10));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
 
 // Classes
 export const getClasses = (callback: (classes: Class[]) => void) => {
@@ -123,5 +168,14 @@ export const removeUser = async (uid: string) => {
     await deleteDoc(doc(db, 'users', uid));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const saveTestResult = async (result: TestResult) => {
+  const path = `testResults/${result.id}`;
+  try {
+    await setDoc(doc(db, 'testResults', result.id), result);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 };

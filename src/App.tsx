@@ -12,6 +12,7 @@ import AdminPanel from './pages/AdminPanel';
 import StudyTips from './pages/StudyTips';
 import Games from './pages/Games';
 import LiveComments from './pages/LiveComments';
+import Tests from './pages/Tests';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import { auth, db } from './firebase';
@@ -105,6 +106,7 @@ export default function App() {
               <Route path="/tips" element={<StudyTips />} />
               <Route path="/games" element={<Games />} />
               <Route path="/comments" element={<LiveComments />} />
+              <Route path="/tests" element={<Tests />} />
               <Route path="/login" element={<Login />} />
               <Route 
                 path="/admin" 

@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye,
-  MessageSquare
+  MessageSquare, ClipboardList, Trophy
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db } from '../firebase';
@@ -22,12 +22,13 @@ import {
   getClasses, saveClass, removeClass, 
   getSubjectsByClass, saveSubject, removeSubject, 
   getChaptersBySubject, saveChapter, removeChapter, 
-  getUsers, saveUser, removeUser 
+  getUsers, saveUser, removeUser,
+  getTests, saveTest, removeTest
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion } from '../types';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'stats';
-type EditTab = 'basic' | 'resources' | 'quiz';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats';
+type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
 
@@ -37,6 +38,7 @@ export default function AdminPanel() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [tests, setTests] = useState<Test[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -46,7 +48,7 @@ export default function AdminPanel() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user', id: string, name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
@@ -110,6 +112,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
+    const unsubTests = getTests(setTests);
     
     const q = query(collection(db, 'siteComments'), orderBy('createdAt', 'desc'));
     const unsubComments = onSnapshot(q, (snapshot) => {
@@ -119,6 +122,7 @@ export default function AdminPanel() {
     return () => {
       unsubClasses();
       unsubUsers();
+      unsubTests();
       unsubComments();
     };
   }, []);
@@ -175,7 +179,7 @@ export default function AdminPanel() {
     await saveFn(item2);
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string) => {
     setDeleteConfirm({ type, id, name });
   };
 
@@ -187,6 +191,7 @@ export default function AdminPanel() {
     else if (type === 'subject') await removeSubject(id);
     else if (type === 'chapter') await removeChapter(id);
     else if (type === 'user') await removeUser(id);
+    else if (type === 'test') await removeTest(id);
     
     setDeleteConfirm(null);
   };
@@ -203,6 +208,7 @@ export default function AdminPanel() {
       if (editingEntity.type === 'class') await saveClass(editingEntity);
       else if (editingEntity.type === 'subject') await saveSubject(editingEntity);
       else if (editingEntity.type === 'chapter') await saveChapter(editingEntity);
+      else if (editingEntity.type === 'test') await saveTest(editingEntity);
       setEditingEntity(null);
     } catch (error) {
       console.error("Error saving:", error);
@@ -211,9 +217,9 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter') => {
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test') => {
     const id = Date.now().toString();
-    const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : chapters.length);
+    const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
     let newEntity: any = { id, name: 'New ' + type, enabled: true, order };
     
@@ -233,6 +239,15 @@ export default function AdminPanel() {
       newEntity.resources = [];
       newEntity.quiz = [];
       newEntity.isImportant = false;
+    } else if (type === 'test') {
+      newEntity = {
+        id: crypto.randomUUID(),
+        classId: selectedClassId || (classes[0]?.id || ''),
+        title: 'New Test',
+        questions: [],
+        active: true,
+        createdAt: new Date()
+      };
     }
     
     setEditingEntity({ ...newEntity, type });
@@ -242,8 +257,8 @@ export default function AdminPanel() {
   // Stats data
   const statsData = [
     { name: 'Classes', value: classes.length },
-    { name: 'Subjects', value: subjects.length },
     { name: 'Chapters', value: chapters.length },
+    { name: 'Tests', value: tests.length },
     { name: 'Users', value: users.length },
   ];
 
@@ -292,6 +307,13 @@ export default function AdminPanel() {
             >
               <MessageSquare size={16} className="inline-block mr-1.5" />
               Comments
+            </button>
+            <button 
+              onClick={() => setActiveTab('tests')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'tests' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <ClipboardList size={16} className="inline-block mr-1.5" />
+              Tests
             </button>
             <button 
               onClick={() => setActiveTab('stats')}
@@ -768,6 +790,82 @@ export default function AdminPanel() {
             </div>
           )}
 
+          {activeTab === 'tests' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search tests..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => addNew('test')}
+                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus size={20} />
+                  Add Test
+                </button>
+              </div>
+
+              <div className="grid gap-4">
+                {tests.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase())).map((test) => (
+                  <motion.div 
+                    key={test.id}
+                    layout
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group gap-4"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue shrink-0">
+                        <ClipboardList size={24} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-medium text-white break-words">{test.title}</h3>
+                        <p className="text-xs text-white/40 truncate">
+                          Class: {classes.find(c => c.id === test.classId)?.name || 'Unknown'} • {test.questions.length} Questions
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                      <button 
+                        onClick={() => saveTest({ ...test, active: !test.active })}
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${test.active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
+                      >
+                        {test.active ? 'Active' : 'Inactive'}
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleEdit(test, 'test')}
+                          className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete('test', test.id, test.title)}
+                          className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                {tests.length === 0 && (
+                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <ClipboardList size={48} className="mx-auto text-white/10 mb-4" />
+                    <p className="text-white/30 italic">No tests created yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'stats' && (
             <div className="space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -896,6 +994,25 @@ export default function AdminPanel() {
                 </div>
               )}
 
+              {editingEntity.type === 'test' && (
+                <div className="px-6 pt-4 flex items-center gap-4 border-b border-white/10 shrink-0">
+                  <button 
+                    onClick={() => setEditTab('basic')}
+                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'basic' ? 'text-neon-blue' : 'text-white/40 hover:text-white'}`}
+                  >
+                    Basic Info
+                    {editTab === 'basic' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-blue" />}
+                  </button>
+                  <button 
+                    onClick={() => setEditTab('questions')}
+                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'questions' ? 'text-neon-blue' : 'text-white/40 hover:text-white'}`}
+                  >
+                    Questions ({editingEntity.questions?.length || 0})
+                    {editTab === 'questions' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-blue" />}
+                  </button>
+                </div>
+              )}
+
               <div className="flex-grow overflow-y-auto p-6 custom-scrollbar">
                 {editTab === 'basic' && (
                   <div className="space-y-6">
@@ -904,10 +1021,38 @@ export default function AdminPanel() {
                       <input 
                         type="text" 
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={editingEntity.name}
-                        onChange={(e) => setEditingEntity({ ...editingEntity, name: e.target.value })}
+                        value={editingEntity.type === 'test' ? editingEntity.title : editingEntity.name}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, [editingEntity.type === 'test' ? 'title' : 'name']: e.target.value })}
                       />
                     </div>
+
+                    {editingEntity.type === 'test' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Class</label>
+                        <select 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.classId}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, classId: e.target.value })}
+                        >
+                          {classes.map(c => (
+                            <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {editingEntity.type === 'test' && (
+                      <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <input 
+                          type="checkbox" 
+                          id="active"
+                          className="w-5 h-5 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
+                          checked={editingEntity.active}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, active: e.target.checked })}
+                        />
+                        <label htmlFor="active" className="text-sm font-medium text-white">Active (Visible to students)</label>
+                      </div>
+                    )}
 
                     {editingEntity.type === 'chapter' && (
                       <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
@@ -1171,6 +1316,93 @@ export default function AdminPanel() {
                         )}
                       </Droppable>
                     </DragDropContext>
+                  </div>
+                )}
+
+                {editTab === 'questions' && editingEntity.type === 'test' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-white">Test Questions</h3>
+                      <button 
+                        onClick={() => {
+                          const newQuestion: TestQuestion = {
+                            id: Date.now().toString(),
+                            question: 'New Question',
+                            options: ['', '', '', ''],
+                            correctAnswer: 0
+                          };
+                          setEditingEntity({
+                            ...editingEntity,
+                            questions: [...(editingEntity.questions || []), newQuestion]
+                          });
+                        }}
+                        className="text-sm font-bold text-neon-blue hover:text-neon-blue/80 transition-all flex items-center gap-1"
+                      >
+                        <Plus size={16} /> Add Question
+                      </button>
+                    </div>
+
+                    <div className="space-y-6">
+                      {(editingEntity.questions || []).map((q: TestQuestion, qIdx: number) => (
+                        <div key={q.id} className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4 relative group">
+                          <button 
+                            onClick={() => {
+                              const newQuestions = [...editingEntity.questions];
+                              newQuestions.splice(qIdx, 1);
+                              setEditingEntity({ ...editingEntity, questions: newQuestions });
+                            }}
+                            className="absolute top-4 right-4 text-white/20 hover:text-red-400 transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest">Question {qIdx + 1}</label>
+                            <input 
+                              type="text" 
+                              className="w-full bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                              value={q.question}
+                              onChange={(e) => {
+                                const newQuestions = [...editingEntity.questions];
+                                newQuestions[qIdx].question = e.target.value;
+                                setEditingEntity({ ...editingEntity, questions: newQuestions });
+                              }}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {q.options.map((opt, oIdx) => (
+                              <div key={oIdx} className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-[10px] font-bold text-white/40 uppercase">Option {oIdx + 1}</label>
+                                  <input 
+                                    type="radio" 
+                                    name={`correct-${q.id}`}
+                                    checked={q.correctAnswer === oIdx}
+                                    onChange={() => {
+                                      const newQuestions = [...editingEntity.questions];
+                                      newQuestions[qIdx].correctAnswer = oIdx;
+                                      setEditingEntity({ ...editingEntity, questions: newQuestions });
+                                    }}
+                                    className="w-3 h-3 text-neon-blue bg-white/5 border-white/20 focus:ring-neon-blue"
+                                  />
+                                </div>
+                                <input 
+                                  type="text" 
+                                  className={`w-full bg-black/20 border rounded-lg py-1.5 px-3 text-sm text-white outline-none transition-all ${q.correctAnswer === oIdx ? 'border-neon-blue/50 bg-neon-blue/5' : 'border-white/5 focus:border-white/20'}`}
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newQuestions = [...editingEntity.questions];
+                                    newQuestions[qIdx].options[oIdx] = e.target.value;
+                                    setEditingEntity({ ...editingEntity, questions: newQuestions });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

@@ -316,7 +316,7 @@ function CommentItem({
           <div>
             <span className="font-bold text-sm sm:text-base">{comment.userName}</span>
             <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
-              {comment.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
             </span>
           </div>
         </div>

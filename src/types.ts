@@ -52,3 +52,29 @@ export interface User {
 }
 
 export interface UserProfile extends User {}
+
+export interface TestQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+}
+
+export interface Test {
+  id: string;
+  classId: string;
+  title: string;
+  questions: TestQuestion[];
+  active: boolean;
+  createdAt: any;
+}
+
+export interface TestResult {
+  id: string;
+  testId: string;
+  testTitle: string;
+  studentName: string;
+  score: number;
+  total: number;
+  completedAt: any;
+}
