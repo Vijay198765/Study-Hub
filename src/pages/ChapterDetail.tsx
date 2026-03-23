@@ -5,10 +5,19 @@ import {
   ArrowLeft, FileText, Download, Eye, HelpCircle, 
   CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw,
   Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
-  ExternalLink, ChevronRight
+  ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History
 } from 'lucide-react';
+
+// Utility for conditional classes
+const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 import { Class, Subject, Chapter } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { auth, db } from '../firebase';
+import { 
+  collection, addDoc, onSnapshot, query, where, 
+  orderBy, serverTimestamp, deleteDoc, doc, getDocs,
+  limit
+} from 'firebase/firestore';
 
 export default function ChapterDetail() {
   const { classId, subjectId, chapterId } = useParams();
@@ -16,8 +25,17 @@ export default function ChapterDetail() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'resources' | 'quiz'>('resources');
+  const [activeTab, setActiveTab] = useState<'resources' | 'quiz' | 'discussion'>('resources');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Progress & History State
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [quizHistory, setQuizHistory] = useState<any[]>([]);
+  
+  // Discussion State
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   
   // Quiz State
   const [quizStarted, setQuizStarted] = useState(false);
@@ -28,11 +46,14 @@ export default function ChapterDetail() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
   const [showReview, setShowReview] = useState(false);
+  const [userRole, setUserRole] = useState<'student' | 'admin'>('student');
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
     let unsubscribeSubjects: () => void = () => {};
     let unsubscribeChapters: () => void = () => {};
+    let unsubscribeComments: () => void = () => {};
 
     if (classId) {
       unsubscribeSubjects = getSubjectsByClass(classId, setSubjects);
@@ -41,15 +62,79 @@ export default function ChapterDetail() {
       unsubscribeChapters = getChaptersBySubject(subjectId, (data) => {
         setChapters(data);
         setLoading(false);
+        
+        // Save to Recently Viewed
+        const currentChapter = data.find(c => c.id === chapterId);
+        if (currentChapter) {
+          const currentSubject = subjects.find(s => s.id === subjectId);
+          const recent = JSON.parse(localStorage.getItem('recentChapters') || '[]');
+          const newItem = {
+            id: currentChapter.id,
+            name: currentChapter.name,
+            subjectId,
+            classId,
+            subjectName: currentSubject?.name || 'Subject'
+          };
+          const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
+          const updated = [newItem, ...filtered].slice(0, 3);
+          localStorage.setItem('recentChapters', JSON.stringify(updated));
+        }
       });
+    }
+
+    if (chapterId) {
+      // Fetch comments
+      const q = query(
+        collection(db, 'comments'),
+        where('chapterId', '==', chapterId),
+        orderBy('createdAt', 'desc')
+      );
+      unsubscribeComments = onSnapshot(q, (snapshot) => {
+        setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      // Check progress
+      if (auth.currentUser) {
+        const progressQ = query(
+          collection(db, 'userProgress'),
+          where('userId', '==', auth.currentUser.uid),
+          where('chapterId', '==', chapterId)
+        );
+        getDocs(progressQ).then(snapshot => {
+          setIsCompleted(!snapshot.empty);
+        });
+
+      // Fetch user role
+      if (auth.currentUser) {
+        getDocs(query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid)))
+          .then(snapshot => {
+            if (!snapshot.empty) {
+              setUserRole(snapshot.docs[0].data().role);
+            }
+          });
+      }
+
+        // Fetch quiz history
+        const historyQ = query(
+          collection(db, 'quizHistory'),
+          where('userId', '==', auth.currentUser.uid),
+          where('chapterId', '==', chapterId),
+          orderBy('completedAt', 'desc'),
+          limit(5)
+        );
+        onSnapshot(historyQ, (snapshot) => {
+          setQuizHistory(snapshot.docs.map(doc => doc.data()));
+        });
+      }
     }
 
     return () => {
       unsubscribeClasses();
       unsubscribeSubjects();
       unsubscribeChapters();
+      unsubscribeComments();
     };
-  }, [classId, subjectId]);
+  }, [classId, subjectId, chapterId, auth.currentUser]);
 
   const currentClass = classes.find(c => c.id === classId);
   const subject = subjects.find(s => s.id === subjectId);
@@ -82,12 +167,27 @@ export default function ChapterDetail() {
       setScore(prev => prev + 1);
     }
     
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentQuestionIdx < chapter.quiz.length - 1) {
         setCurrentQuestionIdx(prev => prev + 1);
         setSelectedOption(null);
       } else {
         setQuizFinished(true);
+        // Save quiz score
+        if (auth.currentUser) {
+          const finalScore = idx === chapter.quiz[currentQuestionIdx].correctAnswer ? score + 1 : score;
+          try {
+            await addDoc(collection(db, 'quizHistory'), {
+              userId: auth.currentUser.uid,
+              chapterId,
+              score: finalScore,
+              total: chapter.quiz.length,
+              completedAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.error("Error saving quiz score:", e);
+          }
+        }
       }
     }, 1000);
   };
@@ -106,6 +206,62 @@ export default function ChapterDetail() {
   const startQuiz = () => {
     setQuizStarted(true);
     setUserAnswers(new Array(chapter.quiz.length).fill(null));
+  };
+
+  const toggleProgress = async () => {
+    if (!auth.currentUser) return;
+    try {
+      if (isCompleted) {
+        const q = query(
+          collection(db, 'userProgress'),
+          where('userId', '==', auth.currentUser.uid),
+          where('chapterId', '==', chapterId)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.forEach(async (d) => {
+          await deleteDoc(doc(db, 'userProgress', d.id));
+        });
+        setIsCompleted(false);
+      } else {
+        await addDoc(collection(db, 'userProgress'), {
+          userId: auth.currentUser.uid,
+          chapterId,
+          completedAt: serverTimestamp()
+        });
+        setIsCompleted(true);
+      }
+    } catch (e) {
+      console.error("Error toggling progress:", e);
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser || !newComment.trim()) return;
+    setIsSubmittingComment(true);
+    try {
+      await addDoc(collection(db, 'comments'), {
+        id: crypto.randomUUID(),
+        chapterId,
+        userId: auth.currentUser.uid,
+        userName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
+        text: newComment.trim(),
+        createdAt: serverTimestamp()
+      });
+      setNewComment('');
+    } catch (e) {
+      console.error("Error adding comment:", e);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await deleteDoc(doc(db, 'comments', commentId));
+    } catch (e) {
+      console.error("Error deleting comment:", e);
+    }
   };
 
   const getResourceIcon = (type: string) => {
@@ -188,17 +344,38 @@ export default function ChapterDetail() {
           <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
             <button 
               onClick={() => setActiveTab('resources')}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'resources' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
+              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'resources' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
             >
               Resources
             </button>
             <button 
               onClick={() => setActiveTab('quiz')}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
+              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
             >
-              MCQ Quiz
+              Quiz
+            </button>
+            <button 
+              onClick={() => setActiveTab('discussion')}
+              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'discussion' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
+            >
+              Discussion
             </button>
           </div>
+        </div>
+
+        <div className="mb-8 flex justify-end">
+          <button 
+            onClick={toggleProgress}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all font-medium",
+              isCompleted 
+                ? "bg-green-500/10 border-green-500/50 text-green-400" 
+                : "bg-white/5 border-white/10 text-white/60 hover:border-neon-blue/50 hover:text-white"
+            )}
+          >
+            {isCompleted ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+            {isCompleted ? 'Completed' : 'Mark as Done'}
+          </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -257,7 +434,7 @@ export default function ChapterDetail() {
                 </div>
               )}
             </motion.div>
-          ) : (
+          ) : activeTab === 'quiz' ? (
             <motion.div 
               key="quiz"
               initial={{ opacity: 0, y: 20 }}
@@ -266,26 +443,51 @@ export default function ChapterDetail() {
               className="max-w-3xl mx-auto"
             >
               {!quizStarted ? (
-                <div className="glass-card p-12 text-center">
-                  <div className="w-20 h-20 rounded-full bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
-                    <HelpCircle size={40} />
-                  </div>
-                  {chapter.quiz.length > 0 ? (
-                    <>
-                      <h2 className="text-3xl font-display font-bold mb-4">Ready for a Challenge?</h2>
-                      <p className="text-white/50 mb-8">
-                        Test your understanding of <strong>{chapter.name}</strong>. 
-                        You have 60 seconds to answer {chapter.quiz.length} questions.
-                      </p>
-                      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button onClick={startQuiz} className="btn-neon px-10 py-3 text-lg">
-                          Start Quiz
-                        </button>
+                <div className="space-y-8">
+                  <div className="glass-card p-12 text-center">
+                    <div className="w-20 h-20 rounded-full bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
+                      <HelpCircle size={40} />
+                    </div>
+                    {chapter.quiz.length > 0 ? (
+                      <>
+                        <h2 className="text-3xl font-display font-bold mb-4">Ready for a Challenge?</h2>
+                        <p className="text-white/50 mb-8">
+                          Test your understanding of <strong>{chapter.name}</strong>. 
+                          You have 60 seconds to answer {chapter.quiz.length} questions.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                          <button onClick={startQuiz} className="btn-neon px-10 py-3 text-lg">
+                            Start Quiz
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="py-10">
+                        <p className="text-white/30 italic">No quiz questions available for this chapter yet.</p>
                       </div>
-                    </>
-                  ) : (
-                    <div className="py-10">
-                      <p className="text-white/30 italic">No quiz questions available for this chapter yet.</p>
+                    )}
+                  </div>
+
+                  {quizHistory.length > 0 && (
+                    <div className="glass-card p-8">
+                      <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                        <History size={20} className="text-neon-purple" /> Recent Attempts
+                      </h3>
+                      <div className="space-y-4">
+                        {quizHistory.map((h, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+                            <div>
+                              <p className="font-bold text-neon-blue">{h.score} / {h.total}</p>
+                              <p className="text-xs text-white/40">
+                                {h.completedAt?.toDate ? h.completedAt.toDate().toLocaleDateString() : 'Just now'}
+                              </p>
+                            </div>
+                            <div className="text-xs font-bold px-3 py-1 rounded-full bg-white/5 text-white/60">
+                              {Math.round((h.score / h.total) * 100)}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -381,7 +583,7 @@ export default function ChapterDetail() {
                         else if (isSelected) variantClass = "border-red-500 bg-red-500/10 text-red-400";
                         else variantClass = "opacity-50 border-white/5";
                       }
- 
+
                       return (
                         <button
                           key={idx}
@@ -398,6 +600,72 @@ export default function ChapterDetail() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="discussion"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto"
+            >
+              <div className="glass-card p-8">
+                <h2 className="text-2xl font-display font-bold mb-8 flex items-center gap-3">
+                  <MessageSquare className="text-neon-blue" /> Discussion Forum
+                </h2>
+
+                <form onSubmit={handleAddComment} className="mb-10">
+                  <div className="relative">
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Ask a question or share your thoughts..."
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pr-12 min-h-[100px] focus:border-neon-blue/50 outline-none transition-all resize-none"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={isSubmittingComment || !newComment.trim()}
+                      className="absolute bottom-4 right-4 p-2 bg-neon-blue text-black rounded-xl hover:scale-110 transition-all disabled:opacity-50 disabled:scale-100"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-6">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-white shrink-0">
+                        {comment.userName[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-neon-blue">{comment.userName}</h4>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-white/30 uppercase tracking-widest">
+                              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                            </span>
+                            {(isAdmin || comment.userId === auth.currentUser?.uid) && (
+                              <button 
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-white/70 break-words">{comment.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {comments.length === 0 && (
+                    <div className="text-center py-10 text-white/20 italic">
+                      No comments yet. Be the first to start the discussion!
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -39,6 +39,51 @@ service cloud.firestore {
     //   - email: string (required)
     //   - role: string (required, ['admin', 'student'])
     //
+    // Collection: userProgress
+    // Document ID: progressId
+    // Fields:
+    //   - userId: string (required)
+    //   - chapterId: string (required)
+    //   - completedAt: timestamp (required)
+    //
+    // Collection: quizHistory
+    // Document ID: historyId
+    // Fields:
+    //   - userId: string (required)
+    //   - chapterId: string (required)
+    //   - score: number (required)
+    //   - total: number (required)
+    //   - completedAt: timestamp (required)
+    //
+    // Collection: comments
+    // Document ID: commentId
+    // Fields:
+    //   - id: string (required)
+    //   - chapterId: string (required)
+    //   - userId: string (required)
+    //   - userName: string (required)
+    //   - text: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: tests
+    // Document ID: testId
+    // Fields:
+    //   - id: string (required)
+    //   - classId: string (required)
+    //   - title: string (required)
+    //   - questions: array (required)
+    //   - active: boolean (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: testResults
+    // Document ID: resultId
+    // Fields:
+    //   - testId: string (required)
+    //   - studentName: string (required)
+    //   - score: number (required)
+    //   - total: number (required)
+    //   - completedAt: timestamp (required)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -91,6 +136,60 @@ service cloud.firestore {
              data.role in ['admin', 'student'];
     }
 
+    function isValidUserProgress(data) {
+      return data.keys().hasAll(['userId', 'chapterId', 'completedAt']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.chapterId is string && data.chapterId.size() > 0 &&
+             data.completedAt is timestamp;
+    }
+
+    function isValidQuizHistory(data) {
+      return data.keys().hasAll(['userId', 'chapterId', 'score', 'total', 'completedAt']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.chapterId is string && data.chapterId.size() > 0 &&
+             data.score is number && data.total is number &&
+             data.completedAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'chapterId', 'userId', 'userName', 'text', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.chapterId is string && data.chapterId.size() > 0 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 1000 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTest(data) {
+      return data.keys().hasAll(['id', 'classId', 'title', 'questions', 'active', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.classId is string && data.classId.size() > 0 &&
+             data.title is string && data.title.size() > 0 &&
+             data.questions is list &&
+             data.active is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTestResult(data) {
+      return data.keys().hasAll(['testId', 'studentName', 'score', 'total', 'completedAt']) &&
+             data.testId is string && data.testId.size() > 0 &&
+             data.studentName is string && data.studentName.size() > 0 &&
+             data.score is number && data.total is number &&
+             data.completedAt is timestamp;
+    }
+
+    function isValidSiteComment(data) {
+      return data.keys().hasAll(['id', 'userName', 'text', 'likes', 'likedBy', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 2000 &&
+             data.likes is number &&
+             data.likedBy is list &&
+             data.createdAt is timestamp &&
+             (!('parentId' in data) || (data.parentId is string && data.parentId.size() > 0));
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -122,6 +221,43 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (request.resource.data.role == 'student' || (request.resource.data.role == 'admin' && request.auth.token.email == "vijayninama683@gmail.com"));
       allow update: if isAdmin() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /userProgress/{progressId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidUserProgress(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /quizHistory/{historyId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidQuizHistory(request.resource.data);
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidComment(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /tests/{testId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidTest(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /testResults/{resultId} {
+      allow read: if true;
+      allow create: if isValidTestResult(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /siteComments/{commentId} {
+      allow read: if true;
+      allow create: if isValidSiteComment(request.resource.data);
+      allow update: if isValidSiteComment(request.resource.data) && 
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']));
       allow delete: if isAdmin();
     }
   }

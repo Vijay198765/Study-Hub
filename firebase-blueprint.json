@@ -52,6 +52,86 @@
         "role": { "type": "string", "enum": ["admin", "student"] }
       },
       "required": ["uid", "email", "role"]
+    },
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Tracks completed chapters for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "chapterId", "completedAt"]
+    },
+    "QuizHistory": {
+      "title": "QuizHistory",
+      "description": "Saves quiz scores for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "score": { "type": "number" },
+        "total": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "chapterId", "score", "total", "completedAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment in the discussion forum",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "chapterId", "userId", "userName", "text", "createdAt"]
+    },
+    "Test": {
+      "title": "Test",
+      "description": "An admin-launched test for a class",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "classId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": { "type": "array" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "classId", "title", "questions", "active", "createdAt"]
+    },
+    "TestResult": {
+      "title": "TestResult",
+      "description": "A student's result for a launched test",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "score": { "type": "number" },
+        "total": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["testId", "studentName", "score", "total", "completedAt"]
+    },
+    "SiteComment": {
+      "title": "SiteComment",
+      "description": "A general comment about the website",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "text": { "type": "string" },
+        "likes": { "type": "number" },
+        "likedBy": { "type": "array" },
+        "parentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userName", "text", "likes", "likedBy", "createdAt"]
     }
   },
   "firestore": {
@@ -70,6 +150,30 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "/userProgress/{progressId}": {
+      "schema": "UserProgress",
+      "description": "User chapter completion status"
+    },
+    "/quizHistory/{historyId}": {
+      "schema": "QuizHistory",
+      "description": "User quiz history"
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Discussion forum comments"
+    },
+    "/tests/{testId}": {
+      "schema": "Test",
+      "description": "Admin-launched tests"
+    },
+    "/testResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "Test results for scoreboard"
+    },
+    "/siteComments/{commentId}": {
+      "schema": "SiteComment",
+      "description": "General website feedback and comments"
     }
   }
 }

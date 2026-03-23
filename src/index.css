@@ -13,13 +13,13 @@
 
 @layer base {
   body {
-    @apply bg-dark-bg text-white font-sans selection:bg-neon-blue/30;
+    @apply bg-dark-bg text-white font-sans selection:bg-neon-blue/30 transition-colors duration-300;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-dark-card backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
+    @apply bg-dark-card backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl transition-all;
   }
   
   .neon-border {

@@ -5,11 +5,15 @@ import {
   ChevronRight, ChevronDown, Search, Users, 
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
-  ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye
+  ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye,
+  MessageSquare
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { storage } from '../firebase';
+import { storage, db } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc 
+} from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
@@ -22,7 +26,7 @@ import {
 } from '../services/dataService';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion } from '../types';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'stats';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'stats';
 type EditTab = 'basic' | 'resources' | 'quiz';
 
 const DraggableAny = Draggable as any;
@@ -33,6 +37,7 @@ export default function AdminPanel() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [siteComments, setSiteComments] = useState<any[]>([]);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -105,9 +110,16 @@ export default function AdminPanel() {
   useEffect(() => {
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
+    
+    const q = query(collection(db, 'siteComments'), orderBy('createdAt', 'desc'));
+    const unsubComments = onSnapshot(q, (snapshot) => {
+      setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubClasses();
       unsubUsers();
+      unsubComments();
     };
   }, []);
 
@@ -273,6 +285,13 @@ export default function AdminPanel() {
             >
               <Users size={16} className="inline-block mr-1.5" />
               Users
+            </button>
+            <button 
+              onClick={() => setActiveTab('comments')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'comments' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+            >
+              <MessageSquare size={16} className="inline-block mr-1.5" />
+              Comments
             </button>
             <button 
               onClick={() => setActiveTab('stats')}
@@ -686,6 +705,65 @@ export default function AdminPanel() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'comments' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search comments..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {siteComments.filter(c => c.text.toLowerCase().includes(searchQuery.toLowerCase()) || c.userName.toLowerCase().includes(searchQuery.toLowerCase())).map((comment) => (
+                  <div key={comment.id} className="p-4 bg-white/5 border border-white/10 rounded-xl hover:border-red-500/30 transition-all group">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-neon-blue/20 text-neon-blue flex items-center justify-center text-xs font-bold">
+                          {comment.userName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-white font-medium">{comment.userName}</span>
+                          <span className="text-[10px] text-white/20 ml-2 font-mono">
+                            {comment.createdAt?.toDate().toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm('Delete this comment?')) {
+                            await deleteDoc(doc(db, 'siteComments', comment.id));
+                          }
+                        }}
+                        className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                        title="Delete Abusive Comment"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                    <p className="text-white/60 text-sm leading-relaxed">{comment.text}</p>
+                    <div className="mt-3 flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest text-white/20">
+                      <span>{comment.likes || 0} Likes</span>
+                      {comment.parentId && <span className="text-neon-blue">Reply to: {comment.parentId}</span>}
+                    </div>
+                  </div>
+                ))}
+                {siteComments.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                    <MessageSquare size={48} className="mb-4" />
+                    <p>No comments found</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

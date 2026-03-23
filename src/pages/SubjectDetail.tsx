@@ -43,65 +43,69 @@ export default function SubjectDetail() {
   const enabledChapters = chapters.filter(c => c.enabled);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-24 pb-12 px-4 hero-gradient">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
-          <Link to="/" className="hover:text-neon-blue transition-colors">Home</Link>
+        <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-8 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
+          <Link to="/" className="hover:text-neon-blue transition-colors flex items-center gap-1">
+            <ArrowLeft size={14} /> Home
+          </Link>
           <ChevronRight size={12} />
           <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
           <ChevronRight size={12} />
           <span className="text-white/60 break-words">{subject.name}</span>
         </div>
 
-        <div className="glass-card p-6 md:p-8 mb-8 md:mb-12 relative overflow-hidden">
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-neon-blue/10 rounded-full blur-3xl"></div>
-          <div className="relative z-10">
-            <h1 className="text-3xl md:text-4xl font-display font-bold mb-2 break-words">{subject.name}</h1>
-            <p className="text-sm md:text-base text-white/50">Comprehensive chapter-wise study resources and practice papers.</p>
-          </div>
+        <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs font-bold uppercase tracking-widest mb-6"
+          >
+            {currentClass?.name} • Subject
+          </motion.div>
+          <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 break-words tracking-tight">
+            {subject.name}
+          </h1>
+          <p className="text-white/40 text-xl max-w-2xl mx-auto">
+            Comprehensive chapter-wise study resources and practice papers for {subject.name}.
+          </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {enabledChapters.map((chapter, idx) => (
             <motion.div
               key={chapter.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              whileHover={{ scale: 1.01, x: 5 }}
-              whileTap={{ scale: 0.99 }}
+              whileHover={{ y: -8 }}
+              className="group"
             >
-              <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`}>
-                <div className="glass-card p-6 flex items-center justify-between group hover:neon-border transition-all cursor-pointer relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-neon-blue/0 via-neon-blue/0 to-neon-blue/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`} className="block h-full">
+                <div className="glass-card p-8 h-full flex flex-col group-hover:neon-border transition-all relative overflow-hidden">
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
                   
-                  <div className="flex items-center gap-4 md:gap-6 relative z-10 min-w-0 flex-1">
-                    <div className="text-xl md:text-2xl font-display font-bold text-white/20 group-hover:text-neon-blue transition-colors shrink-0">
+                  <div className="flex items-start justify-between mb-8">
+                    <div className="text-4xl font-display font-bold text-white/10 group-hover:text-neon-blue transition-colors">
                       {String(idx + 1).padStart(2, '0')}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="text-lg md:text-xl font-bold group-hover:neon-text transition-colors break-words" title={chapter.name}>
-                          {chapter.name}
-                        </h3>
-                        {chapter.isImportant && (
-                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-neon-purple/20 text-neon-purple text-[9px] md:text-[10px] font-bold uppercase tracking-wider shrink-0">
-                            <Star size={10} fill="currentColor" /> Important
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs md:text-sm text-white/40 truncate">
-                        {chapter.resources.length} Resources • {chapter.quiz.length} Quiz Questions
-                      </p>
-                    </div>
+                    {chapter.isImportant && (
+                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider">
+                        <Star size={12} fill="currentColor" /> Important
+                      </span>
+                    )}
                   </div>
+
+                  <h3 className="text-2xl font-display font-bold mb-4 group-hover:neon-text transition-colors break-words">
+                    {chapter.name}
+                  </h3>
                   
-                  <div className="flex items-center gap-4 relative z-10 shrink-0">
-                    <div className="hidden lg:flex items-center gap-2 text-[10px] text-white/20 uppercase tracking-widest font-bold">
-                      <Info size={12} /> View Materials
+                  <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                    <div className="text-xs text-white/30 uppercase tracking-widest font-bold">
+                      {chapter.resources.length} Materials
                     </div>
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
-                      <ChevronRight size={18} className="group-hover:text-neon-blue" />
+                    <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
+                      <ChevronRight size={20} className="group-hover:text-neon-blue" />
                     </div>
                   </div>
                 </div>
@@ -110,8 +114,9 @@ export default function SubjectDetail() {
           ))}
 
           {enabledChapters.length === 0 && (
-            <div className="text-center py-20 glass-card">
-              <p className="text-white/30 italic">No chapters available for this subject yet.</p>
+            <div className="col-span-full text-center py-32 glass-card">
+              <BookOpen size={48} className="mx-auto mb-6 text-white/10" />
+              <p className="text-white/40 text-xl italic">No chapters available for this subject yet.</p>
             </div>
           )}
         </div>

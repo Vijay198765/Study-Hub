@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock } from 'lucide-react';
+import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Class } from '../types';
 import { getClasses } from '../services/dataService';
@@ -9,11 +9,23 @@ export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [displayText, setDisplayText] = useState('');
+  const [recentChapters, setRecentChapters] = useState<any[]>([]);
   const location = useLocation();
   const fullText = "The Future of Learning is Here.";
 
   useEffect(() => {
     const unsubscribe = getClasses(setClasses);
+    
+    // Load recent chapters
+    const saved = localStorage.getItem('recentChapters');
+    if (saved) {
+      try {
+        setRecentChapters(JSON.parse(saved));
+      } catch (e) {
+        console.error("Error parsing recent chapters", e);
+      }
+    }
+
     return () => unsubscribe();
   }, []);
 
@@ -88,6 +100,36 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Recently Viewed */}
+      {recentChapters.length > 0 && (
+        <section className="max-w-7xl mx-auto mb-20">
+          <div className="flex items-center gap-3 mb-8">
+            <History className="text-neon-purple" />
+            <h2 className="text-2xl font-display font-bold">Continue Studying</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {recentChapters.map((chapter, idx) => (
+              <motion.div
+                key={chapter.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
+                  <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
+                      <p className="text-xs text-white/40">{chapter.subjectName}</p>
+                    </div>
+                    <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Class Grid */}
       <section id="classes-section" className="max-w-7xl mx-auto scroll-mt-24">

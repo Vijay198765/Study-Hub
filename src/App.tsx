@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import StudyTips from './pages/StudyTips';
 import Games from './pages/Games';
+import LiveComments from './pages/LiveComments';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import { auth, db } from './firebase';
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
               <Route path="/tips" element={<StudyTips />} />
               <Route path="/games" element={<Games />} />
+              <Route path="/comments" element={<LiveComments />} />
               <Route path="/login" element={<Login />} />
               <Route 
                 path="/admin" 
