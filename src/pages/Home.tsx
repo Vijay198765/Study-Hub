@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { Class } from '../types';
-import { getClasses } from '../services/dataService';
+import { Class, Subject, Chapter } from '../types';
+import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 
 export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -13,8 +13,55 @@ export default function Home() {
   const location = useLocation();
   const fullText = "The Future of Learning is Here.";
 
+  const [allData, setAllData] = useState<{
+    classes: Class[];
+    subjects: Subject[];
+    chapters: Chapter[];
+  }>({ classes: [], subjects: [], chapters: [] });
+  const [results, setResults] = useState<{
+    classes: Class[];
+    subjects: Subject[];
+    chapters: Chapter[];
+  }>({ classes: [], subjects: [], chapters: [] });
+  const [isSearching, setIsSearching] = useState(false);
+
   useEffect(() => {
-    const unsubscribeClasses = getClasses(setClasses);
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.search-container')) {
+        setIsSearching(false);
+      }
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeClasses = getClasses((classes) => {
+      setClasses(classes);
+      setAllData(prev => ({ ...prev, classes }));
+      
+      // Fetch subjects and chapters for global search
+      classes.forEach(cls => {
+        getSubjectsByClass(cls.id, (subjects) => {
+          setAllData(prev => {
+            const existingIds = new Set(prev.subjects.map(s => s.id));
+            const newSubjects = subjects.filter(s => !existingIds.has(s.id));
+            return { ...prev, subjects: [...prev.subjects, ...newSubjects] };
+          });
+
+          subjects.forEach(sub => {
+            getChaptersBySubject(sub.id, (chapters) => {
+              setAllData(prev => {
+                const existingIds = new Set(prev.chapters.map(c => c.id));
+                const newChapters = chapters.filter(c => !existingIds.has(c.id));
+                return { ...prev, chapters: [...prev.chapters, ...newChapters] };
+              });
+            });
+          });
+        });
+      });
+    });
     
     // Load recent chapters
     const saved = localStorage.getItem('recentChapters');
@@ -52,17 +99,23 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const filteredClasses = classes.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setResults({ classes: [], subjects: [], chapters: [] });
+      setIsSearching(false);
+      return;
+    }
 
-  const quotes = [
-    "Education is the most powerful weapon which you can use to change the world.",
-    "The beautiful thing about learning is that no one can take it away from you.",
-    "The expert in anything was once a beginner.",
-    "Success is the sum of small efforts, repeated day in and day out."
-  ];
-  const [randomQuote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
+    setIsSearching(true);
+    const term = searchTerm.toLowerCase();
+    setResults({
+      classes: allData.classes.filter(c => c.name.toLowerCase().includes(term)).slice(0, 3),
+      subjects: allData.subjects.filter(s => s.name.toLowerCase().includes(term)).slice(0, 5),
+      chapters: allData.chapters.filter(c => c.name.toLowerCase().includes(term)).slice(0, 8)
+    });
+  }, [searchTerm, allData]);
+
+  const quote = "Education is the most powerful weapon which you can use to change the world.";
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
@@ -84,22 +137,103 @@ export default function Home() {
         </h1>
         
         <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 italic">
-          "{randomQuote}"
+          "{quote}"
         </p>
 
         {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative group">
+        <div className="max-w-xl mx-auto relative group mb-12 search-container">
           <div className="absolute -inset-1 bg-gradient-to-r from-neon-blue to-neon-purple rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
           <div className="relative flex items-center bg-dark-bg border border-white/10 rounded-2xl px-4 py-3">
             <Search className="text-white/40 w-5 h-5 mr-3" />
             <input
               type="text"
-              placeholder="Search for classes or subjects..."
+              placeholder="Search for classes, subjects, or chapters..."
               className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/20"
               value={searchTerm}
+              onFocus={() => searchTerm.trim() && setIsSearching(true)}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          {/* Search Results Dropdown */}
+          <AnimatePresence>
+            {isSearching && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute top-full left-0 right-0 mt-4 bg-dark-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60] max-h-[60vh] overflow-y-auto no-scrollbar"
+              >
+                <div className="p-4 space-y-6">
+                  {results.classes.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                        <GraduationCap size={12} /> Classes
+                      </h3>
+                      <div className="grid gap-1">
+                        {results.classes.map(c => (
+                          <Link 
+                            key={c.id} 
+                            to={`/class/${c.id}`} 
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                          >
+                            <span className="text-sm font-medium">{c.name}</span>
+                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.subjects.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                        <BookOpen size={12} /> Subjects
+                      </h3>
+                      <div className="grid gap-1">
+                        {results.subjects.map(s => (
+                          <Link 
+                            key={s.id} 
+                            to={`/class/${s.classId}/subject/${s.id}`} 
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                          >
+                            <span className="text-sm font-medium">{s.name}</span>
+                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-purple group-hover:translate-x-1 transition-all" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.chapters.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                        <Star size={12} /> Chapters
+                      </h3>
+                      <div className="grid gap-1">
+                        {results.chapters.map(c => (
+                          <Link 
+                            key={c.id} 
+                            to={`/class/${c.classId}/subject/${c.subjectId}/chapter/${c.id}`} 
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                          >
+                            <span className="text-sm font-medium">{c.name}</span>
+                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-pink group-hover:translate-x-1 transition-all" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.classes.length === 0 && results.subjects.length === 0 && results.chapters.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-white/40 text-sm italic">No results found for "{searchTerm}"</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 
@@ -143,7 +277,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredClasses.map((cls, idx) => (
+          {classes.map((cls, idx) => (
             <motion.div
               key={cls.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -172,7 +306,7 @@ export default function Home() {
               </Link>
             </motion.div>
           ))}
-          {filteredClasses.length === 0 && (
+          {classes.length === 0 && (
             <div className="col-span-full text-center py-20 text-white/20 italic">
               No classes found. Please check back later or try a different search.
             </div>
