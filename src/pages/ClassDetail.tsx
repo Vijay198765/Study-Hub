@@ -47,9 +47,11 @@ export default function ClassDetail() {
             <h1 className="text-5xl font-display font-bold mb-2">{currentClass.name}</h1>
             <p className="text-white/50">Select a subject to view chapters and study materials.</p>
           </div>
-          <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
-            <GraduationCap className="text-neon-blue" />
-            <span className="font-medium">{enabledSubjects.length} Subjects Available</span>
+          <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
+            <GraduationCap className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,242,255,0.5)]" />
+            <span className="font-medium text-white/80">
+              <span className="text-neon-blue font-bold drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">{enabledSubjects.length}</span> Subjects Available
+            </span>
           </div>
         </div>
 

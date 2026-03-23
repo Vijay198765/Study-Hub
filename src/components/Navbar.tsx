@@ -54,9 +54,14 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-[0_0_15px_rgba(0,242,255,0.4)] group-hover:scale-110 transition-transform">
             <GraduationCap className="text-white w-6 h-6" />
           </div>
-          <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
-            Study-hub
-          </span>
+          <div className="flex flex-col">
+            <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 leading-none">
+              Study-hub
+            </span>
+            <span className="text-[8px] text-neon-blue font-bold uppercase tracking-[0.2em] mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+              by Vijay Ninama
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Nav */}

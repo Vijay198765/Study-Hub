@@ -73,7 +73,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-6"
         >
-          🚀 Welcome to Study-hub
+          🚀 Welcome to Study-hub by Vijay Ninama
         </motion.div>
         
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight leading-tight">
@@ -122,7 +122,7 @@ export default function Home() {
                   <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
                     <div>
                       <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
-                      <p className="text-xs text-white/40">{chapter.subjectName}</p>
+                      <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{chapter.subjectName}</p>
                     </div>
                     <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
                   </div>

@@ -112,6 +112,10 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
               Skip for now <ArrowRight size={16} />
             </button>
           </div>
+
+          <div className="pt-6 text-center border-t border-white/5">
+            <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-bold">Created by Vijay Ninama</p>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -86,11 +86,11 @@ export default function SubjectDetail() {
                   <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
                   
                   <div className="flex items-start justify-between mb-8">
-                    <div className="text-4xl font-display font-bold text-white/10 group-hover:text-neon-blue transition-colors">
+                    <div className="text-4xl font-display font-bold text-neon-blue/20 drop-shadow-[0_0_8px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_15px_rgba(0,242,255,0.8)] transition-all duration-300">
                       {String(idx + 1).padStart(2, '0')}
                     </div>
                     {chapter.isImportant && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(188,19,254,0.4)]">
                         <Star size={12} fill="currentColor" /> Important
                       </span>
                     )}
@@ -101,7 +101,7 @@ export default function SubjectDetail() {
                   </h3>
                   
                   <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                    <div className="text-xs text-white/30 uppercase tracking-widest font-bold">
+                    <div className="text-xs text-neon-blue/40 drop-shadow-[0_0_5px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_10px_rgba(0,242,255,0.6)] uppercase tracking-widest font-bold transition-all">
                       {chapter.resources.length} Materials
                     </div>
                     <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">

@@ -7,7 +7,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">Study-hub</h3>
-          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-4">Owner: Vijay Ninama</p>
+          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-1">Owner: Vijay Ninama</p>
+          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-4">Helper: Tilak Sahu</p>
           <p className="text-white/50 max-w-md mb-6">
             Empowering students with futuristic learning tools and high-quality study materials. 
             Join our mission to revolutionize education.

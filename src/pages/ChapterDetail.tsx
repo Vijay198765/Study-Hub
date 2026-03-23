@@ -342,8 +342,8 @@ export default function ChapterDetail() {
                       {getResourceIcon(res.type)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-bold capitalize truncate" title={res.title}>{res.title}</h3>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest">{res.type}</p>
+                      <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
+                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] uppercase tracking-widest transition-all font-bold">{res.type}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
