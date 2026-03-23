@@ -25,17 +25,12 @@ export default function ChapterDetail() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'resources' | 'quiz' | 'discussion'>('resources');
+  const [activeTab, setActiveTab] = useState<'resources' | 'quiz'>('resources');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   // Progress & History State
   const [isCompleted, setIsCompleted] = useState(false);
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
-  
-  // Discussion State
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   
   // Quiz State
   const [quizStarted, setQuizStarted] = useState(false);
@@ -53,7 +48,6 @@ export default function ChapterDetail() {
     const unsubscribeClasses = getClasses(setClasses);
     let unsubscribeSubjects: () => void = () => {};
     let unsubscribeChapters: () => void = () => {};
-    let unsubscribeComments: () => void = () => {};
 
     if (classId) {
       unsubscribeSubjects = getSubjectsByClass(classId, setSubjects);
@@ -83,16 +77,6 @@ export default function ChapterDetail() {
     }
 
     if (chapterId) {
-      // Fetch comments
-      const q = query(
-        collection(db, 'comments'),
-        where('chapterId', '==', chapterId),
-        orderBy('createdAt', 'desc')
-      );
-      unsubscribeComments = onSnapshot(q, (snapshot) => {
-        setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      });
-
       // Check progress
       if (auth.currentUser) {
         const progressQ = query(
@@ -132,7 +116,6 @@ export default function ChapterDetail() {
       unsubscribeClasses();
       unsubscribeSubjects();
       unsubscribeChapters();
-      unsubscribeComments();
     };
   }, [classId, subjectId, chapterId, auth.currentUser]);
 
@@ -235,35 +218,6 @@ export default function ChapterDetail() {
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth.currentUser || !newComment.trim()) return;
-    setIsSubmittingComment(true);
-    try {
-      await addDoc(collection(db, 'comments'), {
-        id: crypto.randomUUID(),
-        chapterId,
-        userId: auth.currentUser.uid,
-        userName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
-        text: newComment.trim(),
-        createdAt: serverTimestamp()
-      });
-      setNewComment('');
-    } catch (e) {
-      console.error("Error adding comment:", e);
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      await deleteDoc(doc(db, 'comments', commentId));
-    } catch (e) {
-      console.error("Error deleting comment:", e);
-    }
-  };
-
   const getResourceIcon = (type: string) => {
     switch (type) {
       case 'notes': return <FileText className="text-blue-400" />;
@@ -354,12 +308,6 @@ export default function ChapterDetail() {
             >
               Quiz
             </button>
-            <button 
-              onClick={() => setActiveTab('discussion')}
-              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'discussion' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
-            >
-              Discussion
-            </button>
           </div>
         </div>
 
@@ -434,7 +382,7 @@ export default function ChapterDetail() {
                 </div>
               )}
             </motion.div>
-          ) : activeTab === 'quiz' ? (
+          ) : (
             <motion.div 
               key="quiz"
               initial={{ opacity: 0, y: 20 }}
@@ -600,72 +548,6 @@ export default function ChapterDetail() {
                   </div>
                 </div>
               )}
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="discussion"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="max-w-4xl mx-auto"
-            >
-              <div className="glass-card p-8">
-                <h2 className="text-2xl font-display font-bold mb-8 flex items-center gap-3">
-                  <MessageSquare className="text-neon-blue" /> Discussion Forum
-                </h2>
-
-                <form onSubmit={handleAddComment} className="mb-10">
-                  <div className="relative">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Ask a question or share your thoughts..."
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pr-12 min-h-[100px] focus:border-neon-blue/50 outline-none transition-all resize-none"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={isSubmittingComment || !newComment.trim()}
-                      className="absolute bottom-4 right-4 p-2 bg-neon-blue text-black rounded-xl hover:scale-110 transition-all disabled:opacity-50 disabled:scale-100"
-                    >
-                      <Send size={18} />
-                    </button>
-                  </div>
-                </form>
-
-                <div className="space-y-6">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-white shrink-0">
-                        {comment.userName[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-bold text-neon-blue">{comment.userName}</h4>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-white/30 uppercase tracking-widest">
-                              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleDateString() : 'Just now'}
-                            </span>
-                            {(isAdmin || comment.userId === auth.currentUser?.uid) && (
-                              <button 
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-white/70 break-words">{comment.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {comments.length === 0 && (
-                    <div className="text-center py-10 text-white/20 italic">
-                      No comments yet. Be the first to start the discussion!
-                    </div>
-                  )}
-                </div>
-              </div>
             </motion.div>
           )}
         </AnimatePresence>

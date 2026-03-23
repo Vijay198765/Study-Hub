@@ -8,7 +8,7 @@ import {
   collection, addDoc, onSnapshot, query, orderBy, 
   serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove 
 } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 
 interface SiteComment {
   id: string;
@@ -64,19 +64,24 @@ export default function LiveComments() {
     e.preventDefault();
     if (!newComment.trim() || !userName) return;
 
+    const commentData: any = {
+      userName,
+      text: newComment.trim(),
+      likes: 0,
+      likedBy: [],
+      createdAt: serverTimestamp()
+    };
+    
+    if (replyTo?.id) {
+      commentData.parentId = replyTo.id;
+    }
+
     try {
-      await addDoc(collection(db, 'siteComments'), {
-        userName,
-        text: newComment.trim(),
-        likes: 0,
-        likedBy: [],
-        parentId: replyTo?.id || null,
-        createdAt: serverTimestamp()
-      });
+      await addDoc(collection(db, 'siteComments'), commentData);
       setNewComment('');
       setReplyTo(null);
     } catch (error) {
-      console.error("Error adding comment:", error);
+      handleFirestoreError(error, OperationType.CREATE, 'siteComments');
     }
   };
 
@@ -98,7 +103,7 @@ export default function LiveComments() {
         });
       }
     } catch (error) {
-      console.error("Error updating likes:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `siteComments/${comment.id}`);
     }
   };
 
@@ -107,7 +112,7 @@ export default function LiveComments() {
     try {
       await deleteDoc(doc(db, 'siteComments', id));
     } catch (error) {
-      console.error("Error deleting comment:", error);
+      handleFirestoreError(error, OperationType.DELETE, `siteComments/${id}`);
     }
   };
 
