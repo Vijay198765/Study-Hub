@@ -256,6 +256,7 @@ export default function AdminPanel() {
       newEntity.classId = selectedClassId;
       newEntity.resources = [];
       newEntity.quiz = [];
+      newEntity.quizEnabled = true;
       newEntity.isImportant = false;
     } else if (type === 'test') {
       if (tests.length > 0) {
@@ -1043,6 +1044,21 @@ export default function AdminPanel() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 mr-2">
+                          <input 
+                            type="checkbox" 
+                            id={`quiz-enabled-${chapter.id}`}
+                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
+                            checked={chapter.quizEnabled !== false}
+                            onChange={async (e) => {
+                              const updatedChapter = { ...chapter, quizEnabled: e.target.checked };
+                              await saveChapter(updatedChapter);
+                            }}
+                          />
+                          <label htmlFor={`quiz-enabled-${chapter.id}`} className="text-[10px] font-bold text-white/40 uppercase tracking-wider cursor-pointer">
+                            {chapter.quizEnabled !== false ? 'Quiz On' : 'Quiz Off'}
+                          </label>
+                        </div>
                         <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/60">
                           {chapter.quiz?.length || 0} MCQs
                         </div>
@@ -1218,6 +1234,19 @@ export default function AdminPanel() {
                           onChange={(e) => setEditingEntity({ ...editingEntity, active: e.target.checked })}
                         />
                         <label htmlFor="active" className="text-sm font-medium text-white">Active (Visible to students)</label>
+                      </div>
+                    )}
+
+                    {editingEntity.type === 'chapter' && (
+                      <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <input 
+                          type="checkbox" 
+                          id="quizEnabled"
+                          className="w-5 h-5 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
+                          checked={editingEntity.quizEnabled !== false}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, quizEnabled: e.target.checked })}
+                        />
+                        <label htmlFor="quizEnabled" className="text-sm font-medium text-white">Enable Quiz (MCQs)</label>
                       </div>
                     )}
 

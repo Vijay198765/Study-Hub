@@ -22,6 +22,7 @@ export interface Chapter {
   name: string;
   resources: Resource[];
   quiz: QuizQuestion[];
+  quizEnabled: boolean;
   isImportant: boolean;
   enabled: boolean;
   order?: number;

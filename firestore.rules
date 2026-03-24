@@ -117,13 +117,14 @@ service cloud.firestore {
     }
 
     function isValidChapter(data) {
-      return data.keys().hasAll(['id', 'subjectId', 'classId', 'name', 'resources', 'quiz', 'isImportant', 'enabled']) &&
+      return data.keys().hasAll(['id', 'subjectId', 'classId', 'name', 'resources', 'quiz', 'quizEnabled', 'isImportant', 'enabled']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
              data.subjectId is string && data.subjectId.size() > 0 && data.subjectId.size() < 50 &&
              data.classId is string && data.classId.size() > 0 && data.classId.size() < 50 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
              data.resources is list &&
              data.quiz is list &&
+             data.quizEnabled is bool &&
              data.isImportant is bool &&
              data.enabled is bool &&
              (!('order' in data) || data.order is number);

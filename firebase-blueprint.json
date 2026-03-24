@@ -36,11 +36,12 @@
         "name": { "type": "string" },
         "resources": { "type": "array" },
         "quiz": { "type": "array" },
+        "quizEnabled": { "type": "boolean" },
         "isImportant": { "type": "boolean" },
         "enabled": { "type": "boolean" },
         "order": { "type": "number" }
       },
-      "required": ["id", "subjectId", "classId", "name", "resources", "quiz", "isImportant", "enabled", "order"]
+      "required": ["id", "subjectId", "classId", "name", "resources", "quiz", "quizEnabled", "isImportant", "enabled", "order"]
     },
     "User": {
       "title": "User",

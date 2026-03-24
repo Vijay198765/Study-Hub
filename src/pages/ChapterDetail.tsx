@@ -133,6 +133,12 @@ export default function ChapterDetail() {
     return () => clearInterval(timer);
   }, [quizStarted, quizFinished, timeLeft]);
 
+  useEffect(() => {
+    if (chapter && chapter.quizEnabled === false && activeTab === 'quiz') {
+      setActiveTab('resources');
+    }
+  }, [chapter, activeTab]);
+
   if (loading) return <div className="pt-32 text-center text-white/40">Loading chapter details...</div>;
   if (!chapter) return <div className="pt-32 text-center text-white/40">Chapter not found</div>;
 
@@ -302,12 +308,14 @@ export default function ChapterDetail() {
             >
               Resources
             </button>
-            <button 
-              onClick={() => setActiveTab('quiz')}
-              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
-            >
-              Quiz
-            </button>
+            {chapter.quizEnabled !== false && (
+              <button 
+                onClick={() => setActiveTab('quiz')}
+                className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
+              >
+                Quiz
+              </button>
+            )}
           </div>
         </div>
 
