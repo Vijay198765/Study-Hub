@@ -33,15 +33,14 @@ type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
+  const [activeTab, setActiveTab] = useState<AdminTab>('classes');
+  
   const userEmail = auth.currentUser?.email?.toLowerCase();
-  const isLimitedAdmin = userEmail === 'tagoreteam2025@gmail.com';
-  const [activeTab, setActiveTab] = useState<AdminTab>(isLimitedAdmin ? 'chapterTests' : 'classes');
+  const isLimitedAdmin = false; // Removed tagoreteam2025@gmail.com authority
   
   useEffect(() => {
-    if (isLimitedAdmin && activeTab !== 'chapterTests') {
-      setActiveTab('chapterTests');
-    }
-  }, [isLimitedAdmin, activeTab]);
+    // No longer needed
+  }, []);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void, singleButton?: boolean } | null>(null);

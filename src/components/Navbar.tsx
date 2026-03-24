@@ -34,8 +34,6 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
     }
   };
 
-  const isLimitedAdmin = user?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
-
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
@@ -43,11 +41,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
     { name: 'Study Tips', path: '/tips', icon: Lightbulb },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Wall', path: '/comments', icon: MessageSquare },
-    ...(isAdmin ? [
-      isLimitedAdmin 
-        ? { name: 'Chapter MCQs', path: '/admin', icon: Trophy }
-        : { name: 'Dashboard', path: '/admin', icon: LayoutDashboard }
-    ] : []),
+    ...(isAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];
 
   return (
