@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronDown, Search, Users, 
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
-  ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye,
+  ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -1221,7 +1221,7 @@ export default function AdminPanel() {
                                         <div className="relative">
                                           <input 
                                             type="text" 
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-3 pr-8 text-sm text-white outline-none focus:border-white/30"
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-3 pr-10 text-sm text-white outline-none focus:border-white/30"
                                             value={resource.title}
                                             onChange={(e) => {
                                               const newResources = [...editingEntity.resources];
@@ -1330,7 +1330,7 @@ export default function AdminPanel() {
                                             <div className="relative flex-grow">
                                               <input 
                                                 type="text" 
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white outline-none focus:border-neon-blue transition-all font-mono"
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-24 text-sm text-white outline-none focus:border-neon-blue transition-all font-mono"
                                                 value={resource.url}
                                                 onChange={(e) => {
                                                   const newResources = [...editingEntity.resources];
@@ -1347,22 +1347,23 @@ export default function AdminPanel() {
                                                         navigator.clipboard.writeText(resource.url);
                                                         setToast({ message: 'Link copied!', type: 'success' });
                                                       }}
-                                                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-neon-blue"
+                                                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-neon-blue"
                                                       title="Copy Link"
                                                     >
-                                                      <Plus size={12} className="rotate-45" />
+                                                      <Copy size={14} />
                                                     </button>
                                                     <a 
                                                       href={resource.url}
                                                       target="_blank"
                                                       rel="noopener noreferrer"
-                                                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-neon-purple"
+                                                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-neon-purple"
                                                       title="Test Link"
                                                     >
-                                                      <Eye size={12} />
+                                                      <Eye size={14} />
                                                     </a>
                                                   </div>
                                                 )}
+                                                <div className="w-px h-4 bg-white/10 mx-1" />
                                                 {resource.url.includes('drive.google.com') ? <ExternalLink size={14} className="text-neon-blue" /> : <Layers size={14} className="text-white/20" />}
                                               </div>
                                             </div>
