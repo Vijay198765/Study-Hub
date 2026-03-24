@@ -223,13 +223,28 @@ export default function AdminPanel() {
     if (!editingEntity) return;
     setIsSaving(true);
     try {
-      if (editingEntity.type === 'class') await saveClass(editingEntity);
-      else if (editingEntity.type === 'subject') await saveSubject(editingEntity);
-      else if (editingEntity.type === 'chapter') await saveChapter(editingEntity);
-      else if (editingEntity.type === 'test') await saveTest(editingEntity);
+      // Create a copy and remove the 'type' field which is only for UI state
+      const { type, ...dataToSave } = editingEntity;
+      
+      if (type === 'class') await saveClass(dataToSave as Class);
+      else if (type === 'subject') await saveSubject(dataToSave as Subject);
+      else if (type === 'chapter') await saveChapter(dataToSave as Chapter);
+      else if (type === 'test') await saveTest(dataToSave as Test);
+      
       setEditingEntity(null);
-    } catch (error) {
+      setToast({ message: "Changes saved successfully!", type: 'success' });
+    } catch (error: any) {
       console.error("Error saving:", error);
+      let errorMessage = "Failed to save changes.";
+      try {
+        const errorData = JSON.parse(error.message);
+        if (errorData.error.includes("insufficient permissions")) {
+          errorMessage = "Permission denied. Please check security rules.";
+        }
+      } catch (e) {
+        // Not a JSON error
+      }
+      setToast({ message: errorMessage, type: 'error' });
     } finally {
       setIsSaving(false);
     }
