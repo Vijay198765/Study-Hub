@@ -53,7 +53,7 @@ export default function App() {
             setIsAdmin(userDoc.data().role === 'admin');
           } else {
             const adminEmails = ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'];
-            if (adminEmails.includes(firebaseUser.email || '')) {
+            if (adminEmails.includes(firebaseUser.email?.toLowerCase() || '')) {
               setIsAdmin(true);
             } else {
               setIsAdmin(false);

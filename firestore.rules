@@ -96,7 +96,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         ((request.auth.token.email == "vijayninama683@gmail.com" || request.auth.token.email == "tagoreteam2025@gmail.com") && request.auth.token.email_verified == true));
+         ((request.auth.token.email.lower() == "vijayninama683@gmail.com" || request.auth.token.email.lower() == "tagoreteam2025@gmail.com") && request.auth.token.email_verified == true));
     }
 
     function isValidClass(data) {
@@ -217,7 +217,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
-        (request.resource.data.role == 'student' || (request.resource.data.role == 'admin' && (request.auth.token.email == "vijayninama683@gmail.com" || request.auth.token.email == "tagoreteam2025@gmail.com")));
+        (request.resource.data.role == 'student' || (request.resource.data.role == 'admin' && (request.auth.token.email.lower() == "vijayninama683@gmail.com" || request.auth.token.email.lower() == "tagoreteam2025@gmail.com")));
       allow update: if isAdmin() && isValidUser(request.resource.data);
       allow delete: if isAdmin();
     }
