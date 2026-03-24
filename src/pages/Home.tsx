@@ -4,9 +4,11 @@ import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History } fro
 import { Link, useLocation } from 'react-router-dom';
 import { Class, Subject, Chapter } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { ClassCardSkeleton } from '../components/Skeleton';
 
 export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [displayText, setDisplayText] = useState('');
   const [recentChapters, setRecentChapters] = useState<any[]>([]);
@@ -37,9 +39,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setLoadingClasses(true);
     const unsubscribeClasses = getClasses((classes) => {
       setClasses(classes);
       setAllData(prev => ({ ...prev, classes }));
+      setLoadingClasses(false);
       
       // Fetch subjects and chapters for global search
       classes.forEach(cls => {
@@ -129,14 +133,14 @@ export default function Home() {
           🚀 Welcome to Study-hub by Vijay Ninama
         </motion.div>
         
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight leading-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight leading-tight min-h-[1.2em]">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
             {displayText}
           </span>
           <span className="animate-pulse text-neon-blue">|</span>
         </h1>
         
-        <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 italic">
+        <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 italic min-h-[3em]">
           "{quote}"
         </p>
 
@@ -277,36 +281,40 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {classes.map((cls, idx) => (
-            <motion.div
-              key={cls.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.1 }}
-              whileHover={{ y: -10 }}
-              className="group"
-            >
-              <Link to={`/class/${cls.id}`} className="block h-full">
-                <div className="glass-card p-8 h-full relative overflow-hidden group-hover:neon-border transition-all">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-                    <GraduationCap size={80} />
+          {loadingClasses ? (
+            Array.from({ length: 4 }).map((_, i) => <ClassCardSkeleton key={i} />)
+          ) : (
+            classes.map((cls, idx) => (
+              <motion.div
+                key={cls.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -10 }}
+                className="group"
+              >
+                <Link to={`/class/${cls.id}`} className="block h-full">
+                  <div className="glass-card p-8 h-full relative overflow-hidden group-hover:neon-border transition-all">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+                      <GraduationCap size={80} />
+                    </div>
+                    
+                    <h3 className="text-4xl font-display font-bold mb-4 group-hover:neon-text transition-colors">
+                      {cls.name}
+                    </h3>
+                    <p className="text-white/40 mb-8">
+                      Access premium study materials, notes, and interactive quizzes for {cls.name}.
+                    </p>
+                    
+                    <div className="flex items-center text-neon-blue font-medium gap-2">
+                      Explore Now <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                    </div>
                   </div>
-                  
-                  <h3 className="text-4xl font-display font-bold mb-4 group-hover:neon-text transition-colors">
-                    {cls.name}
-                  </h3>
-                  <p className="text-white/40 mb-8">
-                    Access premium study materials, notes, and interactive quizzes for {cls.name}.
-                  </p>
-                  
-                  <div className="flex items-center text-neon-blue font-medium gap-2">
-                    Explore Now <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-          {classes.length === 0 && (
+                </Link>
+              </motion.div>
+            ))
+          )}
+          {!loadingClasses && classes.length === 0 && (
             <div className="col-span-full text-center py-20 text-white/20 italic">
               No classes found. Please check back later or try a different search.
             </div>

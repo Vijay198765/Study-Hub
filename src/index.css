@@ -11,6 +11,10 @@
   --color-dark-card: rgba(20, 20, 25, 0.7);
 }
 
+/* Ensure font-display: swap is used for Google Fonts */
+/* Note: This is handled by the ?display=swap parameter in the Google Fonts URL in index.html */
+
+
 @layer base {
   body {
     @apply bg-dark-bg text-white font-sans selection:bg-neon-blue/30 transition-colors duration-300;

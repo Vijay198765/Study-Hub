@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Book, ArrowLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { Class, Subject } from '../types';
 import { getClasses, getSubjectsByClass } from '../services/dataService';
+import { Skeleton } from '../components/Skeleton';
 
 export default function ClassDetail() {
   const { classId } = useParams();
@@ -30,7 +31,37 @@ export default function ClassDetail() {
 
   const currentClass = classes.find(c => c.id === classId);
 
-  if (loading) return <div className="pt-32 text-center text-white/40">Loading class details...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="h-6 w-32 bg-white/5 rounded-lg mb-8 animate-pulse"></div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <div className="h-12 w-64 bg-white/5 rounded-lg mb-4 animate-pulse"></div>
+              <div className="h-4 w-96 bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
+            <div className="h-12 w-48 bg-white/5 rounded-2xl animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="glass-card p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 animate-pulse"></div>
+                  <div className="space-y-2">
+                    <div className="h-6 w-32 bg-white/5 rounded-lg animate-pulse"></div>
+                    <div className="h-4 w-24 bg-white/5 rounded-lg animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="w-6 h-6 bg-white/5 rounded-full animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentClass) return <div className="pt-32 text-center text-white/40">Class not found</div>;
 
   const enabledSubjects = subjects.filter(s => s.enabled);

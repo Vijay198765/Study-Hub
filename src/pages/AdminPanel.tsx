@@ -9,7 +9,7 @@ import {
   MessageSquare, ClipboardList, Trophy
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { storage, db } from '../firebase';
+import { storage, db, auth } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   collection, query, orderBy, onSnapshot, deleteDoc, doc 
@@ -27,13 +27,22 @@ import {
 } from '../services/dataService';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion } from '../types';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('classes');
+  
+  const userEmail = auth.currentUser?.email;
+  const isLimitedAdmin = userEmail === 'tagoreteam2025@gmail.com';
+
+  useEffect(() => {
+    if (isLimitedAdmin) {
+      setActiveTab('chapterTests');
+    }
+  }, [isLimitedAdmin]);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void, singleButton?: boolean } | null>(null);
@@ -288,55 +297,70 @@ export default function AdminPanel() {
             <p className="text-white/40">Manage your educational ecosystem.</p>
           </div>
           <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto no-scrollbar max-w-full">
+            {!isLimitedAdmin && (
+              <>
+                <button 
+                  onClick={() => setActiveTab('classes')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'classes' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Layers size={16} className="inline-block mr-1.5" />
+                  Classes
+                </button>
+                <button 
+                  onClick={() => setActiveTab('subjects')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'subjects' ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <BookOpen size={16} className="inline-block mr-1.5" />
+                  Subjects
+                </button>
+                <button 
+                  onClick={() => setActiveTab('chapters')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <FileText size={16} className="inline-block mr-1.5" />
+                  Chapters
+                </button>
+              </>
+            )}
             <button 
-              onClick={() => setActiveTab('classes')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'classes' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              onClick={() => setActiveTab('chapterTests')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapterTests' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
             >
-              <Layers size={16} className="inline-block mr-1.5" />
-              Classes
+              <Trophy size={16} className="inline-block mr-1.5" />
+              Chapter MCQs
             </button>
-            <button 
-              onClick={() => setActiveTab('subjects')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'subjects' ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <BookOpen size={16} className="inline-block mr-1.5" />
-              Subjects
-            </button>
-            <button 
-              onClick={() => setActiveTab('chapters')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <FileText size={16} className="inline-block mr-1.5" />
-              Chapters
-            </button>
-            <button 
-              onClick={() => setActiveTab('users')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-500 text-white shadow-[0_0_15_rgba(16,185,129,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <Users size={16} className="inline-block mr-1.5" />
-              Users
-            </button>
-            <button 
-              onClick={() => setActiveTab('comments')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'comments' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <MessageSquare size={16} className="inline-block mr-1.5" />
-              Comments
-            </button>
-            <button 
-              onClick={() => setActiveTab('tests')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'tests' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <ClipboardList size={16} className="inline-block mr-1.5" />
-              Tests
-            </button>
-            <button 
-              onClick={() => setActiveTab('stats')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
-            >
-              <BarChart3 size={16} className="inline-block mr-1.5" />
-              Stats
-            </button>
+            {!isLimitedAdmin && (
+              <>
+                <button 
+                  onClick={() => setActiveTab('users')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-500 text-white shadow-[0_0_15_rgba(16,185,129,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Users size={16} className="inline-block mr-1.5" />
+                  Users
+                </button>
+                <button 
+                  onClick={() => setActiveTab('comments')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'comments' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <MessageSquare size={16} className="inline-block mr-1.5" />
+                  Comments
+                </button>
+                <button 
+                  onClick={() => setActiveTab('tests')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'tests' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <ClipboardList size={16} className="inline-block mr-1.5" />
+                  Tests
+                </button>
+                <button 
+                  onClick={() => setActiveTab('stats')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                >
+                  <BarChart3 size={16} className="inline-block mr-1.5" />
+                  Stats
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -958,6 +982,100 @@ export default function AdminPanel() {
               </div>
             </div>
           )}
+          {activeTab === 'chapterTests' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Select Class</label>
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue transition-all"
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
+                  >
+                    <option value="" className="bg-dark-bg">All Classes</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Select Subject</label>
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue transition-all"
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    disabled={!selectedClassId}
+                  >
+                    <option value="" className="bg-dark-bg">All Subjects</option>
+                    {subjects.map(s => (
+                      <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Search chapters..." 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4">
+                {chapters
+                  .filter(ch => ch.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((chapter) => (
+                    <div 
+                      key={chapter.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
+                    >
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-lg bg-neon-pink/10 flex items-center justify-center text-neon-pink shrink-0">
+                          <Trophy size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
+                          <p className="text-xs text-white/40 truncate">
+                            {classes.find(c => c.id === chapter.classId)?.name} • {subjects.find(s => s.id === chapter.subjectId)?.name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/60">
+                          {chapter.quiz?.length || 0} MCQs
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setEditingEntity({ ...chapter, type: 'chapter' });
+                            setEditTab('quiz');
+                          }}
+                          className="btn-neon bg-neon-pink text-white px-4 py-1.5 text-xs flex items-center gap-2"
+                        >
+                          <Edit2 size={14} />
+                          Edit MCQs
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                {chapters.length === 0 && selectedSubjectId && (
+                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <Trophy size={48} className="mx-auto text-white/10 mb-4" />
+                    <p className="text-white/30 italic">No chapters found for this subject.</p>
+                  </div>
+                )}
+                {!selectedSubjectId && (
+                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <BookOpen size={48} className="mx-auto text-white/10 mb-4" />
+                    <p className="text-white/30 italic">Please select a class and subject to manage chapter MCQs.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -995,27 +1113,33 @@ export default function AdminPanel() {
 
               {editingEntity.type === 'chapter' && (
                 <div className="px-6 pt-4 flex items-center gap-4 border-b border-white/10 shrink-0">
-                  <button 
-                    onClick={() => setEditTab('basic')}
-                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'basic' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
-                  >
-                    Basic Info
-                    {editTab === 'basic' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
-                  </button>
-                  <button 
-                    onClick={() => setEditTab('resources')}
-                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'resources' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
-                  >
-                    Resources ({editingEntity.resources?.length || 0})
-                    {editTab === 'resources' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
-                  </button>
-                  <button 
-                    onClick={() => setEditTab('quiz')}
-                    className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'quiz' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
-                  >
-                    Quiz ({editingEntity.quiz?.length || 0})
-                    {editTab === 'quiz' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
-                  </button>
+                  {!isLimitedAdmin && (
+                    <>
+                      <button 
+                        onClick={() => setEditTab('basic')}
+                        className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'basic' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Basic Info
+                        {editTab === 'basic' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                      </button>
+                      <button 
+                        onClick={() => setEditTab('resources')}
+                        className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'resources' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Resources ({editingEntity.resources?.length || 0})
+                        {editTab === 'resources' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                      </button>
+                    </>
+                  )}
+                  {(activeTab === 'chapterTests' || isLimitedAdmin) && (
+                    <button 
+                      onClick={() => setEditTab('quiz')}
+                      className={`pb-4 px-2 text-sm font-medium transition-all relative ${editTab === 'quiz' ? 'text-neon-pink' : 'text-white/40 hover:text-white'}`}
+                    >
+                      Quiz ({editingEntity.quiz?.length || 0})
+                      {editTab === 'quiz' && <motion.div layoutId="editTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-pink" />}
+                    </button>
+                  )}
                 </div>
               )}
 
