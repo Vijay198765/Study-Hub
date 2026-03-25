@@ -814,7 +814,11 @@ export default function AdminPanel() {
               </div>
 
               <div className="grid gap-4">
-                {siteComments.filter(c => c.text.toLowerCase().includes(searchQuery.toLowerCase()) || c.userName.toLowerCase().includes(searchQuery.toLowerCase())).map((comment) => (
+                {siteComments.filter(c => 
+                  c.text.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                  c.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (c.userEmail && c.userEmail.toLowerCase().includes(searchQuery.toLowerCase()))
+                ).map((comment) => (
                   <div key={comment.id} className="p-4 bg-white/5 border border-white/10 rounded-xl hover:border-red-500/30 transition-all group">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
@@ -822,9 +826,16 @@ export default function AdminPanel() {
                           {comment.userName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <span className="text-white font-medium">{comment.userName}</span>
-                          <span className="text-[10px] text-white/20 ml-2 font-mono">
-                            {comment.createdAt?.toDate().toLocaleString()}
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{comment.userName}</span>
+                            {comment.userEmail && (
+                              <span className="text-[10px] text-neon-blue/60 bg-neon-blue/5 px-1.5 py-0.5 rounded border border-neon-blue/10">
+                                {comment.userEmail}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-white/20 font-mono">
+                            {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : 'Just now'}
                           </span>
                         </div>
                       </div>

@@ -14,6 +14,7 @@ import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 interface SiteComment {
   id: string;
   userName: string;
+  userEmail?: string;
   text: string;
   likes: number;
   likedBy: string[];
@@ -71,6 +72,7 @@ export default function LiveComments() {
 
     const commentData: any = {
       userName: userProfile.name,
+      userEmail: auth.currentUser?.email,
       userUid: auth.currentUser?.uid,
       text: newComment.trim(),
       likes: 0,
