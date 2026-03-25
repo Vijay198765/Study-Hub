@@ -1325,6 +1325,55 @@ export default function AdminPanel() {
                 </button>
               </div>
 
+              <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Global Music Player</h3>
+                  <p className="text-xs text-white/40">Enable or disable the music player for all users.</p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await setDoc(doc(db, 'settings', 'global'), {
+                        isMusicEnabled: !globalSettings?.isMusicEnabled
+                      }, { merge: true });
+                      setToast({ message: `Music player ${!globalSettings?.isMusicEnabled ? 'enabled' : 'disabled'} globally!`, type: 'success' });
+                    } catch (error) {
+                      setToast({ message: "Failed to update global setting.", type: 'error' });
+                    }
+                  }}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all",
+                    globalSettings?.isMusicEnabled 
+                      ? "bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
+                      : "bg-white/10 text-white/40"
+                  )}
+                >
+                  {globalSettings?.isMusicEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              {globalSettings?.globalAutoPlayTrackId && (
+                <div className="bg-neon-purple/10 border border-neon-purple/20 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-neon-purple/20 flex items-center justify-center text-neon-purple">
+                      <MusicIcon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-neon-purple uppercase tracking-widest">Global Auto-play Active</p>
+                      <p className="text-sm text-white font-medium">
+                        {musicTracks.find(t => t.id === globalSettings.globalAutoPlayTrackId)?.title || 'Unknown Track'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleSetGlobalMusic('')}
+                    className="text-xs font-bold text-neon-pink hover:underline uppercase tracking-widest"
+                  >
+                    Disable Global Music
+                  </button>
+                </div>
+              )}
+
               <div className="grid gap-4">
                 {musicTracks.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase())).map((track) => (
                   <motion.div 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Music as MusicIcon, Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Settings } from 'lucide-react';
+import { Music as MusicIcon, Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Settings, X } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,12 +20,18 @@ export default function MusicPlayer({ user }: { user: any }) {
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [globalTrackId, setGlobalTrackId] = useState<string | null>(null);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(true);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [sessionStopped, setSessionStopped] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hasAutoPlayed = useRef(false);
 
   useEffect(() => {
-    const handleToggle = () => setShowSettings(prev => !prev);
+    const handleToggle = () => {
+      setIsHidden(false);
+      setShowSettings(prev => !prev);
+    };
     window.addEventListener('toggle-music', handleToggle);
     return () => window.removeEventListener('toggle-music', handleToggle);
   }, []);
@@ -39,7 +45,12 @@ export default function MusicPlayer({ user }: { user: any }) {
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
-        setGlobalTrackId(snapshot.data().globalAutoPlayTrackId);
+        const data = snapshot.data();
+        setGlobalTrackId(data.globalAutoPlayTrackId);
+        setIsMusicEnabled(data.isMusicEnabled !== false); // Default to true
+      } else {
+        setGlobalTrackId(null);
+        setIsMusicEnabled(true);
       }
     });
 
@@ -51,8 +62,11 @@ export default function MusicPlayer({ user }: { user: any }) {
 
   // Separate effect to handle initial auto-play once tracks and settings are loaded
   useEffect(() => {
-    if (tracks.length > 0 && !hasAutoPlayed.current) {
-      const targetTrackId = user?.preferredMusicId || globalTrackId;
+    if (tracks.length > 0 && !hasAutoPlayed.current && !sessionStopped && isMusicEnabled) {
+      // If user has an explicit preference (even if it's empty string for 'None'), use it.
+      // Otherwise fallback to global track.
+      const hasUserPref = user && 'preferredMusicId' in user;
+      const targetTrackId = hasUserPref ? user.preferredMusicId : globalTrackId;
       
       if (targetTrackId) {
         const idx = tracks.findIndex(t => t.id === targetTrackId);
@@ -61,9 +75,12 @@ export default function MusicPlayer({ user }: { user: any }) {
           setIsPlaying(true);
           hasAutoPlayed.current = true;
         }
+      } else if (hasUserPref && targetTrackId === '') {
+        // User explicitly chose 'None'
+        hasAutoPlayed.current = true;
       }
     }
-  }, [tracks, globalTrackId, user?.preferredMusicId]);
+  }, [tracks, globalTrackId, user, sessionStopped, isMusicEnabled]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -71,24 +88,40 @@ export default function MusicPlayer({ user }: { user: any }) {
     }
   }, [volume, isMuted]);
 
+  // Handle track changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.load();
-      if (isPlaying) {
+      if (isPlaying && !sessionStopped && isMusicEnabled) {
         audioRef.current.play().catch(err => {
           console.log("Auto-play blocked by browser. User interaction required.");
           setIsBlocked(true);
           setIsPlaying(false);
         });
+      }
+    }
+  }, [currentTrackIdx]);
+
+  // Handle play/pause
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying && !sessionStopped && isMusicEnabled) {
+        audioRef.current.play().catch(err => {
+          if (err.name !== 'AbortError') {
+            console.log("Play failed:", err.message);
+            setIsBlocked(true);
+            setIsPlaying(false);
+          }
+        });
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentTrackIdx]);
+  }, [isPlaying, sessionStopped, isMusicEnabled]);
 
   useEffect(() => {
     const handleFirstInteraction = () => {
-      if (isBlocked && audioRef.current) {
+      if (isBlocked && audioRef.current && !sessionStopped && isMusicEnabled) {
         audioRef.current.play().then(() => {
           setIsBlocked(false);
           setIsPlaying(true);
@@ -98,14 +131,16 @@ export default function MusicPlayer({ user }: { user: any }) {
     };
     window.addEventListener('click', handleFirstInteraction);
     return () => window.removeEventListener('click', handleFirstInteraction);
-  }, [isBlocked]);
+  }, [isBlocked, sessionStopped, isMusicEnabled]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      setSessionStopped(true);
     } else {
+      setSessionStopped(false);
       audioRef.current.play().then(() => {
         setIsBlocked(false);
         setIsPlaying(true);
@@ -118,12 +153,14 @@ export default function MusicPlayer({ user }: { user: any }) {
 
   const nextTrack = () => {
     if (tracks.length === 0) return;
+    setSessionStopped(false);
     setCurrentTrackIdx((prev) => (prev + 1) % tracks.length);
     setIsPlaying(true);
   };
 
   const prevTrack = () => {
     if (tracks.length === 0) return;
+    setSessionStopped(false);
     setCurrentTrackIdx((prev) => (prev - 1 + tracks.length) % tracks.length);
     setIsPlaying(true);
   };
@@ -162,14 +199,28 @@ export default function MusicPlayer({ user }: { user: any }) {
     return url;
   };
 
-  if (tracks.length === 0) return null;
+  if (!isMusicEnabled) return null;
+
+  if (tracks.length === 0 || isHidden) {
+    if (isHidden) {
+      return (
+        <button 
+          onClick={() => setIsHidden(false)}
+          className="fixed bottom-6 right-6 z-[100] w-12 h-12 rounded-full bg-dark-bg/80 backdrop-blur-md border border-white/10 text-neon-blue flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+        >
+          <MusicIcon size={24} />
+        </button>
+      );
+    }
+    return null;
+  }
 
   const currentTrack = tracks[currentTrackIdx];
 
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
       <AnimatePresence>
-        {isBlocked && (
+        {isBlocked && !sessionStopped && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -192,9 +243,14 @@ export default function MusicPlayer({ user }: { user: any }) {
           >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xs font-bold text-white uppercase tracking-widest">Music Settings</h3>
-              <button onClick={() => setShowSettings(false)} className="text-white/40 hover:text-white">
-                <Settings size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setIsHidden(true)} className="text-white/40 hover:text-white" title="Hide Player">
+                  <X size={14} />
+                </button>
+                <button onClick={() => setShowSettings(false)} className="text-white/40 hover:text-white">
+                  <Settings size={14} />
+                </button>
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -214,6 +270,20 @@ export default function MusicPlayer({ user }: { user: any }) {
               <div className="space-y-2">
                 <label className="text-[10px] text-white/40 uppercase font-bold">Playlist</label>
                 <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  <button
+                    onClick={() => {
+                      setIsPlaying(false);
+                      setSessionStopped(true);
+                      handleSetAutoPlay('');
+                    }}
+                    className={cn(
+                      "w-full text-left text-[10px] p-2 rounded-lg transition-colors flex justify-between items-center group",
+                      !user?.preferredMusicId ? "bg-neon-pink/20 text-neon-pink" : "text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    <span className="truncate mr-2">None (Disable Auto-play)</span>
+                    <VolumeX size={10} />
+                  </button>
                   {tracks.map((track, idx) => (
                     <button
                       key={track.id}
