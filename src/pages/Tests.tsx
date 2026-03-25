@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ClipboardList, Trophy, Timer, CheckCircle2, XCircle, ArrowRight, Star, Medal, Users, Lock, Info } from 'lucide-react';
 import { getTests, saveTestResult, getTestResults } from '../services/dataService';
 import { Test, TestResult } from '../types';
-import { auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { calculateRanks } from '../utils/ranking';
 
 export default function Tests() {
@@ -17,25 +19,23 @@ export default function Tests() {
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [isGuest, setIsGuest] = useState(false);
+  const [isGuest, setIsGuest] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const guestStatus = localStorage.getItem('is_guest') === 'true';
-      setIsGuest(guestStatus);
-
-      const profileStr = localStorage.getItem('user_profile');
-      if (profileStr) {
-        setUserProfile(JSON.parse(profileStr));
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsGuest(false);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          setUserProfile(userDoc.data());
+        }
+      } else {
+        setIsGuest(true);
+        setUserProfile(null);
       }
-    };
-
-    checkAuth();
-    const unsubAuth = auth.onAuthStateChanged(() => {
-      checkAuth();
     });
 
-    return () => unsubAuth();
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {

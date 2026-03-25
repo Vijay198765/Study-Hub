@@ -5,7 +5,7 @@ import {
   ArrowLeft, FileText, Download, Eye, HelpCircle, 
   CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw,
   Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
-  ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History
+  ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History, Lock
 } from 'lucide-react';
 
 // Utility for conditional classes
@@ -193,6 +193,10 @@ export default function ChapterDetail() {
   };
 
   const startQuiz = () => {
+    if (!auth.currentUser) {
+      alert("Please login to participate in the quiz.");
+      return;
+    }
     setQuizStarted(true);
     setUserAnswers(new Array(chapter.quiz.length).fill(null));
   };
@@ -411,8 +415,19 @@ export default function ChapterDetail() {
                           Test your understanding of <strong>{chapter.name}</strong>. 
                           You have 60 seconds to answer {chapter.quiz.length} questions.
                         </p>
+                        {!auth.currentUser && (
+                          <div className="mb-6 p-4 bg-neon-blue/10 border border-neon-blue/20 rounded-2xl flex items-center gap-4 text-neon-blue text-left">
+                            <Lock size={20} className="shrink-0" />
+                            <p className="text-sm">You need to log in to participate in the quiz and save your progress.</p>
+                          </div>
+                        )}
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                          <button onClick={startQuiz} className="btn-neon px-10 py-3 text-lg">
+                          <button 
+                            onClick={startQuiz} 
+                            disabled={!auth.currentUser}
+                            className={`btn-neon px-10 py-3 text-lg flex items-center gap-2 ${!auth.currentUser ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {!auth.currentUser && <Lock size={20} />}
                             Start Quiz
                           </button>
                         </div>
