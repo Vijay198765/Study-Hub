@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User, Music as MusicIcon } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { auth, db } from '../firebase';
@@ -143,21 +143,6 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
           <button onClick={() => setIsSearchOpen(true)} className="text-white/70 hover:text-neon-blue p-2">
             <Search size={20} />
           </button>
-          {user && (
-            <button 
-              onClick={() => {
-                setNewName(user.name);
-                setIsProfileOpen(true);
-              }}
-              className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center"
-            >
-              {user.photoURL ? (
-                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                <User size={16} className="text-white/70" />
-              )}
-            </button>
-          )}
           <button className="text-white p-2" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
