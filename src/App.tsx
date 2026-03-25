@@ -3,6 +3,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import MusicPlayer from './components/MusicPlayer';
 import Home from './pages/Home';
 import ClassDetail from './pages/ClassDetail';
 import SubjectDetail from './pages/SubjectDetail';
@@ -117,6 +118,7 @@ export default function App() {
         </div>
         
         <Navbar isAdmin={isAdmin} user={userProfile} />
+        <MusicPlayer user={userProfile} />
         
         <main className="flex-grow">
           <AnimatePresence mode="wait">

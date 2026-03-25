@@ -50,9 +50,24 @@
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "student"] }
+        "name": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "preferredMusicId": { "type": "string" }
       },
       "required": ["uid", "email", "role"]
+    },
+    "Music": {
+      "title": "Music",
+      "description": "Background music tracks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "url", "createdAt"]
     },
     "UserProgress": {
       "title": "UserProgress",
@@ -175,6 +190,10 @@
     "/siteComments/{commentId}": {
       "schema": "SiteComment",
       "description": "General website feedback and comments"
+    },
+    "/music/{musicId}": {
+      "schema": "Music",
+      "description": "Background music tracks"
     }
   }
 }
