@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Music as MusicIcon, Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Settings } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -19,25 +19,44 @@ export default function MusicPlayer({ user }: { user: any }) {
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [globalTrackId, setGlobalTrackId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const hasAutoPlayed = useRef(false);
 
   useEffect(() => {
     const q = query(collection(db, 'music'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubMusic = onSnapshot(q, (snapshot) => {
       const musicData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicTrack));
       setTracks(musicData);
-      
-      // Auto-play logic if preferredMusicId is set
-      if (user?.preferredMusicId && musicData.length > 0) {
-        const preferredIdx = musicData.findIndex(t => t.id === user.preferredMusicId);
-        if (preferredIdx !== -1) {
-          setCurrentTrackIdx(preferredIdx);
-          setIsPlaying(true);
-        }
+    });
+
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setGlobalTrackId(snapshot.data().globalAutoPlayTrackId);
       }
     });
-    return () => unsubscribe();
-  }, [user?.preferredMusicId]);
+
+    return () => {
+      unsubMusic();
+      unsubSettings();
+    };
+  }, []);
+
+  // Separate effect to handle initial auto-play once tracks and settings are loaded
+  useEffect(() => {
+    if (tracks.length > 0 && !hasAutoPlayed.current) {
+      const targetTrackId = user?.preferredMusicId || globalTrackId;
+      
+      if (targetTrackId) {
+        const idx = tracks.findIndex(t => t.id === targetTrackId);
+        if (idx !== -1) {
+          setCurrentTrackIdx(idx);
+          setIsPlaying(true);
+          hasAutoPlayed.current = true;
+        }
+      }
+    }
+  }, [tracks, globalTrackId, user?.preferredMusicId]);
 
   useEffect(() => {
     if (audioRef.current) {

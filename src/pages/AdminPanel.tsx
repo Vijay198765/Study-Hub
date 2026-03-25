@@ -6,13 +6,14 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Music as MusicIcon, ClipboardList as ClipboardIcon
+  MessageSquare, ClipboardList, Trophy, Music as MusicIcon, ClipboardList as ClipboardIcon, Globe
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { cn } from '../lib/utils';
 import { storage, db, auth } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -53,6 +54,7 @@ export default function AdminPanel() {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
   const [musicTracks, setMusicTracks] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -150,6 +152,12 @@ export default function AdminPanel() {
       setMusicTracks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setGlobalSettings(snapshot.data());
+      }
+    });
+
     return () => {
       unsubClasses();
       unsubUsers();
@@ -157,6 +165,7 @@ export default function AdminPanel() {
       unsubResults();
       unsubComments();
       unsubMusic();
+      unsubSettings();
     };
   }, []);
 
@@ -258,10 +267,10 @@ export default function AdminPanel() {
       else if (type === 'test') await saveTest(dataToSave as Test);
       else if (type === 'music') {
         const musicRef = doc(db, 'music', dataToSave.id);
-        await updateDoc(musicRef, {
+        await setDoc(musicRef, {
           ...dataToSave,
-          createdAt: dataToSave.createdAt || new Date()
-        });
+          createdAt: dataToSave.createdAt || serverTimestamp()
+        }, { merge: true });
       }
       
       setEditingEntity(null);
@@ -280,6 +289,18 @@ export default function AdminPanel() {
       setToast({ message: errorMessage, type: 'error' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSetGlobalMusic = async (trackId: string) => {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), {
+        globalAutoPlayTrackId: trackId
+      }, { merge: true });
+      setToast({ message: "Global auto-play track updated!", type: 'success' });
+    } catch (error) {
+      console.error("Error setting global music:", error);
+      setToast({ message: "Failed to update global preference.", type: 'error' });
     }
   };
 
@@ -1321,6 +1342,19 @@ export default function AdminPanel() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleSetGlobalMusic(track.id)}
+                        className={cn(
+                          "p-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-tighter",
+                          globalSettings?.globalAutoPlayTrackId === track.id 
+                            ? "bg-neon-purple text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]" 
+                            : "text-white/40 hover:text-white hover:bg-white/5"
+                        )}
+                        title={globalSettings?.globalAutoPlayTrackId === track.id ? "Global Auto-play Active" : "Set as Global Auto-play"}
+                      >
+                        <Globe size={18} />
+                        <span className="hidden md:inline">{globalSettings?.globalAutoPlayTrackId === track.id ? "Global Active" : "Set Global"}</span>
+                      </button>
                       <button 
                         onClick={() => handleEdit(track, 'music')}
                         className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"

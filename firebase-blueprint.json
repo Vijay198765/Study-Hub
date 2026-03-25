@@ -148,6 +148,14 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userName", "text", "likes", "likedBy", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "globalAutoPlayTrackId": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -194,6 +202,10 @@
     "/music/{musicId}": {
       "schema": "Music",
       "description": "Background music tracks"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global application settings"
     }
   }
 }

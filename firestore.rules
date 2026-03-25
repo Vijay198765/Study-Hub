@@ -50,6 +50,11 @@ service cloud.firestore {
     //   - url: string (required)
     //   - createdAt: timestamp (required)
     //
+    // Collection: settings
+    // Document ID: settingId
+    // Fields:
+    //   - globalAutoPlayTrackId: string (optional)
+    //
     // Collection: userProgress
     // Document ID: progressId
     // Fields:
@@ -156,7 +161,11 @@ service cloud.firestore {
              data.id is string && data.id.size() > 0 &&
              data.title is string && data.title.size() > 0 &&
              data.url is string && data.url.size() > 0 &&
-             data.createdAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time);
+    }
+
+    function isValidSettings(data) {
+      return !('globalAutoPlayTrackId' in data) || data.globalAutoPlayTrackId is string;
     }
 
     function isValidUserProgress(data) {
@@ -248,6 +257,11 @@ service cloud.firestore {
     match /music/{musicId} {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidMusic(request.resource.data);
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSettings(request.resource.data);
     }
 
     match /userProgress/{progressId} {
