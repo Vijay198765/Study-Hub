@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import SearchModal from './SearchModal';
+import { toast } from 'sonner';
 
 interface NavbarProps {
   isAdmin: boolean;
@@ -16,6 +18,9 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [newName, setNewName] = useState(user?.name || '');
+  const [isUpdating, setIsUpdating] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,6 +36,23 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
       navigate('/');
     } catch (error) {
       console.error("Logout error:", error);
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!newName.trim() || !user) return;
+    setIsUpdating(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        name: newName.trim()
+      });
+      toast.success('Name updated successfully!');
+      setIsProfileOpen(false);
+    } catch (error) {
+      console.error("Error updating name:", error);
+      toast.error('Failed to update name');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -89,9 +111,22 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
           
           {user ? (
             <div className="flex items-center gap-4 ml-4">
-              <span className="text-xs text-white/40 font-mono hidden xl:block max-w-[150px] truncate">
-                {user.email}
-              </span>
+              <button 
+                onClick={() => {
+                  setNewName(user.name);
+                  setIsProfileOpen(true);
+                }}
+                className="flex items-center gap-2 text-white/70 hover:text-neon-blue transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <User size={16} />
+                  )}
+                </div>
+                <span className="text-sm font-medium hidden xl:block">{user.name}</span>
+              </button>
               <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5 px-4 text-xs">
                 <LogOut className="w-3 h-3" /> Logout
               </button>
@@ -115,6 +150,67 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
       </div>
 
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {isProfileOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsProfileOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-dark-bg border border-white/10 rounded-3xl p-8 shadow-2xl"
+            >
+              <button 
+                onClick={() => setIsProfileOpen(false)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-white/10 border-2 border-neon-blue mx-auto mb-4 flex items-center justify-center">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} alt={user?.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <User size={40} className="text-white/20" />
+                  )}
+                </div>
+                <h2 className="text-2xl font-display font-bold text-white uppercase tracking-tight">Edit Profile</h2>
+                <p className="text-white/40 text-sm">{user?.email}</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">Display Name</label>
+                  <input 
+                    type="text" 
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue transition-all"
+                    placeholder="Enter your name"
+                  />
+                </div>
+
+                <button 
+                  onClick={handleUpdateName}
+                  disabled={isUpdating || !newName.trim() || newName === user?.name}
+                  className="btn-neon w-full py-4 bg-neon-blue text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? 'Updating...' : 'Save Changes'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Nav */}
       <AnimatePresence>

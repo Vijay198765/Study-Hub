@@ -192,16 +192,26 @@ export default function AdminPanel() {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= list.length) return;
 
-    // Swap orders
-    const item1 = { ...list[index] };
-    const item2 = { ...list[newIndex] };
-    
-    const tempOrder = item1.order || index;
-    item1.order = item2.order || newIndex;
-    item2.order = tempOrder;
+    // Create a copy of the list to reorder
+    const newList = [...list];
+    const [movedItem] = newList.splice(index, 1);
+    newList.splice(newIndex, 0, movedItem);
 
-    await saveFn(item1);
-    await saveFn(item2);
+    // Update orders for all items to ensure they are consistent and unique
+    try {
+      const updates = newList.map((item, idx) => {
+        if (item.order !== idx) {
+          return saveFn({ ...item, order: idx });
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(updates);
+      toast.success('Order updated successfully');
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast.error('Failed to update order');
+    }
   };
 
   const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string) => {

@@ -15,6 +15,7 @@ interface SiteComment {
   id: string;
   userName: string;
   userEmail?: string;
+  userPhotoURL?: string;
   text: string;
   likes: number;
   likedBy: string[];
@@ -73,6 +74,7 @@ export default function LiveComments() {
     const commentData: any = {
       userName: userProfile.name,
       userEmail: auth.currentUser?.email,
+      userPhotoURL: auth.currentUser?.photoURL || userProfile.photoURL || '',
       userUid: auth.currentUser?.uid,
       text: newComment.trim(),
       likes: 0,
@@ -144,7 +146,7 @@ export default function LiveComments() {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl sm:text-7xl font-display font-bold uppercase tracking-tighter mb-4"
           >
-            Live <span className="text-neon-blue">Wall</span>
+            Community <span className="text-neon-blue">Live Club</span>
           </motion.h1>
           <p className="text-gray-400 font-mono text-sm uppercase tracking-widest">
             Share your thoughts about the platform
@@ -198,14 +200,14 @@ export default function LiveComments() {
         </div>
 
         {/* Input Area */}
-        <div className="relative">
+        <div className="relative pt-12">
           <AnimatePresence>
             {replyTo && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full left-0 right-0 mb-4 bg-neon-blue/10 border border-neon-blue/20 p-3 rounded-xl flex items-center justify-between"
+                className="absolute bottom-full left-0 right-0 mb-4 bg-neon-blue/10 border border-neon-blue/20 p-3 rounded-xl flex items-center justify-between z-10"
               >
                 <div className="flex items-center gap-2 text-neon-blue text-sm font-medium">
                   <CornerDownRight size={16} />
@@ -301,8 +303,12 @@ function CommentItem({
     >
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}>
-            {comment.userName.charAt(0).toUpperCase()}
+          <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}>
+            {comment.userPhotoURL ? (
+              <img src={comment.userPhotoURL} alt={comment.userName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              comment.userName.charAt(0).toUpperCase()
+            )}
           </div>
           <div>
             <span className="font-bold text-sm sm:text-base">{comment.userName}</span>

@@ -104,7 +104,8 @@ export default function Tests() {
       testTitle: activeTest.title,
       studentName: nameToSave,
       studentEmail: emailToSave,
-      score: Math.round((finalScore / activeTest.questions.length) * 100),
+      studentPhotoURL: userProfile?.photoURL || auth.currentUser?.photoURL || '',
+      score: finalScore,
       total: activeTest.questions.length,
       completedAt: new Date()
     };
@@ -181,7 +182,7 @@ export default function Tests() {
                     <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                       <p className="text-[10px] font-bold text-white/40 uppercase mb-1">Accuracy</p>
                       <p className="text-3xl font-bold text-neon-pink">
-                        {Math.round((score / activeTest.questions.length) * 100)}%
+                        {activeTest.questions.length > 0 ? Math.round((score / activeTest.questions.length) * 100) : 0}%
                       </p>
                     </div>
                   </div>
@@ -211,6 +212,23 @@ export default function Tests() {
                   </div>
 
                   <div className="grid gap-4">
+                    {isGuest && (
+                      <div className="p-8 bg-neon-blue/5 border border-dashed border-neon-blue/20 rounded-3xl text-center space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-neon-blue/10 flex items-center justify-center mx-auto text-neon-blue">
+                          <Lock size={32} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white mb-2">Login to Start Tests</h3>
+                          <p className="text-sm text-white/40 max-w-sm mx-auto">You are currently in Guest Mode. Please log in to participate in tests, save your scores, and compete on the leaderboard.</p>
+                        </div>
+                        <button 
+                          onClick={() => window.location.href = '/login'}
+                          className="btn-neon bg-neon-blue text-black px-8 py-3 font-bold"
+                        >
+                          Login Now
+                        </button>
+                      </div>
+                    )}
                     {tests.map((test) => (
                       <motion.div 
                         key={test.id}
@@ -230,16 +248,21 @@ export default function Tests() {
                               </p>
                             </div>
                           </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startTest(test);
-                            }}
-                            disabled={isGuest}
-                            className={`btn-neon px-6 py-2 flex items-center gap-2 ${isGuest ? 'bg-white/5 text-white/20 cursor-not-allowed border-white/5' : 'bg-neon-blue text-black'}`}
-                          >
-                            {isGuest ? <Lock size={18} /> : 'Start'} <ArrowRight size={18} />
-                          </button>
+                          <div className="flex flex-col items-end gap-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isGuest) startTest(test);
+                              }}
+                              disabled={isGuest}
+                              className={`btn-neon px-6 py-2 flex items-center gap-2 ${isGuest ? 'bg-white/5 text-white/20 cursor-not-allowed border-white/5' : 'bg-neon-blue text-black'}`}
+                            >
+                              {isGuest ? <Lock size={18} /> : 'Start'} <ArrowRight size={18} />
+                            </button>
+                            {isGuest && (
+                              <p className="text-[10px] text-neon-blue/60 font-bold uppercase tracking-tighter">Login Required</p>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     ))}
@@ -273,14 +296,18 @@ export default function Tests() {
                           return leaderboard.map((result, idx) => (
                             <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentName === currentUserName ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold shrink-0 ${
                                   ranks[idx] === 1 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
                                   ranks[idx] === 2 ? 'bg-slate-300 text-black' : 
                                   ranks[idx] === 3 ? 'bg-amber-600 text-white' : 
                                   'bg-white/10 text-white/40'
                                 }`}>
-                                  {ranks[idx]}
-                                </span>
+                                  {result.studentPhotoURL ? (
+                                    <img src={result.studentPhotoURL} alt={result.studentName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  ) : (
+                                    ranks[idx]
+                                  )}
+                                </div>
                                 <div className="min-w-0">
                                   <p className={`text-sm font-medium truncate ${result.studentName === currentUserName ? 'text-neon-blue' : 'text-white'}`} title={result.studentName}>
                                     {result.studentName}

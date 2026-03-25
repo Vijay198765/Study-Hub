@@ -10,8 +10,9 @@ import {
 
 // Utility for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
-import { Class, Subject, Chapter } from '../types';
+import { Class, Subject, Chapter, QuizQuestion } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { DEFAULT_MCQS } from '../constants/mcqs';
 import { auth, db } from '../firebase';
 import { 
   collection, addDoc, onSnapshot, query, where, 
@@ -123,6 +124,26 @@ export default function ChapterDetail() {
   const subject = subjects.find(s => s.id === subjectId);
   const chapter = chapters.find(c => c.id === chapterId);
 
+  // Get effective quiz (either from chapter or default)
+  const getEffectiveQuiz = (): QuizQuestion[] => {
+    if (!chapter) return [];
+    if (chapter.quiz && chapter.quiz.length > 0) return chapter.quiz;
+    
+    // Fallback to default MCQs based on subject name
+    if (subject) {
+      const subjectName = subject.name.toLowerCase();
+      if (subjectName.includes('science')) return DEFAULT_MCQS['Science'];
+      if (subjectName.includes('math')) return DEFAULT_MCQS['Math'];
+      if (subjectName.includes('history')) return DEFAULT_MCQS['History'];
+      if (subjectName.includes('geography')) return DEFAULT_MCQS['Geography'];
+      if (subjectName.includes('civics')) return DEFAULT_MCQS['Civics'];
+      if (subjectName.includes('economic')) return DEFAULT_MCQS['Economics'];
+    }
+    return [];
+  };
+
+  const effectiveQuiz = getEffectiveQuiz();
+
   useEffect(() => {
     let timer: any;
     if (quizStarted && !quizFinished && timeLeft > 0) {
@@ -152,25 +173,25 @@ export default function ChapterDetail() {
       return next;
     });
 
-    if (idx === chapter.quiz[currentQuestionIdx].correctAnswer) {
+    if (idx === effectiveQuiz[currentQuestionIdx].correctAnswer) {
       setScore(prev => prev + 1);
     }
     
     setTimeout(async () => {
-      if (currentQuestionIdx < chapter.quiz.length - 1) {
+      if (currentQuestionIdx < effectiveQuiz.length - 1) {
         setCurrentQuestionIdx(prev => prev + 1);
         setSelectedOption(null);
       } else {
         setQuizFinished(true);
         // Save quiz score
         if (auth.currentUser) {
-          const finalScore = idx === chapter.quiz[currentQuestionIdx].correctAnswer ? score + 1 : score;
+          const finalScore = idx === effectiveQuiz[currentQuestionIdx].correctAnswer ? score + 1 : score;
           try {
             await addDoc(collection(db, 'quizHistory'), {
               userId: auth.currentUser.uid,
               chapterId,
               score: finalScore,
-              total: chapter.quiz.length,
+              total: effectiveQuiz.length,
               completedAt: serverTimestamp()
             });
           } catch (e) {
@@ -198,7 +219,7 @@ export default function ChapterDetail() {
       return;
     }
     setQuizStarted(true);
-    setUserAnswers(new Array(chapter.quiz.length).fill(null));
+    setUserAnswers(new Array(effectiveQuiz.length).fill(null));
   };
 
   const toggleProgress = async () => {
@@ -406,19 +427,28 @@ export default function ChapterDetail() {
                 <div className="space-y-8">
                   <div className="glass-card p-12 text-center">
                     <div className="w-20 h-20 rounded-full bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
-                      <HelpCircle size={40} />
+                      <Trophy size={40} />
                     </div>
-                    {chapter.quiz.length > 0 ? (
+                    {effectiveQuiz.length > 0 ? (
                       <>
-                        <h2 className="text-3xl font-display font-bold mb-4">Ready for a Challenge?</h2>
+                        <h2 className="text-3xl font-display font-bold mb-4 uppercase tracking-tighter">Top 10 MCQ Challenge</h2>
                         <p className="text-white/50 mb-8">
-                          Test your understanding of <strong>{chapter.name}</strong>. 
-                          You have 60 seconds to answer {chapter.quiz.length} questions.
+                          Test your knowledge of <strong>{chapter.name}</strong> with these handpicked important questions.
+                          You have 60 seconds to answer {effectiveQuiz.length} questions.
                         </p>
                         {!auth.currentUser && (
-                          <div className="mb-6 p-4 bg-neon-blue/10 border border-neon-blue/20 rounded-2xl flex items-center gap-4 text-neon-blue text-left">
-                            <Lock size={20} className="shrink-0" />
-                            <p className="text-sm">You need to log in to participate in the quiz and save your progress.</p>
+                          <div className="mb-8 p-6 bg-neon-blue/10 border border-neon-blue/20 rounded-3xl flex flex-col items-center gap-4 text-center">
+                            <div className="flex items-center gap-3 text-neon-blue">
+                              <Lock size={24} className="shrink-0" />
+                              <p className="font-bold uppercase tracking-widest text-sm">Login Required</p>
+                            </div>
+                            <p className="text-sm text-white/60">You need to log in to participate in the quiz, track your progress, and earn rewards.</p>
+                            <button 
+                              onClick={() => window.location.href = '/login'}
+                              className="btn-neon bg-neon-blue text-black px-8 py-2 text-sm font-bold"
+                            >
+                              Login Now
+                            </button>
                           </div>
                         )}
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -471,7 +501,7 @@ export default function ChapterDetail() {
                   <p className="text-white/50 mb-6">Great effort on finishing the quiz.</p>
                   
                   <div className="text-6xl font-display font-bold text-neon-blue mb-8">
-                    {score} <span className="text-2xl text-white/30">/ {chapter.quiz.length}</span>
+                    {score} <span className="text-2xl text-white/30">/ {effectiveQuiz.length}</span>
                   </div>
                   
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -496,7 +526,7 @@ export default function ChapterDetail() {
                       className="mt-12 space-y-6 text-left"
                     >
                       <h3 className="text-xl font-bold border-b border-white/10 pb-4">Detailed Review</h3>
-                      {chapter.quiz.map((q, qIdx) => (
+                      {effectiveQuiz.map((q, qIdx) => (
                         <div key={qIdx} className="p-6 rounded-2xl bg-white/5 border border-white/10">
                           <p className="font-bold mb-4 text-lg">{qIdx + 1}. {q.question}</p>
                           <div className="grid gap-2">
@@ -526,7 +556,7 @@ export default function ChapterDetail() {
                 <div className="glass-card p-8">
                   <div className="flex items-center justify-between mb-8">
                     <div className="text-sm font-medium text-white/40">
-                      Question <span className="text-white">{currentQuestionIdx + 1}</span> of {chapter.quiz.length}
+                      Question <span className="text-white">{currentQuestionIdx + 1}</span> of {effectiveQuiz.length}
                     </div>
                     <div className={`flex items-center gap-2 font-mono font-bold ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-neon-blue'}`}>
                       <Timer size={18} /> {timeLeft}s
@@ -537,16 +567,16 @@ export default function ChapterDetail() {
                     <motion.div 
                       className="h-full bg-neon-blue"
                       initial={{ width: 0 }}
-                      animate={{ width: `${((currentQuestionIdx + 1) / chapter.quiz.length) * 100}%` }}
+                      animate={{ width: `${((currentQuestionIdx + 1) / effectiveQuiz.length) * 100}%` }}
                     />
                   </div>
                   
-                  <h3 className="text-2xl font-bold mb-8">{chapter.quiz[currentQuestionIdx].question}</h3>
+                  <h3 className="text-2xl font-bold mb-8">{effectiveQuiz[currentQuestionIdx].question}</h3>
                   
                   <div className="space-y-4">
-                    {chapter.quiz[currentQuestionIdx].options.map((option, idx) => {
+                    {effectiveQuiz[currentQuestionIdx].options.map((option, idx) => {
                       const isSelected = selectedOption === idx;
-                      const isCorrect = idx === chapter.quiz[currentQuestionIdx].correctAnswer;
+                      const isCorrect = idx === effectiveQuiz[currentQuestionIdx].correctAnswer;
                       
                       let variantClass = "border-white/10 hover:border-neon-blue/50 hover:bg-white/5";
                       if (selectedOption !== null) {
