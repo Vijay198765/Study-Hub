@@ -37,6 +37,14 @@
   .btn-neon {
     @apply relative overflow-hidden px-6 py-2 rounded-full bg-transparent border border-neon-blue text-neon-blue font-medium transition-all duration-300 hover:bg-neon-blue hover:text-black hover:shadow-[0_0_20px_rgba(0,242,255,0.6)];
   }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* Custom Scrollbar */

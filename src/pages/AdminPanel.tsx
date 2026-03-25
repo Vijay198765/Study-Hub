@@ -26,6 +26,7 @@ import {
   getTests, saveTest, removeTest
 } from '../services/dataService';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
+import { DEFAULT_MCQS } from '../constants/mcqs';
 
 type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
@@ -324,10 +325,10 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
-            <p className="text-white/40">Manage your educational ecosystem.</p>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
+            <p className="text-sm text-white/40">Manage your educational ecosystem.</p>
           </div>
-          <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto no-scrollbar max-w-full">
+          <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
             {!isLimitedAdmin && (
               <>
                 <button 
@@ -399,6 +400,7 @@ export default function AdminPanel() {
                 </button>
               </>
             )}
+            <div className="w-4 shrink-0" />
           </div>
         </div>
 
@@ -1865,23 +1867,55 @@ export default function AdminPanel() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-white">Quiz Questions</h3>
-                      <button 
-                        onClick={() => {
-                          const newQuestion: QuizQuestion = {
-                            id: Date.now().toString(),
-                            question: 'New Question',
-                            options: ['', '', '', ''],
-                            correctAnswer: 0
-                          };
-                          setEditingEntity({
-                            ...editingEntity,
-                            quiz: [...(editingEntity.quiz || []), newQuestion]
-                          });
-                        }}
-                        className="text-sm font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1"
-                      >
-                        <Plus size={16} /> Add Question
-                      </button>
+                      <div className="flex items-center gap-4">
+                        {editingEntity.quiz?.length === 0 && (
+                          <button 
+                            onClick={() => {
+                              const subject = subjects.find(s => s.id === editingEntity.subjectId);
+                              if (subject) {
+                                const subjectName = subject.name.toLowerCase();
+                                let defaultQuiz: QuizQuestion[] = [];
+                                if (subjectName.includes('science')) defaultQuiz = DEFAULT_MCQS['Science'];
+                                else if (subjectName.includes('math')) defaultQuiz = DEFAULT_MCQS['Math'];
+                                else if (subjectName.includes('history')) defaultQuiz = DEFAULT_MCQS['History'];
+                                else if (subjectName.includes('geography')) defaultQuiz = DEFAULT_MCQS['Geography'];
+                                else if (subjectName.includes('civics')) defaultQuiz = DEFAULT_MCQS['Civics'];
+                                else if (subjectName.includes('economic')) defaultQuiz = DEFAULT_MCQS['Economics'];
+
+                                if (defaultQuiz.length > 0) {
+                                  setEditingEntity({
+                                    ...editingEntity,
+                                    quiz: defaultQuiz.map(q => ({ ...q, id: Date.now() + Math.random().toString() }))
+                                  });
+                                  setToast({ message: `Imported ${defaultQuiz.length} default MCQs for ${subject.name}`, type: 'success' });
+                                } else {
+                                  setToast({ message: "No default MCQs found for this subject type.", type: 'info' });
+                                }
+                              }
+                            }}
+                            className="text-xs font-bold text-neon-blue hover:text-neon-blue/80 transition-all flex items-center gap-1 bg-neon-blue/10 px-3 py-1 rounded-lg border border-neon-blue/20"
+                          >
+                            <RefreshCcw size={14} /> Import Default MCQs
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            const newQuestion: QuizQuestion = {
+                              id: Date.now().toString(),
+                              question: 'New Question',
+                              options: ['', '', '', ''],
+                              correctAnswer: 0
+                            };
+                            setEditingEntity({
+                              ...editingEntity,
+                              quiz: [...(editingEntity.quiz || []), newQuestion]
+                            });
+                          }}
+                          className="text-sm font-bold text-neon-pink hover:text-neon-pink/80 transition-all flex items-center gap-1"
+                        >
+                          <Plus size={16} /> Add Question
+                        </button>
+                      </div>
                     </div>
 
                     <DragDropContext onDragEnd={(result) => {
