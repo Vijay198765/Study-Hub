@@ -20,8 +20,15 @@ export default function MusicPlayer({ user }: { user: any }) {
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [globalTrackId, setGlobalTrackId] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hasAutoPlayed = useRef(false);
+
+  useEffect(() => {
+    const handleToggle = () => setShowSettings(prev => !prev);
+    window.addEventListener('toggle-music', handleToggle);
+    return () => window.removeEventListener('toggle-music', handleToggle);
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'music'), orderBy('createdAt', 'desc'));
@@ -66,9 +73,12 @@ export default function MusicPlayer({ user }: { user: any }) {
 
   useEffect(() => {
     if (audioRef.current) {
+      audioRef.current.load();
       if (isPlaying) {
         audioRef.current.play().catch(err => {
           console.log("Auto-play blocked by browser. User interaction required.");
+          setIsBlocked(true);
+          setIsPlaying(false);
         });
       } else {
         audioRef.current.pause();
@@ -76,17 +86,34 @@ export default function MusicPlayer({ user }: { user: any }) {
     }
   }, [isPlaying, currentTrackIdx]);
 
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (isBlocked && audioRef.current) {
+        audioRef.current.play().then(() => {
+          setIsBlocked(false);
+          setIsPlaying(true);
+          window.removeEventListener('click', handleFirstInteraction);
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener('click', handleFirstInteraction);
+    return () => window.removeEventListener('click', handleFirstInteraction);
+  }, [isBlocked]);
+
   const togglePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current.play().catch(err => {
-        console.error("Playback error:", err);
+      audioRef.current.play().then(() => {
+        setIsBlocked(false);
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error("Playback error:", err?.message || "Unknown error");
         toast.error("Click anywhere on the page first to enable audio playback.");
       });
     }
-    setIsPlaying(!isPlaying);
   };
 
   const nextTrack = () => {
@@ -112,14 +139,22 @@ export default function MusicPlayer({ user }: { user: any }) {
       });
       toast.success("Auto-play track updated!");
     } catch (error) {
-      console.error("Error updating auto-play:", error);
+      console.error("Error updating auto-play:", error instanceof Error ? error.message : String(error));
       toast.error("Failed to update preference.");
     }
   };
 
   const getDirectUrl = (url: string) => {
+    if (!url) return '';
+    
+    // Handle YouTube links - they won't work in an <audio> tag
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return ''; // Let the onError handler catch this
+    }
+
     if (url.includes('drive.google.com')) {
-      const idMatch = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
+      // Improved regex to handle various Drive link formats
+      const idMatch = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
       if (idMatch && idMatch[1]) {
         return `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
       }
@@ -133,6 +168,20 @@ export default function MusicPlayer({ user }: { user: any }) {
 
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
+      <AnimatePresence>
+        {isBlocked && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-neon-blue text-black px-4 py-2 rounded-full text-xs font-bold shadow-[0_0_20px_rgba(0,242,255,0.5)] mb-2 cursor-pointer hover:scale-105 transition-transform"
+            onClick={togglePlay}
+          >
+            Click to Enable Music 🎵
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showSettings && (
           <motion.div
@@ -242,6 +291,17 @@ export default function MusicPlayer({ user }: { user: any }) {
         autoPlay={isPlaying}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onError={(e) => {
+          console.error("Audio error occurred for track:", currentTrack?.title);
+          if (currentTrack?.url) {
+            if (currentTrack.url.includes('youtube.com') || currentTrack.url.includes('youtu.be')) {
+              toast.error(`YouTube links are not supported for background music. Please use a direct audio link or Google Drive link.`);
+            } else {
+              toast.error(`Failed to load audio: ${currentTrack.title}. Ensure the link is public and valid.`);
+            }
+          }
+        }}
+        preload="auto"
       />
     </div>
   );

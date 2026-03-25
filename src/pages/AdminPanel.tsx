@@ -276,7 +276,7 @@ export default function AdminPanel() {
       setEditingEntity(null);
       setToast({ message: "Changes saved successfully!", type: 'success' });
     } catch (error: any) {
-      console.error("Error saving:", error);
+      console.error("Error saving:", error?.message || String(error));
       let errorMessage = "Failed to save changes.";
       try {
         const errorData = JSON.parse(error.message);

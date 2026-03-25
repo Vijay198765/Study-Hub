@@ -63,7 +63,6 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
     { name: 'Study Tips', path: '/tips', icon: Lightbulb },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Wall', path: '/comments', icon: MessageSquare },
-    { name: 'Music', path: '#', icon: MusicIcon, isMusic: true },
     ...(isAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];
 
@@ -97,31 +96,17 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
             Search
           </button>
           {navLinks.map((link) => (
-            link.isMusic ? (
-              <button
-                key="music-nav"
-                onClick={() => {
-                  // This is just a visual indicator, the player is in App.tsx
-                  toast.info("Music controls are at the bottom right!");
-                }}
-                className="text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap text-white/70"
-              >
-                <link.icon className="w-4 h-4 flex-shrink-0" />
-                {link.name}
-              </button>
-            ) : (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap",
-                  location.pathname === link.path ? "text-neon-blue" : "text-white/70"
-                )}
-              >
-                <link.icon className="w-4 h-4 flex-shrink-0" />
-                {link.name}
-              </Link>
-            )
+            <Link
+              key={link.path}
+              to={link.path}
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap",
+                location.pathname === link.path ? "text-neon-blue" : "text-white/70"
+              )}
+            >
+              <link.icon className="w-4 h-4 flex-shrink-0" />
+              {link.name}
+            </Link>
           ))}
           
           {user ? (
@@ -253,29 +238,15 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
             className="fixed inset-x-0 top-[64px] bg-dark-bg border-b border-white/10 p-6 flex flex-col gap-4 lg:hidden shadow-2xl z-[100]"
           >
             {navLinks.map((link) => (
-              link.isMusic ? (
-                <button
-                  key="music-nav-mobile"
-                  onClick={() => {
-                    setIsOpen(false);
-                    toast.info("Music controls are at the bottom right!");
-                  }}
-                  className="text-lg font-medium text-white/70 hover:text-neon-blue flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all w-full text-left"
-                >
-                  <link.icon className="w-5 h-5" />
-                  {link.name}
-                </button>
-              ) : (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className="text-lg font-medium text-white/70 hover:text-neon-blue flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all"
-                >
-                  <link.icon className="w-5 h-5" />
-                  {link.name}
-                </Link>
-              )
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setIsOpen(false)}
+                className="text-lg font-medium text-white/70 hover:text-neon-blue flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all"
+              >
+                <link.icon className="w-5 h-5" />
+                {link.name}
+              </Link>
             ))}
             <div className="pt-4 border-t border-white/5">
               {user ? (
