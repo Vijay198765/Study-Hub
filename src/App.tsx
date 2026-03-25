@@ -17,7 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
@@ -29,6 +29,7 @@ export default function App() {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -44,35 +45,56 @@ export default function App() {
       setShowWelcome(true);
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       if (firebaseUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            setIsAdmin(userDoc.data().role === 'admin');
+        // Listen to user profile changes
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        unsubscribeProfile = onSnapshot(userRef, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            setUserProfile(data);
+            setIsAdmin(data.role === 'admin');
           } else {
+            // Fallback for new users or if doc doesn't exist yet
             const adminEmails = ['vijayninama683@gmail.com'];
-            if (adminEmails.includes(firebaseUser.email?.toLowerCase() || '')) {
-              setIsAdmin(true);
-            } else {
-              setIsAdmin(false);
-            }
+            const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
+            setIsAdmin(isDefaultAdmin);
+            setUserProfile({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.displayName || 'Student',
+              role: isDefaultAdmin ? 'admin' : 'student'
+            });
           }
-        } catch (error) {
-          console.error("Error checking admin status:", error);
-          setIsAdmin(false);
-        }
+          setLoading(false);
+        }, (error) => {
+          console.error("Error listening to user profile:", error);
+          setLoading(false);
+        });
       } else {
         setIsAdmin(false);
+        setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
+
       if (firebaseUser) {
         setShowWelcome(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   if (loading) {
@@ -94,7 +116,7 @@ export default function App() {
           </span>
         </div>
         
-        <Navbar isAdmin={isAdmin} user={user} />
+        <Navbar isAdmin={isAdmin} user={userProfile} />
         
         <main className="flex-grow">
           <AnimatePresence mode="wait">

@@ -10,10 +10,12 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import UserName from '../components/UserName';
 
 interface SiteComment {
   id: string;
   userName: string;
+  userUid?: string;
   userEmail?: string;
   userPhotoURL?: string;
   text: string;
@@ -33,15 +35,22 @@ export default function LiveComments() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let unsubscribeProfile: (() => void) | null = null;
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       if (user) {
         setIsGuest(false);
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserProfile(data);
-          setIsAdmin(data.role === 'admin');
-        }
+        unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            setUserProfile(data);
+            setIsAdmin(data.role === 'admin');
+          }
+        });
       } else {
         setIsGuest(true);
         setUserProfile(null);
@@ -58,6 +67,7 @@ export default function LiveComments() {
     return () => {
       unsubscribeAuth();
       unsubscribeComments();
+      if (unsubscribeProfile) unsubscribeProfile();
     };
   }, []);
 
@@ -303,19 +313,17 @@ function CommentItem({
     >
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}>
-            {comment.userPhotoURL ? (
-              <img src={comment.userPhotoURL} alt={comment.userName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              comment.userName.charAt(0).toUpperCase()
-            )}
-          </div>
-          <div>
-            <span className="font-bold text-sm sm:text-base">{comment.userName}</span>
-            <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
-              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-            </span>
-          </div>
+          <UserName 
+            userUid={comment.userUid || ''} 
+            fallback={comment.userName} 
+            fallbackPhoto={comment.userPhotoURL}
+            showPhoto={true}
+            photoClassName={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}
+            className="font-bold text-sm sm:text-base"
+          />
+          <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
+            {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+          </span>
         </div>
         {isAdmin && (
           <button 

@@ -7,6 +7,7 @@ import {
   Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
   ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History, Lock
 } from 'lucide-react';
+import UserName from '../components/UserName';
 
 // Utility for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -498,7 +499,7 @@ export default function ChapterDetail() {
                     <Trophy size={40} />
                   </div>
                   <h2 className="text-3xl font-display font-bold mb-2">Quiz Completed!</h2>
-                  <p className="text-white/50 mb-6">Great effort on finishing the quiz.</p>
+                  <p className="text-white/50 mb-6">Great effort on finishing the quiz, <span className="text-neon-blue font-bold"><UserName userUid={auth.currentUser?.uid} fallback="Student" /></span>.</p>
                   
                   <div className="text-6xl font-display font-bold text-neon-blue mb-8">
                     {score} <span className="text-2xl text-white/30">/ {effectiveQuiz.length}</span>
