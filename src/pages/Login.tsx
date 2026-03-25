@@ -7,6 +7,7 @@ import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebas
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Login() {
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -29,6 +30,11 @@ export default function Login() {
   }, [navigate]);
 
   const handleGoogleLogin = async () => {
+    if (!name.trim()) {
+      setError('Please enter your name first');
+      return;
+    }
+
     setLoading(true);
     setError('');
     const provider = new GoogleAuthProvider();
@@ -37,7 +43,8 @@ export default function Login() {
       const user = result.user;
 
       // Check if user exists in Firestore, if not create as student
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
       let role = 'student';
       
       if (!userDoc.exists()) {
@@ -45,14 +52,24 @@ export default function Login() {
         if (user.email === 'vijayninama683@gmail.com') {
           role = 'admin';
         }
-        await setDoc(doc(db, 'users', user.uid), {
+        await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
-          role: role
+          name: name.trim(),
+          role: role,
+          createdAt: new Date().toISOString()
         });
       } else {
         role = userDoc.data().role;
+        // Update name if different
+        await setDoc(userRef, {
+          ...userDoc.data(),
+          name: name.trim(),
+        }, { merge: true });
       }
+
+      localStorage.setItem('studentName', name.trim());
+      localStorage.removeItem('hasSkippedLogin');
 
       if (role === 'admin') {
         navigate('/admin');
@@ -68,11 +85,17 @@ export default function Login() {
       } else if (err.code === 'auth/operation-not-allowed') {
         setError('Google Login is not enabled in the Firebase console. Please enable it in Authentication > Sign-in method.');
       } else {
-        setError('Failed to login with Google. Please try again.');
+        setError('Failed to login with Gmail. Please try again.');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGuestMode = () => {
+    localStorage.setItem('studentName', 'Guest Student');
+    localStorage.setItem('hasSkippedLogin', 'true');
+    navigate('/');
   };
 
   return (
@@ -87,26 +110,52 @@ export default function Login() {
           
           <div className="text-center mb-10">
             <div className="w-16 h-16 rounded-2xl bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
-              <Lock size={32} />
+              <LogIn size={32} />
             </div>
             <h1 className="text-3xl font-display font-bold mb-2">Study-hub Login</h1>
-            <p className="text-white/40">Secure access for students and admins.</p>
+            <p className="text-white/40">Enter your name and continue with Gmail.</p>
           </div>
 
           <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider pl-1">Your Name (Compulsory)</label>
+              <input 
+                type="text" 
+                placeholder="Enter your full name" 
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) setError('');
+                }}
+                className={`w-full bg-white/5 border ${error && !name.trim() ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white focus:border-neon-blue outline-none transition-all`}
+              />
+            </div>
+
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white/5 border-white/10 hover:bg-white/10"
+              className="btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white text-black hover:bg-white/90"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-                  Continue with Google
+                  Continue with Gmail
                 </>
               )}
+            </button>
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-dark-card px-2 text-white/20">Or</span></div>
+            </div>
+
+            <button 
+              onClick={handleGuestMode}
+              className="w-full py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-all"
+            >
+              Skip Login (Guest Mode)
             </button>
 
             {error && (
@@ -121,9 +170,9 @@ export default function Login() {
             )}
           </div>
           
-          <div className="mt-12 text-center">
-            <p className="text-xs text-white/20">
-              Protected by Study-hub Security Protocol v2.5
+          <div className="mt-8 text-center">
+            <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-bold">
+              Guest mode allows viewing only
             </p>
           </div>
         </div>

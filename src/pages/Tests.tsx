@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ClipboardList, Trophy, Timer, CheckCircle2, XCircle, ArrowRight, Star, Medal, Users } from 'lucide-react';
+import { ClipboardList, Trophy, Timer, CheckCircle2, XCircle, ArrowRight, Star, Medal, Users, Lock, Info } from 'lucide-react';
 import { getTests, saveTestResult, getTestResults } from '../services/dataService';
 import { Test, TestResult } from '../types';
 import { auth } from '../firebase';
@@ -16,19 +16,27 @@ export default function Tests() {
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [studentName, setStudentName] = useState(localStorage.getItem('student_name') || '');
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [testToStart, setTestToStart] = useState<Test | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
-    if (auth.currentUser && !studentName) {
-      const name = auth.currentUser.displayName || '';
-      if (name) {
-        setStudentName(name);
-        localStorage.setItem('student_name', name);
+    const checkAuth = () => {
+      const guestStatus = localStorage.getItem('is_guest') === 'true';
+      setIsGuest(guestStatus);
+
+      const profileStr = localStorage.getItem('user_profile');
+      if (profileStr) {
+        setUserProfile(JSON.parse(profileStr));
       }
-    }
-  }, [auth.currentUser]);
+    };
+
+    checkAuth();
+    const unsubAuth = auth.onAuthStateChanged(() => {
+      checkAuth();
+    });
+
+    return () => unsubAuth();
+  }, []);
 
   useEffect(() => {
     const unsub = getTests((data) => {
@@ -50,34 +58,13 @@ export default function Tests() {
   }, [selectedTest]);
 
   const startTest = (test: Test) => {
-    if (!studentName.trim()) {
-      setTestToStart(test);
-      setShowNamePrompt(true);
-      return;
-    }
+    if (isGuest) return;
+    
     setActiveTest(test);
     setCurrentQuestionIdx(0);
     setAnswers(new Array(test.questions.length).fill(-1));
     setTestCompleted(false);
     setScore(0);
-  };
-
-  const handleNameSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedName = studentName.trim();
-    if (trimmedName && testToStart) {
-      localStorage.setItem('student_name', trimmedName);
-      setStudentName(trimmedName);
-      const test = testToStart;
-      setTestToStart(null);
-      setShowNamePrompt(false);
-      
-      setActiveTest(test);
-      setCurrentQuestionIdx(0);
-      setAnswers(new Array(test.questions.length).fill(-1));
-      setTestCompleted(false);
-      setScore(0);
-    }
   };
 
   const handleAnswer = (optionIdx: number) => {
@@ -108,13 +95,15 @@ export default function Tests() {
     setTestCompleted(true);
 
     // Save result
-    const nameToSave = studentName.trim() || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Anonymous';
+    const nameToSave = userProfile?.name || auth.currentUser?.displayName || 'Anonymous';
+    const emailToSave = userProfile?.email || auth.currentUser?.email || '';
     
     const result: TestResult = {
       id: crypto.randomUUID(),
       testId: activeTest.id,
       testTitle: activeTest.title,
       studentName: nameToSave,
+      studentEmail: emailToSave,
       score: Math.round((finalScore / activeTest.questions.length) * 100),
       total: activeTest.questions.length,
       completedAt: new Date()
@@ -144,61 +133,21 @@ export default function Tests() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
-        {/* Name Prompt Modal */}
-        <AnimatePresence>
-          {showNamePrompt && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-              />
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="relative w-full max-w-md bg-dark-card border border-white/10 rounded-3xl p-8 shadow-2xl"
-              >
-                <div className="text-center space-y-6">
-                  <div className="w-16 h-16 rounded-2xl bg-neon-blue/20 flex items-center justify-center text-neon-blue mx-auto">
-                    <Users size={32} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-display font-bold text-white">Enter Your Name</h3>
-                    <p className="text-white/40">Please provide your name to start the test and appear on the leaderboard.</p>
-                  </div>
-                  <form onSubmit={handleNameSubmit} className="space-y-4">
-                    <input 
-                      type="text" 
-                      autoFocus
-                      placeholder="Your Full Name"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-center"
-                      value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
-                      required
-                    />
-                    <div className="flex gap-3">
-                      <button 
-                        type="button"
-                        onClick={() => setShowNamePrompt(false)}
-                        className="flex-1 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-all"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        type="submit"
-                        className="flex-1 py-3 rounded-xl bg-neon-blue text-black font-bold hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all"
-                      >
-                        Start Test
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </motion.div>
+        {isGuest && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 bg-neon-blue/10 border border-neon-blue/20 rounded-2xl flex items-center gap-4 text-neon-blue"
+          >
+            <div className="w-10 h-10 rounded-xl bg-neon-blue/20 flex items-center justify-center shrink-0">
+              <Info size={20} />
             </div>
-          )}
-        </AnimatePresence>
+            <div className="flex-1">
+              <p className="font-medium">Guest Mode Active</p>
+              <p className="text-sm opacity-70 text-white/60">You can view leaderboards, but you need to log in to participate in tests.</p>
+            </div>
+          </motion.div>
+        )}
 
         {(!activeTest || testCompleted) ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -221,7 +170,7 @@ export default function Tests() {
 
                   <div>
                     <h2 className="text-3xl font-display font-bold text-white mb-2">Test Completed!</h2>
-                    <p className="text-white/40">Great job, <span className="text-neon-blue font-bold">{studentName}</span>! Here's your performance:</p>
+                    <p className="text-white/40">Great job, <span className="text-neon-blue font-bold">{userProfile?.name || 'Student'}</span>! Here's your performance:</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
@@ -286,9 +235,10 @@ export default function Tests() {
                               e.stopPropagation();
                               startTest(test);
                             }}
-                            className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center gap-2"
+                            disabled={isGuest}
+                            className={`btn-neon px-6 py-2 flex items-center gap-2 ${isGuest ? 'bg-white/5 text-white/20 cursor-not-allowed border-white/5' : 'bg-neon-blue text-black'}`}
                           >
-                            Start <ArrowRight size={18} />
+                            {isGuest ? <Lock size={18} /> : 'Start'} <ArrowRight size={18} />
                           </button>
                         </div>
                       </motion.div>
@@ -319,8 +269,9 @@ export default function Tests() {
                       <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                         {(() => {
                           const ranks = calculateRanks(leaderboard);
+                          const currentUserName = userProfile?.name || '';
                           return leaderboard.map((result, idx) => (
-                            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentName === studentName ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
+                            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentName === currentUserName ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                                   ranks[idx] === 1 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
@@ -331,9 +282,9 @@ export default function Tests() {
                                   {ranks[idx]}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className={`text-sm font-medium truncate ${result.studentName === studentName ? 'text-neon-blue' : 'text-white'}`} title={result.studentName}>
+                                  <p className={`text-sm font-medium truncate ${result.studentName === currentUserName ? 'text-neon-blue' : 'text-white'}`} title={result.studentName}>
                                     {result.studentName}
-                                    {result.studentName === studentName && <span className="ml-2 text-[8px] uppercase bg-neon-blue/20 px-1 rounded">You</span>}
+                                    {result.studentName === currentUserName && <span className="ml-2 text-[8px] uppercase bg-neon-blue/20 px-1 rounded">You</span>}
                                   </p>
                                   <p className="text-[10px] text-white/20 uppercase tracking-tighter">
                                     {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleDateString() : 'Recent'}

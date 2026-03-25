@@ -75,6 +75,7 @@ export interface TestResult {
   testId: string;
   testTitle: string;
   studentName: string;
+  studentEmail?: string;
   score: number;
   total: number;
   completedAt: any;

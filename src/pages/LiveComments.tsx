@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { 
   collection, addDoc, onSnapshot, query, orderBy, 
-  serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove 
+  serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, getDoc
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 
 interface SiteComment {
@@ -23,26 +24,39 @@ interface SiteComment {
 export default function LiveComments() {
   const [comments, setComments] = useState<SiteComment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [userName, setUserName] = useState<string>(localStorage.getItem('site_user_name') || '');
-  const [showNamePrompt, setShowNamePrompt] = useState(!localStorage.getItem('site_user_name'));
-  const [tempName, setTempName] = useState('');
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isGuest, setIsGuest] = useState(true);
   const [replyTo, setReplyTo] = useState<SiteComment | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check admin status
-    if (auth.currentUser?.email === 'vijayninama683@gmail.com') {
-      setIsAdmin(true);
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsGuest(false);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserProfile(data);
+          setIsAdmin(data.role === 'admin');
+        }
+      } else {
+        setIsGuest(true);
+        setUserProfile(null);
+        setIsAdmin(false);
+      }
+    });
 
     const q = query(collection(db, 'siteComments'), orderBy('createdAt', 'asc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeComments = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteComment));
       setComments(data);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeComments();
+    };
   }, []);
 
   useEffect(() => {
@@ -51,21 +65,13 @@ export default function LiveComments() {
     }
   }, [comments]);
 
-  const handleSetName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (tempName.trim()) {
-      setUserName(tempName.trim());
-      localStorage.setItem('site_user_name', tempName.trim());
-      setShowNamePrompt(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !userName) return;
+    if (isGuest || !newComment.trim() || !userProfile?.name) return;
 
     const commentData: any = {
-      userName,
+      userName: userProfile.name,
+      userUid: auth.currentUser?.uid,
       text: newComment.trim(),
       likes: 0,
       likedBy: [],
@@ -86,7 +92,13 @@ export default function LiveComments() {
   };
 
   const handleLike = async (comment: SiteComment) => {
-    const userId = auth.currentUser?.uid || 'anonymous_' + userName;
+    if (isGuest) {
+      alert("Please login to like comments");
+      return;
+    }
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    
     const isLiked = comment.likedBy?.includes(userId);
 
     try {
@@ -108,6 +120,7 @@ export default function LiveComments() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!isAdmin) return;
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
     try {
       await deleteDoc(doc(db, 'siteComments', id));
@@ -136,48 +149,6 @@ export default function LiveComments() {
           </p>
         </div>
 
-        {/* Name Prompt Overlay */}
-        <AnimatePresence>
-          {showNamePrompt && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
-            >
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-md w-full shadow-2xl"
-              >
-                <div className="flex items-center gap-3 mb-6 text-neon-blue">
-                  <User size={32} />
-                  <h2 className="text-2xl font-display font-bold uppercase">Who are you?</h2>
-                </div>
-                <p className="text-gray-400 mb-6 font-mono text-sm">
-                  Please enter your name to join the conversation.
-                </p>
-                <form onSubmit={handleSetName} className="space-y-4">
-                  <input 
-                    type="text"
-                    value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    placeholder="Enter your name..."
-                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-neon-blue transition-colors"
-                    autoFocus
-                  />
-                  <button 
-                    type="submit"
-                    className="w-full bg-neon-blue text-black font-bold py-3 rounded-xl hover:bg-neon-blue/90 transition-colors uppercase tracking-wider"
-                  >
-                    Enter Wall
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Comments Area */}
         <div 
           ref={scrollRef}
@@ -198,7 +169,8 @@ export default function LiveComments() {
                       onReply={() => setReplyTo(comment)}
                       onDelete={() => handleDelete(comment.id)}
                       isAdmin={isAdmin}
-                      currentUserId={auth.currentUser?.uid || 'anonymous_' + userName}
+                      currentUserId={auth.currentUser?.uid || ''}
+                      isGuest={isGuest}
                     />
                     
                     {/* Replies */}
@@ -206,12 +178,13 @@ export default function LiveComments() {
                       {getReplies(comment.id).map((reply: SiteComment) => (
                         <div key={reply.id}>
                           <CommentItem 
-                            comment={reply}
+                            comment={reply} 
                             onLike={() => handleLike(reply)}
                             onDelete={() => handleDelete(reply.id)}
                             isAdmin={isAdmin}
                             isReply={true}
-                            currentUserId={auth.currentUser?.uid || 'anonymous_' + userName}
+                            currentUserId={auth.currentUser?.uid || ''}
+                            isGuest={isGuest}
                           />
                         </div>
                       ))}
@@ -246,42 +219,51 @@ export default function LiveComments() {
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="flex gap-4">
-            <div className="flex-grow relative">
-              <textarea 
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder={userName ? `Posting as ${userName}...` : "Write a comment..."}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue transition-all resize-none h-16 sm:h-20"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
+          {isGuest ? (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+              <p className="text-gray-400 font-mono text-sm uppercase tracking-widest mb-4">You must be logged in to post messages</p>
+              <button 
+                onClick={() => window.location.href = '/login'}
+                className="bg-neon-blue text-black px-8 py-3 rounded-xl font-bold hover:bg-neon-blue/90 transition-all uppercase tracking-wider"
+              >
+                Login to Chat
+              </button>
             </div>
-            <button 
-              type="submit"
-              disabled={!newComment.trim()}
-              className="bg-neon-blue text-black p-4 sm:px-8 rounded-2xl font-bold hover:bg-neon-blue/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Send size={20} />
-              <span className="hidden sm:inline uppercase tracking-wider">Post</span>
-            </button>
-          </form>
-          <div className="mt-4 flex justify-between items-center px-2">
-            <button 
-              onClick={() => setShowNamePrompt(true)}
-              className="text-xs text-gray-500 hover:text-neon-blue transition-colors font-mono uppercase"
-            >
-              Change Name ({userName})
-            </button>
-            <div className="flex items-center gap-2 text-xs text-gray-500 font-mono uppercase">
-              <Info size={12} />
-              <span>Be respectful to others</span>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex gap-4">
+              <div className="flex-grow relative">
+                <textarea 
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder={`Posting as ${userProfile?.name}...`}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue transition-all resize-none h-16 sm:h-20"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                />
+              </div>
+              <button 
+                type="submit"
+                disabled={!newComment.trim()}
+                className="bg-neon-blue text-black p-4 sm:px-8 rounded-2xl font-bold hover:bg-neon-blue/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Send size={20} />
+                <span className="hidden sm:inline uppercase tracking-wider">Post</span>
+              </button>
+            </form>
+          )}
+          
+          {!isGuest && (
+            <div className="mt-4 flex justify-end items-center px-2">
+              <div className="flex items-center gap-2 text-xs text-gray-500 font-mono uppercase">
+                <Info size={12} />
+                <span>Be respectful to others</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -295,7 +277,8 @@ function CommentItem({
   onDelete, 
   isAdmin, 
   isReply = false,
-  currentUserId
+  currentUserId,
+  isGuest
 }: { 
   comment: SiteComment; 
   onLike: () => void | Promise<void>; 
@@ -304,6 +287,7 @@ function CommentItem({
   isAdmin: boolean;
   isReply?: boolean;
   currentUserId: string;
+  isGuest: boolean;
 }) {
   const isLiked = comment.likedBy?.includes(currentUserId);
 
@@ -349,7 +333,7 @@ function CommentItem({
           <span>{comment.likes || 0}</span>
         </button>
         
-        {!isReply && onReply && (
+        {!isReply && onReply && !isGuest && (
           <button 
             onClick={onReply}
             className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-neon-blue transition-all"

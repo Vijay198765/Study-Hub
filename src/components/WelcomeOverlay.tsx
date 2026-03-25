@@ -12,9 +12,16 @@ interface WelcomeOverlayProps {
 export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleGoogleLogin = async () => {
+    if (!name.trim()) {
+      setError('Please enter your name first');
+      return;
+    }
+    
     setLoading(true);
+    setError('');
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -27,30 +34,32 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
         await setDoc(userRef, {
           uid: result.user.uid,
           email: result.user.email,
-          name: result.user.displayName || name || 'Student',
+          name: name.trim(), // User-input name takes priority
           role: 'student',
           photoURL: result.user.photoURL,
           createdAt: new Date().toISOString()
         });
+      } else {
+        // Update name if it's different, but keep role
+        await setDoc(userRef, {
+          ...userSnap.data(),
+          name: name.trim(),
+        }, { merge: true });
       }
       
-      localStorage.setItem('studentName', result.user.displayName || name || 'Student');
+      localStorage.setItem('studentName', name.trim());
       localStorage.removeItem('hasSkippedLogin');
       onComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      alert("Failed to login. Please try again.");
+      setError(error.message || "Failed to login. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSkip = () => {
-    if (name.trim()) {
-      localStorage.setItem('studentName', name.trim());
-    } else {
-      localStorage.setItem('studentName', 'Guest Student');
-    }
+    localStorage.setItem('studentName', 'Guest Student');
     localStorage.setItem('hasSkippedLogin', 'true');
     onComplete();
   };
@@ -71,24 +80,28 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-white/40 uppercase tracking-wider pl-1">Your Name</label>
+            <label className="text-xs font-bold text-white/40 uppercase tracking-wider pl-1">Your Name (Mandatory for interaction)</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
               <input 
                 type="text" 
                 placeholder="e.g. John Doe" 
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) setError('');
+                }}
+                className={`w-full bg-white/5 border ${error ? 'border-red-500' : 'border-white/10'} rounded-xl py-3 pl-12 pr-4 text-white focus:border-neon-blue outline-none transition-all`}
               />
             </div>
+            {error && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider pl-1 mt-1">{error}</p>}
           </div>
 
           <div className="grid grid-cols-1 gap-4 pt-2">
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full btn-neon bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+              className="w-full btn-neon bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
@@ -100,7 +113,7 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
-                  Login with Google
+                  Continue with Gmail
                 </>
               )}
             </button>
@@ -109,12 +122,15 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
               onClick={handleSkip}
               className="w-full py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
             >
-              Skip for now <ArrowRight size={16} />
+              Skip for now (Guest Mode) <ArrowRight size={16} />
             </button>
           </div>
 
-          <div className="pt-6 text-center border-t border-white/5">
-            <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-bold">Created by Vijay Ninama</p>
+          <div className="pt-4 text-center">
+            <p className="text-[9px] text-white/30 uppercase leading-relaxed">
+              Guest mode allows viewing only. <br />
+              Login to chat, take tests, and save progress.
+            </p>
           </div>
         </div>
       </motion.div>

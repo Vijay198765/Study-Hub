@@ -25,9 +25,9 @@ import {
   getUsers, saveUser, removeUser,
   getTests, saveTest, removeTest
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -49,6 +49,7 @@ export default function AdminPanel() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -132,6 +133,11 @@ export default function AdminPanel() {
     const unsubUsers = getUsers(setUsers);
     const unsubTests = getTests(setTests);
     
+    const qResults = query(collection(db, 'testResults'), orderBy('completedAt', 'desc'));
+    const unsubResults = onSnapshot(qResults, (snapshot) => {
+      setTestResults(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
+    });
+    
     const q = query(collection(db, 'siteComments'), orderBy('createdAt', 'desc'));
     const unsubComments = onSnapshot(q, (snapshot) => {
       setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -141,6 +147,7 @@ export default function AdminPanel() {
       unsubClasses();
       unsubUsers();
       unsubTests();
+      unsubResults();
       unsubComments();
     };
   }, []);
@@ -365,6 +372,13 @@ export default function AdminPanel() {
                 >
                   <ClipboardList size={16} className="inline-block mr-1.5" />
                   Tests
+                </button>
+                <button 
+                  onClick={() => setActiveTab('results')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'results' ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Trophy size={16} className="inline-block mr-1.5" />
+                  Results
                 </button>
                 <button 
                   onClick={() => setActiveTab('stats')}
@@ -923,6 +937,116 @@ export default function AdminPanel() {
                   <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
                     <ClipboardList size={48} className="mx-auto text-white/10 mb-4" />
                     <p className="text-white/30 italic">No tests created yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'results' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search results by name, email or test..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    setConfirmAction({
+                      title: 'Clear All Results',
+                      message: 'Are you sure you want to delete ALL test results? This action cannot be undone.',
+                      onConfirm: async () => {
+                        try {
+                          const promises = testResults.map(r => deleteDoc(doc(db, 'testResults', r.id)));
+                          await Promise.all(promises);
+                          setToast({ message: 'All results cleared!', type: 'success' });
+                        } catch (err) {
+                          setToast({ message: 'Failed to clear results.', type: 'error' });
+                        }
+                        setConfirmAction(null);
+                      }
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all border border-red-500/20"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Student</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Test</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Score</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Date</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {testResults
+                      .filter(r => 
+                        r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        r.studentEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        r.testTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((result) => (
+                      <tr key={result.id} className="border-b border-white/5 hover:bg-white/5 transition-all group">
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="text-white font-medium">{result.studentName}</span>
+                            <span className="text-xs text-white/40">{result.studentEmail || 'No Email'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-white/60">{result.testTitle}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold ${result.score >= 70 ? 'text-emerald-400' : result.score >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {result.score}%
+                            </span>
+                            <span className="text-xs text-white/20">({result.total} Qs)</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-white/40 text-xs">
+                          {result.completedAt?.toDate ? result.completedAt.toDate().toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="py-4 px-4">
+                          <button 
+                            onClick={() => {
+                              setConfirmAction({
+                                title: 'Delete Result',
+                                message: `Are you sure you want to delete the result for ${result.studentName}?`,
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteDoc(doc(db, 'testResults', result.id));
+                                    setToast({ message: 'Result deleted!', type: 'success' });
+                                  } catch (err) {
+                                    setToast({ message: 'Failed to delete result.', type: 'error' });
+                                  }
+                                  setConfirmAction(null);
+                                }
+                              });
+                            }}
+                            className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {testResults.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                    <Trophy size={48} className="mb-4" />
+                    <p>No test results found</p>
                   </div>
                 )}
               </div>
