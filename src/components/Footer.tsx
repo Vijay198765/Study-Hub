@@ -1,7 +1,12 @@
 import React from 'react';
-import { Mail, Heart } from 'lucide-react';
+import { Mail, Heart, Music as MusicIcon } from 'lucide-react';
 
 export default function Footer() {
+  const handleToggleMusic = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('toggle-music'));
+  };
+
   return (
     <footer className="bg-dark-bg border-t border-white/5 py-12 mt-20">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -26,6 +31,9 @@ export default function Footer() {
             <li><a href="/" className="hover:text-neon-blue transition-colors">Home</a></li>
             <li><a href="/classes" className="hover:text-neon-blue transition-colors">Classes</a></li>
             <li><a href="/tips" className="hover:text-neon-blue transition-colors">Study Tips</a></li>
+            <li><button onClick={handleToggleMusic} className="hover:text-neon-blue transition-colors flex items-center gap-2">
+              <MusicIcon className="w-3 h-3" /> Music Selection
+            </button></li>
             <li><a href="/login" className="hover:text-neon-blue transition-colors">Admin Login</a></li>
           </ul>
         </div>

@@ -6,13 +6,14 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy
+  MessageSquare, ClipboardList, Trophy, Music as MusicIcon, ClipboardList as ClipboardIcon, Globe
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { cn } from '../lib/utils';
 import { storage, db, auth } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -28,7 +29,7 @@ import {
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'music';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -52,6 +53,8 @@ export default function AdminPanel() {
   const [tests, setTests] = useState<Test[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
+  const [musicTracks, setMusicTracks] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -60,7 +63,7 @@ export default function AdminPanel() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'music', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
@@ -144,12 +147,25 @@ export default function AdminPanel() {
       setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const qMusic = query(collection(db, 'music'), orderBy('createdAt', 'desc'));
+    const unsubMusic = onSnapshot(qMusic, (snapshot) => {
+      setMusicTracks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setGlobalSettings(snapshot.data());
+      }
+    });
+
     return () => {
       unsubClasses();
       unsubUsers();
       unsubTests();
       unsubResults();
       unsubComments();
+      unsubMusic();
+      unsubSettings();
     };
   }, []);
 
@@ -215,7 +231,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'music', id: string, name: string) => {
     setDeleteConfirm({ type, id, name });
   };
 
@@ -228,6 +244,7 @@ export default function AdminPanel() {
     else if (type === 'chapter') await removeChapter(id);
     else if (type === 'user') await removeUser(id);
     else if (type === 'test') await removeTest(id);
+    else if (type === 'music') await deleteDoc(doc(db, 'music', id));
     
     setDeleteConfirm(null);
   };
@@ -248,11 +265,18 @@ export default function AdminPanel() {
       else if (type === 'subject') await saveSubject(dataToSave as Subject);
       else if (type === 'chapter') await saveChapter(dataToSave as Chapter);
       else if (type === 'test') await saveTest(dataToSave as Test);
+      else if (type === 'music') {
+        const musicRef = doc(db, 'music', dataToSave.id);
+        await setDoc(musicRef, {
+          ...dataToSave,
+          createdAt: dataToSave.createdAt || serverTimestamp()
+        }, { merge: true });
+      }
       
       setEditingEntity(null);
       setToast({ message: "Changes saved successfully!", type: 'success' });
     } catch (error: any) {
-      console.error("Error saving:", error);
+      console.error("Error saving:", error?.message || String(error));
       let errorMessage = "Failed to save changes.";
       try {
         const errorData = JSON.parse(error.message);
@@ -268,7 +292,19 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test') => {
+  const handleSetGlobalMusic = async (trackId: string) => {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), {
+        globalAutoPlayTrackId: trackId
+      }, { merge: true });
+      setToast({ message: "Global auto-play track updated!", type: 'success' });
+    } catch (error) {
+      console.error("Error setting global music:", error);
+      setToast({ message: "Failed to update global preference.", type: 'error' });
+    }
+  };
+
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'music') => {
     const id = Date.now().toString();
     const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
@@ -304,6 +340,13 @@ export default function AdminPanel() {
         active: true,
         createdAt: new Date()
       };
+    } else if (type === 'music') {
+      newEntity = {
+        id: Date.now().toString(),
+        title: 'New Music Track',
+        url: '',
+        createdAt: new Date()
+      };
     }
     
     setEditingEntity({ ...newEntity, type });
@@ -316,9 +359,10 @@ export default function AdminPanel() {
     { name: 'Chapters', value: chapters.length },
     { name: 'Tests', value: tests.length },
     { name: 'Users', value: users.length },
+    { name: 'Music', value: musicTracks.length },
   ];
 
-  const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
+  const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981', '#F59E0B'];
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
@@ -390,6 +434,13 @@ export default function AdminPanel() {
                 >
                   <Trophy size={16} className="inline-block mr-1.5" />
                   Results
+                </button>
+                <button 
+                  onClick={() => setActiveTab('music')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'music' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <MusicIcon size={16} className="inline-block mr-1.5" />
+                  Music
                 </button>
                 <button 
                   onClick={() => setActiveTab('stats')}
@@ -1252,6 +1303,133 @@ export default function AdminPanel() {
               </div>
             </div>
           )}
+          {activeTab === 'music' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search music..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => addNew('music')}
+                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus size={20} />
+                  Add Music
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Global Music Player</h3>
+                  <p className="text-xs text-white/40">Enable or disable the music player for all users.</p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await setDoc(doc(db, 'settings', 'global'), {
+                        isMusicEnabled: !globalSettings?.isMusicEnabled
+                      }, { merge: true });
+                      setToast({ message: `Music player ${!globalSettings?.isMusicEnabled ? 'enabled' : 'disabled'} globally!`, type: 'success' });
+                    } catch (error) {
+                      setToast({ message: "Failed to update global setting.", type: 'error' });
+                    }
+                  }}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all",
+                    globalSettings?.isMusicEnabled 
+                      ? "bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
+                      : "bg-white/10 text-white/40"
+                  )}
+                >
+                  {globalSettings?.isMusicEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              {globalSettings?.globalAutoPlayTrackId && (
+                <div className="bg-neon-purple/10 border border-neon-purple/20 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-neon-purple/20 flex items-center justify-center text-neon-purple">
+                      <MusicIcon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-neon-purple uppercase tracking-widest">Global Auto-play Active</p>
+                      <p className="text-sm text-white font-medium">
+                        {musicTracks.find(t => t.id === globalSettings.globalAutoPlayTrackId)?.title || 'Unknown Track'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleSetGlobalMusic('')}
+                    className="text-xs font-bold text-neon-pink hover:underline uppercase tracking-widest"
+                  >
+                    Disable Global Music
+                  </button>
+                </div>
+              )}
+
+              <div className="grid gap-4">
+                {musicTracks.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase())).map((track) => (
+                  <motion.div 
+                    key={track.id}
+                    layout
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group gap-4"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue shrink-0">
+                        <MusicIcon size={24} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-medium text-white break-words">{track.title}</h3>
+                        <p className="text-xs text-white/40 truncate">{track.url}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleSetGlobalMusic(track.id)}
+                        className={cn(
+                          "p-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-tighter",
+                          globalSettings?.globalAutoPlayTrackId === track.id 
+                            ? "bg-neon-purple text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]" 
+                            : "text-white/40 hover:text-white hover:bg-white/5"
+                        )}
+                        title={globalSettings?.globalAutoPlayTrackId === track.id ? "Global Auto-play Active" : "Set as Global Auto-play"}
+                      >
+                        <Globe size={18} />
+                        <span className="hidden md:inline">{globalSettings?.globalAutoPlayTrackId === track.id ? "Global Active" : "Set Global"}</span>
+                      </button>
+                      <button 
+                        onClick={() => handleEdit(track, 'music')}
+                        className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"
+                        title="Edit"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete('music', track.id, track.title)}
+                        className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+                {musicTracks.length === 0 && (
+                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <MusicIcon size={48} className="mx-auto text-white/10 mb-4" />
+                    <p className="text-white/30 italic">No music tracks added yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1341,35 +1519,79 @@ export default function AdminPanel() {
               <div className="flex-grow overflow-y-auto p-6 custom-scrollbar">
                 {editTab === 'basic' && (
                   <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/60">Name / Title</label>
-                      <div className="relative">
-                        <input 
-                          type="text" 
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
-                          value={editingEntity.type === 'test' ? editingEntity.title : editingEntity.name}
-                          onChange={(e) => setEditingEntity({ ...editingEntity, [editingEntity.type === 'test' ? 'title' : 'name']: e.target.value })}
-                        />
-                        <button 
-                          onClick={async () => {
-                            const field = editingEntity.type === 'test' ? 'title' : 'name';
-                            if (editingEntity[field]) {
-                              setEditingEntity({ ...editingEntity, [field]: '' });
-                            } else {
-                              try {
-                                const text = await navigator.clipboard.readText();
-                                if (text) setEditingEntity({ ...editingEntity, [field]: text });
-                              } catch (err) {
-                                setToast({ message: 'Could not access clipboard', type: 'error' });
-                              }
-                            }
-                          }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
-                        >
-                          {(editingEntity.type === 'test' ? editingEntity.title : editingEntity.name) ? <X size={18} /> : <ClipboardList size={18} />}
-                        </button>
+                    {editingEntity.type === 'music' && (
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-white/60">Track Title</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                            value={editingEntity.title}
+                            onChange={(e) => setEditingEntity({ ...editingEntity, title: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-white/60">Drive Link / URL</label>
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="Paste Google Drive link here..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
+                              value={editingEntity.url}
+                              onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
+                            />
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  const text = await navigator.clipboard.readText();
+                                  if (text) setEditingEntity({ ...editingEntity, url: text });
+                                } catch (err) {
+                                  setToast({ message: 'Could not access clipboard', type: 'error' });
+                                }
+                              }}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
+                            >
+                              <ClipboardList size={18} />
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-white/40 mt-1">
+                            Supports direct links and Google Drive share links.
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {editingEntity.type !== 'music' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Name / Title</label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
+                            value={editingEntity.type === 'test' ? editingEntity.title : editingEntity.name}
+                            onChange={(e) => setEditingEntity({ ...editingEntity, [editingEntity.type === 'test' ? 'title' : 'name']: e.target.value })}
+                          />
+                          <button 
+                            onClick={async () => {
+                              const field = editingEntity.type === 'test' ? 'title' : 'name';
+                              if (editingEntity[field]) {
+                                setEditingEntity({ ...editingEntity, [field]: '' });
+                              } else {
+                                try {
+                                  const text = await navigator.clipboard.readText();
+                                  if (text) setEditingEntity({ ...editingEntity, [field]: text });
+                                } catch (err) {
+                                  setToast({ message: 'Could not access clipboard', type: 'error' });
+                                }
+                              }
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
+                          >
+                            {(editingEntity.type === 'test' ? editingEntity.title : editingEntity.name) ? <X size={18} /> : <ClipboardList size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {editingEntity.type === 'test' && (
                       <div className="space-y-2">
