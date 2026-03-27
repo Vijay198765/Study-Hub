@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  console.log("Starting SyncMusic server...");
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
@@ -30,12 +31,10 @@ async function startServer() {
 
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
-
-    // Send initial state to the new user
     socket.emit("musicStateUpdate", musicState);
 
-    // Admin controls
     socket.on("updateMusicState", (newState) => {
+      console.log("Updating music state:", newState);
       musicState = { ...musicState, ...newState, lastUpdated: Date.now() };
       io.emit("musicStateUpdate", musicState);
     });
@@ -47,12 +46,15 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    console.log("Initializing Vite in development mode...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    console.log("Vite middleware attached.");
   } else {
+    console.log("Running in production mode.");
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
@@ -61,7 +63,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`>>> SyncMusic server is LIVE at http://0.0.0.0:${PORT}`);
   });
 }
 
