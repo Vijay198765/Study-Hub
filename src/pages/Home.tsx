@@ -119,7 +119,7 @@ export default function Home() {
     });
   }, [searchTerm, allData]);
 
-  const quote = "Take care of the people you love but even take better care of the people that loves you";
+  const quote = "Education is the most powerful weapon which you can use to change the world.";
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
