@@ -45,7 +45,24 @@ export default function ChapterDetail() {
   const [showReview, setShowReview] = useState(false);
   const [userRole, setUserRole] = useState<'student' | 'admin'>('student');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [cachedResources, setCachedResources] = useState<Set<string>>(new Set());
   const isAdmin = userRole === 'admin';
+
+  useEffect(() => {
+    const checkCache = async () => {
+      if ('caches' in window) {
+        try {
+          const cache = await caches.open('pdf-cache');
+          const keys = await cache.keys();
+          const urls = new Set(keys.map(request => request.url));
+          setCachedResources(urls);
+        } catch (e) {
+          console.error("Error checking cache:", e);
+        }
+      }
+    };
+    checkCache();
+  }, [chapters]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -63,9 +80,15 @@ export default function ChapterDetail() {
     if ('caches' in window) {
       try {
         const cache = await caches.open('pdf-cache');
+        const existing = await cache.match(url);
+        if (existing) return; // Already cached
+        
         const response = await fetch(url);
         if (response.ok) {
           await cache.put(url, response);
+          // Update cached resources state
+          const keys = await cache.keys();
+          setCachedResources(new Set(keys.map(request => request.url)));
           console.log('Resource cached:', url);
         }
       } catch (error) {
@@ -88,8 +111,16 @@ export default function ChapterDetail() {
 
   const handlePreview = async (url: string) => {
     setLoading(true);
-    const effectiveUrl = isOffline ? await getCachedUrl(url) : url;
-    if (!isOffline) cacheResource(url); // Cache for next time
+    
+    // Try to get from cache first if offline, or even if online for faster loading
+    const cachedUrl = await getCachedUrl(url);
+    const effectiveUrl = cachedUrl || url;
+    
+    if (!isOffline) {
+      // If online, always try to update/ensure it's in cache
+      cacheResource(url);
+    }
+    
     setPreviewUrl(effectiveUrl);
     setLoading(false);
   };
@@ -317,6 +348,9 @@ export default function ChapterDetail() {
 
   const getPreviewUrl = (url: string) => {
     if (!url) return '';
+    // If it's a blob URL (cached), return it directly for native browser preview
+    if (url.startsWith('blob:')) return url;
+    
     // Handle Google Drive links
     if (url.includes('drive.google.com')) {
       // Convert /view or /edit to /preview
@@ -439,7 +473,14 @@ export default function ChapterDetail() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">{res.type}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">{res.type}</p>
+                        {cachedResources.has(new URL(res.url, window.location.origin).href) && (
+                          <span className="flex items-center gap-1 text-[8px] text-green-400 font-bold uppercase tracking-tighter bg-green-400/10 px-1.5 py-0.5 rounded">
+                            <CheckCircle2 size={8} /> Offline Ready
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
