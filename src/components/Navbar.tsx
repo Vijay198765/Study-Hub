@@ -69,15 +69,15 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
   return (
     <nav className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 py-3",
-      isScrolled ? "bg-dark-bg/80 backdrop-blur-md border-b border-white/10" : "bg-transparent"
+      isScrolled ? "bg-dark-card/95 backdrop-blur-md border-b border-white/10" : "bg-transparent"
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-[0_0_15px_rgba(0,242,255,0.4)] group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/20 group-hover:scale-110 transition-transform">
             <GraduationCap className="text-white w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 leading-none">
+            <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
               Study-hub
             </span>
             <span className="text-[8px] text-neon-blue font-bold uppercase tracking-[0.2em] mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -143,6 +143,21 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
           <button onClick={() => setIsSearchOpen(true)} className="text-white/70 hover:text-neon-blue p-2">
             <Search size={20} />
           </button>
+          {user && (
+            <button 
+              onClick={() => {
+                setNewName(user.name);
+                setIsProfileOpen(true);
+              }}
+              className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center"
+            >
+              {user.photoURL ? (
+                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <User size={16} className="text-white/70" />
+              )}
+            </button>
+          )}
           <button className="text-white p-2" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -202,7 +217,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
                 <button 
                   onClick={handleUpdateName}
                   disabled={isUpdating || !newName.trim() || newName === user?.name}
-                  className="btn-neon w-full py-4 bg-neon-blue text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-neon w-full py-4 uppercase tracking-wider"
                 >
                   {isUpdating ? 'Updating...' : 'Save Changes'}
                 </button>

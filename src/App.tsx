@@ -15,9 +15,12 @@ import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
-import { auth, db } from './firebase';
+import { LoadingScreen } from './components/LoadingScreen';
+import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { ThemeProvider } from './contexts/ThemeContext';
+import Watermark from './components/Watermark';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
@@ -31,7 +34,21 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [minLoadingComplete, setMinLoadingComplete] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Test connection on boot
+  useEffect(() => {
+    testConnection();
+  }, []);
+
+  // Minimum loading time for the animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinLoadingComplete(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -77,7 +94,7 @@ export default function App() {
           }
           setLoading(false);
         }, (error) => {
-          console.error("Error listening to user profile:", error);
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
           setLoading(false);
         });
       } else {
@@ -97,56 +114,49 @@ export default function App() {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-neon-blue border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  if (loading || !minLoadingComplete) {
+    return <LoadingScreen />;
   }
 
   return (
-    <ErrorBoundary>
-      {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
-      <div className="flex flex-col min-h-screen relative overflow-hidden">
-        {/* Background Watermark */}
-        <div className="fixed inset-0 pointer-events-none z-[-1] flex items-center justify-center opacity-[0.03] select-none">
-          <span className="text-[20vw] font-display font-bold whitespace-nowrap rotate-[-30deg] text-white">
-            Vijay Ninama
-          </span>
-        </div>
-        
-        <Navbar isAdmin={isAdmin} user={userProfile} />
-        
-        <main className="flex-grow">
-          <AnimatePresence mode="wait">
-            <Routes location={location}>
-              <Route path="/" element={<Home />} />
-              <Route path="/classes" element={<Home />} />
-              <Route path="/class/:classId" element={<ClassDetail />} />
-              <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
-              <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
-              <Route path="/tips" element={<StudyTips />} />
-              <Route path="/games" element={<Games />} />
-              <Route path="/comments" element={<LiveComments />} />
-              <Route path="/tests" element={<Tests />} />
-              <Route path="/login" element={<Login />} />
-              <Route 
-                path="/admin" 
-                element={
-                  <ProtectedRoute isAdmin={isAdmin}>
-                    <AdminPanel />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AnimatePresence>
-        </main>
+    <ThemeProvider>
+      <ErrorBoundary>
+        {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
+        <div className="flex flex-col min-h-screen relative overflow-hidden">
+          <Watermark />
+          
+          <Navbar isAdmin={isAdmin} user={userProfile} />
+          
+          <main className="flex-grow">
+            <AnimatePresence mode="wait">
+              <Routes location={location}>
+                <Route path="/" element={<Home />} />
+                <Route path="/classes" element={<Home />} />
+                <Route path="/class/:classId" element={<ClassDetail />} />
+                <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
+                <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
+                <Route path="/tips" element={<StudyTips />} />
+                <Route path="/games" element={<Games />} />
+                <Route path="/comments" element={<LiveComments />} />
+                <Route path="/tests" element={<Tests />} />
+                <Route path="/login" element={<Login />} />
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute isAdmin={isAdmin}>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AnimatePresence>
+          </main>
 
-        <Footer />
-      </div>
-    </ErrorBoundary>
+          <Footer />
+        </div>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 

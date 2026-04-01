@@ -50,6 +50,8 @@
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
+        "name": { "type": "string" },
+        "photoURL": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "student"] }
       },
       "required": ["uid", "email", "role"]
@@ -133,6 +135,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userName", "text", "likes", "likedBy", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "neonBlue": { "type": "string" },
+        "neonPurple": { "type": "string" },
+        "neonPink": { "type": "string" },
+        "neonMagenta": { "type": "string" },
+        "darkBg": { "type": "string" },
+        "darkCard": { "type": "string" },
+        "darkBorder": { "type": "string" }
+      },
+      "required": ["id"]
     }
   },
   "firestore": {
@@ -175,6 +193,10 @@
     "/siteComments/{commentId}": {
       "schema": "SiteComment",
       "description": "General website feedback and comments"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global application settings"
     }
   }
 }

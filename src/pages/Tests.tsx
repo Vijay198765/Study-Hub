@@ -36,7 +36,7 @@ export default function Tests() {
           if (doc.exists()) {
             setUserProfile(doc.data());
           }
-        });
+        }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
       } else {
         setIsGuest(true);
         setUserProfile(null);
@@ -176,7 +176,7 @@ export default function Tests() {
                     <div className="w-24 h-24 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue mx-auto mb-4">
                       <Trophy size={48} />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-neon-pink flex items-center justify-center text-white shadow-lg">
+                    <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg">
                       <Star size={16} />
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function Tests() {
                     </div>
                     <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                       <p className="text-[10px] font-bold text-white/40 uppercase mb-1">Accuracy</p>
-                      <p className="text-3xl font-bold text-neon-pink">
+                      <p className="text-3xl font-bold text-indigo-600">
                         {activeTest.questions.length > 0 ? Math.round((score / activeTest.questions.length) * 100) : 0}%
                       </p>
                     </div>
@@ -205,7 +205,7 @@ export default function Tests() {
                         setActiveTest(null);
                         setTestCompleted(false);
                       }}
-                      className="btn-neon bg-neon-blue text-black px-12 py-3 font-bold w-full sm:w-auto"
+                      className="btn-neon px-12 py-3 w-full sm:w-auto"
                     >
                       Back to All Tests
                     </button>
@@ -235,7 +235,7 @@ export default function Tests() {
                         </div>
                         <button 
                           onClick={() => window.location.href = '/login'}
-                          className="btn-neon bg-neon-blue text-black px-8 py-3 font-bold"
+                          className="btn-neon px-8 py-3"
                         >
                           Login Now
                         </button>
@@ -267,7 +267,7 @@ export default function Tests() {
                                 if (!isGuest) startTest(test);
                               }}
                               disabled={isGuest}
-                              className={`btn-neon px-6 py-2 flex items-center gap-2 ${isGuest ? 'bg-white/5 text-white/20 cursor-not-allowed border-white/5' : 'bg-neon-blue text-black'}`}
+                              className={`btn-neon px-6 py-2 flex items-center gap-2 ${isGuest ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               {isGuest ? <Lock size={18} /> : 'Start'} <ArrowRight size={18} />
                             </button>
@@ -385,7 +385,7 @@ export default function Tests() {
 
                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mb-8">
                     <motion.div 
-                      className="h-full bg-neon-blue shadow-[0_0_10px_rgba(0,229,255,0.5)]"
+                      className="h-full bg-neon-blue shadow-lg shadow-neon-blue/20"
                       initial={{ width: 0 }}
                       animate={{ width: `${((currentQuestionIdx + 1) / activeTest.questions.length) * 100}%` }}
                     />
@@ -404,7 +404,7 @@ export default function Tests() {
                           className={`p-5 rounded-2xl text-left transition-all border-2 flex items-center justify-between group ${answers[currentQuestionIdx] === idx ? 'border-neon-blue bg-neon-blue/10 text-white' : 'border-white/5 bg-white/5 text-white/60 hover:border-white/20 hover:text-white'}`}
                         >
                           <span className="font-medium">{option}</span>
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${answers[currentQuestionIdx] === idx ? 'border-neon-blue bg-neon-blue text-black' : 'border-white/20 group-hover:border-white/40'}`}>
+                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${answers[currentQuestionIdx] === idx ? 'border-neon-blue bg-neon-blue text-white' : 'border-white/20 group-hover:border-white/40'}`}>
                             {answers[currentQuestionIdx] === idx && <CheckCircle2 size={14} />}
                           </div>
                         </button>
@@ -416,7 +416,7 @@ export default function Tests() {
                     <button
                       onClick={nextQuestion}
                       disabled={answers[currentQuestionIdx] === -1}
-                      className={`btn-neon px-10 py-4 flex items-center gap-2 text-lg font-bold ${answers[currentQuestionIdx] === -1 ? 'opacity-50 cursor-not-allowed bg-white/10 text-white/40' : 'bg-neon-blue text-black'}`}
+                      className={`btn-neon px-10 py-4 flex items-center gap-2 text-lg font-bold ${answers[currentQuestionIdx] === -1 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {currentQuestionIdx === activeTest.questions.length - 1 ? 'Finish Test' : 'Next Question'}
                       <ArrowRight size={20} />
@@ -438,7 +438,7 @@ export default function Tests() {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.5, type: 'spring' }}
-                      className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-neon-pink flex items-center justify-center text-white shadow-lg"
+                      className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg"
                     >
                       <Star size={24} />
                     </motion.div>
@@ -456,7 +456,7 @@ export default function Tests() {
                     </div>
                     <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
                       <p className="text-xs font-bold text-white/40 uppercase mb-1">Accuracy</p>
-                      <p className="text-4xl font-bold text-neon-pink">
+                      <p className="text-4xl font-bold text-indigo-600">
                         {Math.round((score / activeTest.questions.length) * 100)}%
                       </p>
                     </div>
@@ -468,7 +468,7 @@ export default function Tests() {
                         setActiveTest(null);
                         setTestCompleted(false);
                       }}
-                      className="btn-neon bg-neon-blue text-black px-12 py-4 text-lg font-bold w-full sm:w-auto"
+                      className="btn-neon px-12 py-4 text-lg w-full sm:w-auto"
                     >
                       Back to Tests
                     </button>

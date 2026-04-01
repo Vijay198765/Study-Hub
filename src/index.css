@@ -1,67 +1,89 @@
+/* 
+ * MASTER THEME FILE
+ * Control all colors, fonts, and global styles here.
+ */
 @import "tailwindcss";
 
 @theme {
+  /* Fonts */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-neon-blue: #00f2ff;
-  --color-neon-purple: #bc13fe;
-  --color-neon-pink: #ff00ff;
-  --color-dark-bg: #0a0a0c;
-  --color-dark-card: rgba(20, 20, 25, 0.7);
+  /* Primary Brand Colors */
+  --color-neon-blue: var(--neon-blue, #00f2ff);
+  --color-neon-blue-dim: var(--neon-blue-dim, #004e54);
+  --color-neon-purple: var(--neon-purple, #bc13fe);
+  --color-neon-purple-dim: var(--neon-purple-dim, #4a0766);
+  --color-neon-magenta: var(--neon-magenta, #ff00e5);
+  --color-neon-pink: var(--neon-pink, #ff00bd);
+  
+  /* Background & Surface Colors */
+  --color-dark-bg: var(--dark-bg, #0d0d0d);
+  --color-dark-card: var(--dark-card, #151515);
+  --color-dark-border: var(--dark-border, #1c1c1c);
+  
+  /* Text Colors */
+  --color-text-primary: var(--text-primary, #ffffff);
+  --color-text-secondary: var(--text-secondary, #5a5a5f);
+  
+  /* Functional Colors */
+  --color-accent: var(--accent-color, #00f2ff);
+  --color-accent-dim: var(--accent-dim, #004e54);
+  --color-success: var(--success-color, #10b981);
+  --color-error: var(--error-color, #ef4444);
+  --color-warning: var(--warning-color, #f59e0b);
+  --color-info: var(--info-color, #3b82f6);
+  
+  --watermark-text: var(--watermark-text, "Vijay Ninama");
+  --watermark-size: var(--watermark-size, 80);
+  --watermark-opacity: var(--watermark-opacity, 0.06);
+  --watermark-rotate: var(--watermark-rotate, -35);
+  
+  --color-primary: var(--color-accent);
+  --color-primary-hover: #00d8e6;
 }
-
-/* Ensure font-display: swap is used for Google Fonts */
-/* Note: This is handled by the ?display=swap parameter in the Google Fonts URL in index.html */
-
 
 @layer base {
   body {
-    @apply bg-dark-bg text-white font-sans selection:bg-neon-blue/30 transition-colors duration-300;
+    @apply bg-dark-bg text-text-primary font-sans selection:bg-accent/30;
+    background-image: 
+      radial-gradient(circle at center, rgba(0, 242, 255, 0.01) 0%, transparent 70%);
+    background-size: cover;
+    background-attachment: fixed;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-dark-card backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl transition-all;
+    @apply bg-dark-card border border-white/5 rounded-3xl transition-all duration-300;
   }
   
   .neon-border {
-    @apply border border-neon-blue/50 shadow-[0_0_15px_rgba(0,242,255,0.2)];
+    @apply border-neon-blue/40 shadow-[0_0_20px_rgba(0,242,255,0.15)];
+  }
+
+  .neon-text {
+    @apply text-neon-blue drop-shadow-[0_0_10px_rgba(0,242,255,0.5)];
   }
   
-  .neon-text {
-    @apply text-neon-blue drop-shadow-[0_0_8px_rgba(0,242,255,0.5)];
-  }
-
   .btn-neon {
-    @apply relative overflow-hidden px-6 py-2 rounded-full bg-transparent border border-neon-blue text-neon-blue font-medium transition-all duration-300 hover:bg-neon-blue hover:text-black hover:shadow-[0_0_20px_rgba(0,242,255,0.6)];
+    @apply bg-neon-blue text-black px-6 py-2 rounded-full font-bold hover:bg-white hover:shadow-[0_0_20px_rgba(0,242,255,0.5)] transition-all active:scale-95;
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .floating-nav {
+    @apply fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-2xl z-50;
   }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+
+  .floating-nav-item {
+    @apply p-3 text-white/40 hover:text-neon-blue transition-all relative rounded-full;
   }
-}
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
+  .floating-nav-item.active {
+    @apply text-neon-blue bg-neon-blue/20;
+  }
 
-::-webkit-scrollbar-track {
-  background: #0a0a0c;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1f1f23;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2d2d35;
+  .floating-nav-item.active::after {
+    @apply content-[''] absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-neon-blue rounded-full opacity-0;
+  }
 }
 

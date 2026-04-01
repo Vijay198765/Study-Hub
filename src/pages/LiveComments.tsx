@@ -50,7 +50,7 @@ export default function LiveComments() {
             setUserProfile(data);
             setIsAdmin(data.role === 'admin');
           }
-        });
+        }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
       } else {
         setIsGuest(true);
         setUserProfile(null);
@@ -62,7 +62,7 @@ export default function LiveComments() {
     const unsubscribeComments = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteComment));
       setComments(data);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
     return () => {
       unsubscribeAuth();
@@ -238,7 +238,7 @@ export default function LiveComments() {
               <p className="text-gray-400 font-mono text-sm uppercase tracking-widest mb-4">You must be logged in to post messages</p>
               <button 
                 onClick={() => window.location.href = '/login'}
-                className="bg-neon-blue text-black px-8 py-3 rounded-xl font-bold hover:bg-neon-blue/90 transition-all uppercase tracking-wider"
+                className="btn-neon px-8 py-3 uppercase tracking-wider"
               >
                 Login to Chat
               </button>
@@ -262,7 +262,7 @@ export default function LiveComments() {
               <button 
                 type="submit"
                 disabled={!newComment.trim()}
-                className="bg-neon-blue text-black p-4 sm:px-8 rounded-2xl font-bold hover:bg-neon-blue/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="btn-neon p-4 sm:px-8 flex items-center gap-2"
               >
                 <Send size={20} />
                 <span className="hidden sm:inline uppercase tracking-wider">Post</span>

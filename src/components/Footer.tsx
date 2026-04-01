@@ -3,7 +3,7 @@ import { Mail, Heart } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-dark-bg border-t border-white/5 py-12 mt-20">
+    <footer className="bg-dark-card border-t border-white/5 py-12 mt-12">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">Study-hub</h3>
@@ -13,7 +13,7 @@ export default function Footer() {
             Empowering students with futuristic learning tools and high-quality study materials. 
             Join our mission to revolutionize education.
           </p>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 max-w-md">
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 max-w-md">
             <p className="text-[10px] text-white/40 leading-relaxed italic">
               <span className="text-neon-blue font-bold not-italic">Disclaimer:</span> All study materials and content provided on this platform are collected from publicly available sources. Original rights and credits belong to their respective authors and authorities. If you have any concerns regarding the content, please contact us.
             </p>

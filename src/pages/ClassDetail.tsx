@@ -67,25 +67,29 @@ export default function ClassDetail() {
   const enabledSubjects = subjects.filter(s => s.enabled);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-white/50 hover:text-neon-blue mb-8 transition-colors">
-          <ArrowLeft size={18} /> Back to Home
-        </Link>
-        
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div>
-            <h1 className="text-5xl font-display font-bold mb-2">{currentClass.name}</h1>
-            <p className="text-white/50">Select a subject to view chapters and study materials.</p>
-          </div>
-          <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
-            <GraduationCap className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,242,255,0.5)]" />
-            <span className="font-medium text-white/80">
-              <span className="text-neon-blue font-bold drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">{enabledSubjects.length}</span> Subjects Available
-            </span>
+    <div className="min-h-screen pt-24 pb-12">
+      <section className="bg-transparent border-b border-white/5 pt-8 pb-16 px-4 mb-12">
+        <div className="max-w-7xl mx-auto">
+          <Link to="/" className="inline-flex items-center gap-2 text-white/50 hover:text-neon-blue mb-8 transition-colors">
+            <ArrowLeft size={18} /> Back to Home
+          </Link>
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h1 className="text-5xl font-display font-bold mb-2">{currentClass.name}</h1>
+              <p className="text-white/50">Select a subject to view chapters and study materials.</p>
+            </div>
+            <div className="flex items-center gap-4 bg-black px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(0,242,255,0.1)]">
+              <GraduationCap className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,242,255,0.5)]" />
+              <span className="font-medium text-white/80">
+                <span className="text-neon-blue font-bold drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">{enabledSubjects.length}</span> Subjects Available
+              </span>
+            </div>
           </div>
         </div>
+      </section>
 
+      <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {enabledSubjects.map((subject, idx) => (
             <motion.div

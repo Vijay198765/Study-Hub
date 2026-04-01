@@ -99,7 +99,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neon-blue/5 via-dark-bg to-dark-bg">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-black">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -134,7 +134,7 @@ export default function Login() {
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white text-black hover:bg-white/90"
+              className="btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>

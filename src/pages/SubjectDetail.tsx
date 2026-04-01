@@ -43,34 +43,38 @@ export default function SubjectDetail() {
   const enabledChapters = chapters.filter(c => c.enabled);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 hero-gradient">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-8 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
-          <Link to="/" className="hover:text-neon-blue transition-colors flex items-center gap-1">
-            <ArrowLeft size={14} /> Home
-          </Link>
-          <ChevronRight size={12} />
-          <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
-          <ChevronRight size={12} />
-          <span className="text-white/60 break-words">{subject.name}</span>
-        </div>
+    <div className="min-h-screen pt-24 pb-12">
+      <section className="bg-transparent border-b border-white/5 pt-8 pb-16 px-4 mb-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-8 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
+            <Link to="/" className="hover:text-neon-blue transition-colors flex items-center gap-1">
+              <ArrowLeft size={14} /> Home
+            </Link>
+            <ChevronRight size={12} />
+            <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
+            <ChevronRight size={12} />
+            <span className="text-white/60 break-words">{subject.name}</span>
+          </div>
 
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs font-bold uppercase tracking-widest mb-6"
-          >
-            {currentClass?.name} • Subject
-          </motion.div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 break-words tracking-tight">
-            {subject.name}
-          </h1>
-          <p className="text-white/40 text-xl max-w-2xl mx-auto">
-            Comprehensive chapter-wise study resources and practice papers for {subject.name}.
-          </p>
+          <div className="text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-xs font-bold uppercase tracking-widest mb-6"
+            >
+              {currentClass?.name} • Subject
+            </motion.div>
+            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 break-words tracking-tight">
+              {subject.name}
+            </h1>
+            <p className="text-white/40 text-xl max-w-2xl mx-auto">
+              Comprehensive chapter-wise study resources and practice papers for {subject.name}.
+            </p>
+          </div>
         </div>
+      </section>
 
+      <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {enabledChapters.map((chapter, idx) => (
             <motion.div

@@ -12,12 +12,33 @@ import {
   Target,
   MousePointer2,
   Palette,
-  Hash
+  Hash,
+  Info,
+  Eye
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 // --- Types ---
 type GameState = 'start' | 'memorizing' | 'playing' | 'end';
+
+// --- Hooks ---
+const useGameHistory = (maxSize: number = 100) => {
+  const [history, setHistory] = useState<string[]>([]);
+  
+  const addToHistory = useCallback((item: string) => {
+    setHistory(prev => {
+      const newHistory = [item, ...prev];
+      if (newHistory.length > maxSize) return newHistory.slice(0, maxSize);
+      return newHistory;
+    });
+  }, [maxSize]);
+
+  const isInHistory = useCallback((item: string) => history.includes(item), [history]);
+
+  const clearHistory = useCallback(() => setHistory([]), []);
+
+  return { addToHistory, isInHistory, clearHistory };
+};
 
 interface Game {
   id: string;
@@ -48,25 +69,33 @@ const MathSprint = () => {
   const [timeLeft, setTimeLeft] = useState(30);
   const [problem, setProblem] = useState({ a: 0, b: 0, op: '+', answer: 0 });
   const [options, setOptions] = useState<number[]>([]);
+  const { addToHistory, isInHistory, clearHistory } = useGameHistory(100);
 
   const generateProblem = useCallback(() => {
     const ops = ['+', '-', '*'];
-    const op = ops[Math.floor(Math.random() * ops.length)];
-    let a, b, answer;
+    let a, b, op, answer, key;
+    let attempts = 0;
 
-    if (op === '+') {
-      a = Math.floor(Math.random() * 50) + 1;
-      b = Math.floor(Math.random() * 50) + 1;
-      answer = a + b;
-    } else if (op === '-') {
-      a = Math.floor(Math.random() * 50) + 20;
-      b = Math.floor(Math.random() * a) + 1;
-      answer = a - b;
-    } else {
-      a = Math.floor(Math.random() * 12) + 1;
-      b = Math.floor(Math.random() * 12) + 1;
-      answer = a * b;
-    }
+    do {
+      op = ops[Math.floor(Math.random() * ops.length)];
+      if (op === '+') {
+        a = Math.floor(Math.random() * 50) + 1;
+        b = Math.floor(Math.random() * 50) + 1;
+        answer = a + b;
+      } else if (op === '-') {
+        a = Math.floor(Math.random() * 50) + 20;
+        b = Math.floor(Math.random() * a) + 1;
+        answer = a - b;
+      } else {
+        a = Math.floor(Math.random() * 12) + 1;
+        b = Math.floor(Math.random() * 12) + 1;
+        answer = a * b;
+      }
+      key = `${a}${op}${b}`;
+      attempts++;
+    } while (isInHistory(key) && attempts < 200);
+
+    addToHistory(key);
 
     const wrongOptions = new Set<number>();
     while (wrongOptions.size < 3) {
@@ -78,7 +107,7 @@ const MathSprint = () => {
     const allOptions = [...Array.from(wrongOptions), answer].sort(() => Math.random() - 0.5);
     setProblem({ a, b, op, answer });
     setOptions(allOptions);
-  }, []);
+  }, [isInHistory, addToHistory]);
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -94,6 +123,7 @@ const MathSprint = () => {
     setScore(0);
     setTimeLeft(30);
     setGameState('playing');
+    clearHistory();
     generateProblem();
   };
 
@@ -102,7 +132,6 @@ const MathSprint = () => {
       setScore(prev => prev + 1);
       generateProblem();
     } else {
-      setTimeLeft(prev => Math.max(0, prev - 2)); // Penalty
       generateProblem();
     }
   };
@@ -198,7 +227,7 @@ const MemoryMatrix = () => {
     setTimeout(() => {
       setCards(prev => prev.map(c => ({ ...c, flipped: false })));
       setGameState('playing');
-    }, 3000);
+    }, 7000);
   };
 
   const handleCardClick = (index: number) => {
@@ -310,6 +339,7 @@ const ColorRush = () => {
   const [timeLeft, setTimeLeft] = useState(20);
   const [target, setTarget] = useState({ word: '', color: '', colorClass: '' });
   const [options, setOptions] = useState<{ color: string, colorClass: string }[]>([]);
+  const { addToHistory, isInHistory, clearHistory } = useGameHistory(100);
 
   const colors = [
     { name: 'Red', class: 'bg-red-500', text: 'text-red-500' },
@@ -318,11 +348,24 @@ const ColorRush = () => {
     { name: 'Yellow', class: 'bg-yellow-400', text: 'text-yellow-400' },
     { name: 'Purple', class: 'bg-purple-500', text: 'text-purple-500' },
     { name: 'Pink', class: 'bg-pink-500', text: 'text-pink-500' },
+    { name: 'Orange', class: 'bg-orange-500', text: 'text-orange-500' },
+    { name: 'Cyan', class: 'bg-cyan-500', text: 'text-cyan-500' },
+    { name: 'Emerald', class: 'bg-emerald-500', text: 'text-emerald-500' },
+    { name: 'Indigo', class: 'bg-indigo-500', text: 'text-indigo-500' },
   ];
 
   const generateRound = useCallback(() => {
-    const wordColor = colors[Math.floor(Math.random() * colors.length)];
-    const textColor = colors[Math.floor(Math.random() * colors.length)];
+    let wordColor, textColor, key;
+    let attempts = 0;
+
+    do {
+      wordColor = colors[Math.floor(Math.random() * colors.length)];
+      textColor = colors[Math.floor(Math.random() * colors.length)];
+      key = `${wordColor.name}-${textColor.name}`;
+      attempts++;
+    } while (isInHistory(key) && attempts < 200);
+
+    addToHistory(key);
     setTarget({ word: wordColor.name, color: textColor.name, colorClass: textColor.text });
 
     const shuffled = [...colors].sort(() => Math.random() - 0.5).slice(0, 4);
@@ -331,7 +374,7 @@ const ColorRush = () => {
       shuffled[Math.floor(Math.random() * 4)] = wordColor;
     }
     setOptions(shuffled.map(c => ({ color: c.name, colorClass: c.class })));
-  }, []);
+  }, [isInHistory, addToHistory]);
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -347,6 +390,7 @@ const ColorRush = () => {
     setScore(0);
     setTimeLeft(20);
     setGameState('playing');
+    clearHistory();
     generateRound();
   };
 
@@ -355,7 +399,6 @@ const ColorRush = () => {
       setScore(prev => prev + 1);
       generateRound();
     } else {
-      setTimeLeft(prev => Math.max(0, prev - 1));
       generateRound();
     }
   };
@@ -500,16 +543,53 @@ const WordScramble = () => {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(45);
   const [word, setWord] = useState({ original: '', scrambled: '' });
-  const [userInput, setUserInput] = useState('');
+  const [options, setOptions] = useState<string[]>([]);
+  const { addToHistory, isInHistory, clearHistory } = useGameHistory(100);
 
-  const words = ['REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'FIREBASE', 'STUDY', 'LEARNING', 'EDUCATION', 'KNOWLEDGE', 'FUTURE', 'MATH', 'BOOK', 'READ', 'TEST', 'EXAM', 'PASS', 'QUIZ', 'CODE', 'DATA', 'FILE', 'USER'];
+  const words = [
+    'REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'FIREBASE', 'STUDY', 'LEARNING', 'EDUCATION', 'KNOWLEDGE', 'FUTURE', 
+    'MATH', 'BOOK', 'READ', 'TEST', 'EXAM', 'PASS', 'QUIZ', 'CODE', 'DATA', 'FILE', 'USER', 'SYSTEM', 'LOGIC', 
+    'BRAIN', 'MIND', 'THINK', 'SMART', 'GENIUS', 'FOCUS', 'POWER', 'SPEED', 'QUICK', 'FAST', 'LIGHT', 'SPACE', 
+    'EARTH', 'MOON', 'STAR', 'SUN', 'PLANET', 'GALAXY', 'UNIVERSE', 'ATOM', 'CELL', 'LIFE', 'WORLD', 'PEACE', 
+    'LOVE', 'HOPE', 'DREAM', 'GOAL', 'PLAN', 'WORK', 'PLAY', 'GAME', 'FUN', 'JOY', 'HAPPY', 'SMILE', 'LAUGH',
+    'MUSIC', 'ART', 'DANCE', 'SONG', 'FILM', 'MOVIE', 'STORY', 'TALE', 'MYTH', 'LEGEND', 'HERO', 'BRAVE', 'STRONG',
+    'CALM', 'QUIET', 'SILENT', 'SOUND', 'VOICE', 'WORD', 'TEXT', 'PAGE', 'PAPER', 'PEN', 'INK', 'DRAW', 'PAINT',
+    'COLOR', 'BLUE', 'RED', 'GREEN', 'GOLD', 'SILVER', 'IRON', 'STEEL', 'WOOD', 'STONE', 'ROCK', 'SAND', 'WAVE',
+    'OCEAN', 'SEA', 'RIVER', 'LAKE', 'RAIN', 'SNOW', 'ICE', 'FIRE', 'HEAT', 'COLD', 'WIND', 'STORM', 'CLOUD',
+    'BREEZE', 'NIGHT', 'DAY', 'MORNING', 'EVENING', 'SUMMER', 'WINTER', 'SPRING', 'AUTUMN', 'LEAF', 'TREE', 'FLOWER',
+    'BIRD', 'FISH', 'CAT', 'DOG', 'HORSE', 'LION', 'TIGER', 'BEAR', 'WOLF', 'FOX', 'DEER', 'RABBIT', 'EAGLE',
+    'SHARK', 'WHALE', 'DOLPHIN', 'SNAKE', 'FROG', 'TURTLE', 'BEE', 'ANT', 'SPIDER', 'FLY', 'WASP', 'MOTH', 'BUG',
+    'DESERT', 'FOREST', 'JUNGLE', 'VALLEY', 'HILL', 'PEAK', 'CAVE', 'ISLAND', 'COAST', 'SHORE', 'BEACH', 'SAND',
+    'CITY', 'TOWN', 'VILLAGE', 'STREET', 'ROAD', 'PATH', 'BRIDGE', 'TOWER', 'HOUSE', 'HOME', 'ROOM', 'DOOR', 'WINDOW',
+    'CHAIR', 'TABLE', 'BED', 'LAMP', 'CLOCK', 'WATCH', 'PHONE', 'RADIO', 'TV', 'CAMERA', 'PHOTO', 'IMAGE', 'PICTURE',
+    'FRAME', 'GLASS', 'CUP', 'PLATE', 'FORK', 'KNIFE', 'SPOON', 'BOWL', 'FOOD', 'DRINK', 'WATER', 'MILK', 'JUICE',
+    'BREAD', 'CAKE', 'FRUIT', 'APPLE', 'PEAR', 'PEACH', 'PLUM', 'GRAPE', 'MELON', 'BERRY', 'NUT', 'SEED', 'PLANT'
+  ];
 
   const generateWord = useCallback(() => {
-    const original = words[Math.floor(Math.random() * words.length)];
+    let original, key;
+    let attempts = 0;
+
+    do {
+      original = words[Math.floor(Math.random() * words.length)];
+      key = original;
+      attempts++;
+    } while (isInHistory(key) && attempts < 200);
+
+    addToHistory(key);
     const scrambled = original.split('').sort(() => Math.random() - 0.5).join('');
+    
+    // Generate 3 wrong options
+    const wrongOptions = new Set<string>();
+    while (wrongOptions.size < 3) {
+      const wrong = words[Math.floor(Math.random() * words.length)];
+      if (wrong !== original) wrongOptions.add(wrong);
+    }
+
+    const allOptions = [...Array.from(wrongOptions), original].sort(() => Math.random() - 0.5);
     setWord({ original, scrambled });
-    setUserInput('');
-  }, []);
+    setOptions(allOptions);
+  }, [isInHistory, addToHistory]);
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -525,13 +605,15 @@ const WordScramble = () => {
     setScore(0);
     setTimeLeft(45);
     setGameState('playing');
+    clearHistory();
     generateWord();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userInput.toUpperCase() === word.original) {
+  const handleAnswer = (selected: string) => {
+    if (selected === word.original) {
       setScore(prev => prev + 1);
+      generateWord();
+    } else {
       generateWord();
     }
   };
@@ -563,17 +645,19 @@ const WordScramble = () => {
             {word.scrambled}
           </motion.div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              autoFocus
-              type="text"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Type your answer..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-xl text-center outline-none focus:neon-border transition-all uppercase"
-            />
-            <button type="submit" className="btn-neon w-full py-4 text-lg">Submit</button>
-          </form>
+          <div className="grid grid-cols-2 gap-4">
+            {options.map((opt, idx) => (
+              <motion.button
+                key={idx}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleAnswer(opt)}
+                className="glass-card p-4 text-lg font-bold hover:neon-border transition-all uppercase"
+              >
+                {opt}
+              </motion.button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -595,32 +679,44 @@ const SpaceDodge = () => {
   const [score, setScore] = useState(0);
   const [playerPos, setPlayerPos] = useState(50);
   const [obstacles, setObstacles] = useState<{ id: number, x: number, y: number }[]>([]);
+  const requestRef = React.useRef<number>(0);
+  const lastTimeRef = React.useRef<number>(0);
+
+  const update = useCallback((time: number) => {
+    if (lastTimeRef.current !== undefined) {
+      const deltaTime = time - lastTimeRef.current;
+      
+      if (deltaTime > 32) { // Cap at ~30fps for stability
+        setObstacles(prev => {
+          const moved = prev.map(o => ({ ...o, y: o.y + 1.5 }));
+          const filtered = moved.filter(o => o.y < 100);
+          
+          const collision = filtered.some(o => o.y > 85 && Math.abs(o.x - playerPos) < 10);
+          if (collision) {
+            setGameState('end');
+            return [];
+          }
+
+          if (Math.random() < 0.08) {
+            filtered.push({ id: Date.now(), x: Math.random() * 90 + 5, y: 0 });
+          }
+          return filtered;
+        });
+        setScore(prev => prev + 1);
+        lastTimeRef.current = time;
+      }
+    }
+    requestRef.current = requestAnimationFrame(update);
+  }, [playerPos]);
 
   useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    const gameLoop = setInterval(() => {
-      setObstacles(prev => {
-        const moved = prev.map(o => ({ ...o, y: o.y + 2 }));
-        const filtered = moved.filter(o => o.y < 100);
-        
-        // Collision detection
-        const collision = filtered.some(o => o.y > 85 && Math.abs(o.x - playerPos) < 10);
-        if (collision) {
-          setGameState('end');
-          return [];
-        }
-
-        if (Math.random() < 0.05) {
-          filtered.push({ id: Date.now(), x: Math.random() * 90 + 5, y: 0 });
-        }
-        return filtered;
-      });
-      setScore(prev => prev + 1);
-    }, 50);
-
-    return () => clearInterval(gameLoop);
-  }, [gameState, playerPos]);
+    if (gameState === 'playing') {
+      requestRef.current = requestAnimationFrame(update);
+    } else {
+      cancelAnimationFrame(requestRef.current);
+    }
+    return () => cancelAnimationFrame(requestRef.current);
+  }, [gameState, update]);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') setPlayerPos(prev => Math.max(5, prev - 5));
@@ -633,7 +729,7 @@ const SpaceDodge = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-[500px] bg-slate-950 rounded-xl overflow-hidden border border-white/10">
+    <div className="relative w-full h-[500px] bg-black rounded-xl overflow-hidden border border-white/10">
       {gameState === 'start' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20 bg-black/60 backdrop-blur-sm">
           <Target size={64} className="mb-6 text-blue-400" />
@@ -680,6 +776,7 @@ const CapitalFinder = () => {
   const [gameState, setGameState] = useState<GameState>('start');
   const [score, setScore] = useState(0);
   const [round, setRound] = useState({ country: '', capital: '', options: [] as string[] });
+  const { addToHistory, isInHistory, clearHistory } = useGameHistory(100);
 
   const data = [
     { country: 'France', capital: 'Paris' },
@@ -690,27 +787,152 @@ const CapitalFinder = () => {
     { country: 'Canada', capital: 'Ottawa' },
     { country: 'Egypt', capital: 'Cairo' },
     { country: 'Germany', capital: 'Berlin' },
+    { country: 'Italy', capital: 'Rome' },
+    { country: 'Spain', capital: 'Madrid' },
+    { country: 'UK', capital: 'London' },
+    { country: 'USA', capital: 'Washington D.C.' },
+    { country: 'China', capital: 'Beijing' },
+    { country: 'Russia', capital: 'Moscow' },
+    { country: 'South Africa', capital: 'Pretoria' },
+    { country: 'Mexico', capital: 'Mexico City' },
+    { country: 'Argentina', capital: 'Buenos Aires' },
+    { country: 'Turkey', capital: 'Ankara' },
+    { country: 'South Korea', capital: 'Seoul' },
+    { country: 'Indonesia', capital: 'Jakarta' },
+    { country: 'Thailand', capital: 'Bangkok' },
+    { country: 'Vietnam', capital: 'Hanoi' },
+    { country: 'Greece', capital: 'Athens' },
+    { country: 'Portugal', capital: 'Lisbon' },
+    { country: 'Sweden', capital: 'Stockholm' },
+    { country: 'Norway', capital: 'Oslo' },
+    { country: 'Finland', capital: 'Helsinki' },
+    { country: 'Denmark', capital: 'Copenhagen' },
+    { country: 'Switzerland', capital: 'Bern' },
+    { country: 'Austria', capital: 'Vienna' },
+    { country: 'Belgium', capital: 'Brussels' },
+    { country: 'Netherlands', capital: 'Amsterdam' },
+    { country: 'Poland', capital: 'Warsaw' },
+    { country: 'Czech Republic', capital: 'Prague' },
+    { country: 'Hungary', capital: 'Budapest' },
+    { country: 'Ireland', capital: 'Dublin' },
+    { country: 'New Zealand', capital: 'Wellington' },
+    { country: 'Singapore', capital: 'Singapore' },
+    { country: 'Malaysia', capital: 'Kuala Lumpur' },
+    { country: 'Philippines', capital: 'Manila' },
+    { country: 'Pakistan', capital: 'Islamabad' },
+    { country: 'Bangladesh', capital: 'Dhaka' },
+    { country: 'Nigeria', capital: 'Abuja' },
+    { country: 'Kenya', capital: 'Nairobi' },
+    { country: 'Ethiopia', capital: 'Addis Ababa' },
+    { country: 'Morocco', capital: 'Rabat' },
+    { country: 'Colombia', capital: 'Bogotá' },
+    { country: 'Peru', capital: 'Lima' },
+    { country: 'Chile', capital: 'Santiago' },
+    { country: 'Saudi Arabia', capital: 'Riyadh' },
+    { country: 'UAE', capital: 'Abu Dhabi' },
+    { country: 'Israel', capital: 'Jerusalem' },
+    { country: 'Iran', capital: 'Tehran' },
+    { country: 'Iraq', capital: 'Baghdad' },
+    { country: 'Ukraine', capital: 'Kyiv' },
+    { country: 'Romania', capital: 'Bucharest' },
+    { country: 'Bulgaria', capital: 'Sofia' },
+    { country: 'Croatia', capital: 'Zagreb' },
+    { country: 'Serbia', capital: 'Belgrade' },
+    { country: 'Slovakia', capital: 'Bratislava' },
+    { country: 'Slovenia', capital: 'Ljubljana' },
+    { country: 'Estonia', capital: 'Tallinn' },
+    { country: 'Latvia', capital: 'Riga' },
+    { country: 'Lithuania', capital: 'Vilnius' },
+    { country: 'Iceland', capital: 'Reykjavik' },
+    { country: 'Luxembourg', capital: 'Luxembourg' },
+    { country: 'Malta', capital: 'Valletta' },
+    { country: 'Cyprus', capital: 'Nicosia' },
+    { country: 'Albania', capital: 'Tirana' },
+    { country: 'Montenegro', capital: 'Podgorica' },
+    { country: 'North Macedonia', capital: 'Skopje' },
+    { country: 'Bosnia and Herzegovina', capital: 'Sarajevo' },
+    { country: 'Moldova', capital: 'Chisinau' },
+    { country: 'Georgia', capital: 'Tbilisi' },
+    { country: 'Armenia', capital: 'Yerevan' },
+    { country: 'Azerbaijan', capital: 'Baku' },
+    { country: 'Kazakhstan', capital: 'Astana' },
+    { country: 'Uzbekistan', capital: 'Tashkent' },
+    { country: 'Turkmenistan', capital: 'Ashgabat' },
+    { country: 'Kyrgyzstan', capital: 'Bishkek' },
+    { country: 'Tajikistan', capital: 'Dushanbe' },
+    { country: 'Mongolia', capital: 'Ulaanbaatar' },
+    { country: 'Nepal', capital: 'Kathmandu' },
+    { country: 'Sri Lanka', capital: 'Sri Jayawardenepura Kotte' },
+    { country: 'Myanmar', capital: 'Naypyidaw' },
+    { country: 'Cambodia', capital: 'Phnom Penh' },
+    { country: 'Laos', capital: 'Vientiane' },
+    { country: 'Jordan', capital: 'Amman' },
+    { country: 'Lebanon', capital: 'Beirut' },
+    { country: 'Oman', capital: 'Muscat' },
+    { country: 'Qatar', capital: 'Doha' },
+    { country: 'Kuwait', capital: 'Kuwait City' },
+    { country: 'Bahrain', capital: 'Manama' },
+    { country: 'Yemen', capital: 'Sana\'a' },
+    { country: 'Algeria', capital: 'Algiers' },
+    { country: 'Tunisia', capital: 'Tunis' },
+    { country: 'Libya', capital: 'Tripoli' },
+    { country: 'Sudan', capital: 'Khartoum' },
+    { country: 'Ghana', capital: 'Accra' },
+    { country: 'Ivory Coast', capital: 'Yamoussoukro' },
+    { country: 'Senegal', capital: 'Dakar' },
+    { country: 'Uganda', capital: 'Kampala' },
+    { country: 'Tanzania', capital: 'Dodoma' },
+    { country: 'Zambia', capital: 'Lusaka' },
+    { country: 'Zimbabwe', capital: 'Harare' },
+    { country: 'Botswana', capital: 'Gaborone' },
+    { country: 'Namibia', capital: 'Windhoek' },
+    { country: 'Angola', capital: 'Luanda' },
+    { country: 'Madagascar', capital: 'Antananarivo' },
+    { country: 'Cuba', capital: 'Havana' },
+    { country: 'Jamaica', capital: 'Kingston' },
+    { country: 'Panama', capital: 'Panama City' },
+    { country: 'Costa Rica', capital: 'San José' },
+    { country: 'Ecuador', capital: 'Quito' },
+    { country: 'Uruguay', capital: 'Montevideo' },
+    { country: 'Paraguay', capital: 'Asunción' },
+    { country: 'Bolivia', capital: 'Sucre' },
+    { country: 'Venezuela', capital: 'Caracas' },
   ];
 
   const generateRound = useCallback(() => {
-    const item = data[Math.floor(Math.random() * data.length)];
+    let item, key;
+    let attempts = 0;
+
+    do {
+      item = data[Math.floor(Math.random() * data.length)];
+      key = item.country;
+      attempts++;
+    } while (isInHistory(key) && attempts < 200);
+
+    addToHistory(key);
     const others = data.filter(d => d.capital !== item.capital).sort(() => Math.random() - 0.5).slice(0, 3);
     const options = [item.capital, ...others.map(o => o.capital)].sort(() => Math.random() - 0.5);
     setRound({ country: item.country, capital: item.capital, options });
-  }, []);
+  }, [isInHistory, addToHistory]);
 
   const handleAnswer = (ans: string) => {
     if (ans === round.capital) {
       setScore(prev => prev + 1);
       generateRound();
-      if (score + 1 === 10) {
+      if (score + 1 === 20) {
         setGameState('end');
         confetti();
       }
     } else {
-      alert(`Wrong! The capital of ${round.country} is ${round.capital}`);
       generateRound();
     }
+  };
+
+  const startQuiz = () => {
+    setScore(0);
+    setGameState('playing');
+    clearHistory();
+    generateRound();
   };
 
   return (
@@ -719,8 +941,8 @@ const CapitalFinder = () => {
         <div className="text-center">
           <Target size={64} className="mx-auto mb-6 text-orange-400" />
           <h2 className="text-3xl font-bold mb-4">Capital Finder</h2>
-          <p className="text-white/60 mb-8">How well do you know world capitals? Get 10 correct to win!</p>
-          <button onClick={() => { setScore(0); setGameState('playing'); generateRound(); }} className="btn-neon px-8 py-3">Start Quiz</button>
+          <p className="text-white/60 mb-8">How well do you know world capitals? Get 20 correct to win!</p>
+          <button onClick={startQuiz} className="btn-neon px-8 py-3">Start Quiz</button>
         </div>
       )}
 
@@ -737,7 +959,7 @@ const CapitalFinder = () => {
               </button>
             ))}
           </div>
-          <div className="mt-12 text-center text-white/40">Score: {score}/10</div>
+          <div className="mt-12 text-center text-white/40">Score: {score}/20</div>
         </div>
       )}
 
@@ -759,6 +981,7 @@ const GuessAns = () => {
   const [timeLeft, setTimeLeft] = useState(30);
   const [problem, setProblem] = useState({ question: '', answer: '' });
   const [options, setOptions] = useState<string[]>([]);
+  const { addToHistory, isInHistory, clearHistory } = useGameHistory(100);
 
   const data = [
     { q: 'What is 5 + 7?', a: '12', o: ['10', '11', '13'] },
@@ -769,14 +992,144 @@ const GuessAns = () => {
     { q: 'What is the square root of 64?', a: '8', o: ['6', '7', '9'] },
     { q: 'Which gas do plants absorb?', a: 'CO2', o: ['Oxygen', 'Nitrogen', 'Hydrogen'] },
     { q: 'Who wrote "Romeo and Juliet"?', a: 'Shakespeare', o: ['Dickens', 'Hemingway', 'Austen'] },
+    { q: 'What is the fastest land animal?', a: 'Cheetah', o: ['Lion', 'Leopard', 'Tiger'] },
+    { q: 'Which element has the symbol "O"?', a: 'Oxygen', o: ['Gold', 'Silver', 'Iron'] },
+    { q: 'What is the largest planet in our solar system?', a: 'Jupiter', o: ['Saturn', 'Neptune', 'Mars'] },
+    { q: 'How many colors are in a rainbow?', a: '7', o: ['6', '8', '5'] },
+    { q: 'Which country is known as the Land of the Rising Sun?', a: 'Japan', o: ['China', 'Korea', 'Thailand'] },
+    { q: 'What is the currency of Japan?', a: 'Yen', o: ['Dollar', 'Euro', 'Won'] },
+    { q: 'Which is the smallest continent?', a: 'Australia', o: ['Europe', 'Antarctica', 'South America'] },
+    { q: 'What is the boiling point of water?', a: '100°C', o: ['90°C', '110°C', '120°C'] },
+    { q: 'Which is the longest river in the world?', a: 'Nile', o: ['Amazon', 'Yangtze', 'Mississippi'] },
+    { q: 'Who painted the Mona Lisa?', a: 'Da Vinci', o: ['Picasso', 'Van Gogh', 'Michelangelo'] },
+    { q: 'What is the hardest natural substance?', a: 'Diamond', o: ['Gold', 'Iron', 'Steel'] },
+    { q: 'Which planet is closest to the Sun?', a: 'Mercury', o: ['Venus', 'Earth', 'Mars'] },
+    { q: 'How many bones are in the adult human body?', a: '206', o: ['200', '210', '215'] },
+    { q: 'Which is the largest desert in the world?', a: 'Sahara', o: ['Gobi', 'Kalahari', 'Arabian'] },
+    { q: 'What is the main ingredient in chocolate?', a: 'Cocoa', o: ['Sugar', 'Milk', 'Vanilla'] },
+    { q: 'Which is the tallest mountain in the world?', a: 'Everest', o: ['K2', 'Kangchenjunga', 'Lhotse'] },
+    { q: 'Who discovered gravity?', a: 'Newton', o: ['Einstein', 'Galileo', 'Tesla'] },
+    { q: 'What is the capital of France?', a: 'Paris', o: ['Lyon', 'Marseille', 'Nice'] },
+    { q: 'Which animal is known as the King of the Jungle?', a: 'Lion', o: ['Tiger', 'Elephant', 'Bear'] },
+    { q: 'How many legs does a spider have?', a: '8', o: ['6', '10', '12'] },
+    { q: 'Which is the largest country by area?', a: 'Russia', o: ['Canada', 'China', 'USA'] },
+    { q: 'What is the chemical symbol for water?', a: 'H2O', o: ['CO2', 'O2', 'NaCl'] },
+    { q: 'What is the capital of Italy?', a: 'Rome', o: ['Milan', 'Venice', 'Florence'] },
+    { q: 'Which is the largest animal in the world?', a: 'Blue Whale', o: ['Elephant', 'Giraffe', 'Shark'] },
+    { q: 'How many minutes are in an hour?', a: '60', o: ['50', '70', '80'] },
+    { q: 'What is the color of an emerald?', a: 'Green', o: ['Red', 'Blue', 'Yellow'] },
+    { q: 'Which planet is known as the Morning Star?', a: 'Venus', o: ['Mars', 'Jupiter', 'Mercury'] },
+    { q: 'What is the main gas in the air we breathe?', a: 'Nitrogen', o: ['Oxygen', 'CO2', 'Argon'] },
+    { q: 'How many days are in a leap year?', a: '366', o: ['365', '364', '367'] },
+    { q: 'What is the largest organ in the human body?', a: 'Skin', o: ['Liver', 'Heart', 'Lungs'] },
+    { q: 'Which is the smallest prime number?', a: '2', o: ['1', '3', '5'] },
+    { q: 'What is the capital of Germany?', a: 'Berlin', o: ['Munich', 'Frankfurt', 'Hamburg'] },
+    { q: 'Which ocean is between Europe and America?', a: 'Atlantic', o: ['Pacific', 'Indian', 'Arctic'] },
+    { q: 'How many sides does a hexagon have?', a: '6', o: ['5', '7', '8'] },
+    { q: 'What is the freezing point of water?', a: '0°C', o: ['-10°C', '10°C', '32°C'] },
+    { q: 'Which bird is a symbol of peace?', a: 'Dove', o: ['Eagle', 'Owl', 'Swan'] },
+    { q: 'What is the capital of Spain?', a: 'Madrid', o: ['Barcelona', 'Seville', 'Valencia'] },
+    { q: 'Which is the largest state in the USA by area?', a: 'Alaska', o: ['Texas', 'California', 'Montana'] },
+    { q: 'How many strings does a standard guitar have?', a: '6', o: ['4', '5', '12'] },
+    { q: 'What is the capital of Canada?', a: 'Ottawa', o: ['Toronto', 'Vancouver', 'Montreal'] },
+    { q: 'Which fruit is known as the "king of fruits"?', a: 'Durian', o: ['Mango', 'Apple', 'Banana'] },
+    { q: 'What is the capital of Australia?', a: 'Canberra', o: ['Sydney', 'Melbourne', 'Brisbane'] },
+    { q: 'Which is the most spoken language in the world?', a: 'Mandarin', o: ['English', 'Spanish', 'Hindi'] },
+    { q: 'How many players are in a soccer team on the field?', a: '11', o: ['10', '12', '9'] },
+    { q: 'What is the capital of Brazil?', a: 'Brasília', o: ['Rio de Janeiro', 'São Paulo', 'Salvador'] },
+    { q: 'Which is the largest moon of Saturn?', a: 'Titan', o: ['Europa', 'Ganymede', 'Callisto'] },
+    { q: 'What is the capital of Russia?', a: 'Moscow', o: ['Saint Petersburg', 'Kazan', 'Novosibirsk'] },
+    { q: 'Which metal is liquid at room temperature?', a: 'Mercury', o: ['Gold', 'Silver', 'Copper'] },
+    { q: 'How many hearts does an octopus have?', a: '3', o: ['1', '2', '8'] },
+    { q: 'What is the capital of Japan?', a: 'Tokyo', o: ['Osaka', 'Kyoto', 'Nagoya'] },
+    { q: 'Which is the largest land-locked country?', a: 'Kazakhstan', o: ['Mongolia', 'Chad', 'Niger'] },
+    { q: 'What is the capital of Egypt?', a: 'Cairo', o: ['Alexandria', 'Giza', 'Luxor'] },
+    { q: 'Which is the most abundant element in the universe?', a: 'Hydrogen', o: ['Helium', 'Oxygen', 'Carbon'] },
+    { q: 'How many teeth does an adult human typically have?', a: '32', o: ['28', '30', '34'] },
+    { q: 'What is the capital of China?', a: 'Beijing', o: ['Shanghai', 'Guangzhou', 'Shenzhen'] },
+    { q: 'Which is the largest internal organ?', a: 'Liver', o: ['Heart', 'Kidneys', 'Stomach'] },
+    { q: 'What is the capital of Mexico?', a: 'Mexico City', o: ['Guadalajara', 'Monterrey', 'Cancun'] },
+    { q: 'Which is the only continent without a desert?', a: 'Europe', o: ['Antarctica', 'South America', 'Australia'] },
+    { q: 'How many planets are in our solar system?', a: '8', o: ['7', '9', '10'] },
+    { q: 'What is the capital of South Africa?', a: 'Pretoria', o: ['Cape Town', 'Johannesburg', 'Durban'] },
+    { q: 'Which is the largest species of shark?', a: 'Whale Shark', o: ['Great White', 'Hammerhead', 'Tiger Shark'] },
+    { q: 'What is the capital of Turkey?', a: 'Ankara', o: ['Istanbul', 'Izmir', 'Antalya'] },
+    { q: 'Which is the most dense planet in our solar system?', a: 'Earth', o: ['Jupiter', 'Saturn', 'Mars'] },
+    { q: 'How many years are in a millennium?', a: '1000', o: ['100', '500', '2000'] },
+    { q: 'What is the capital of Argentina?', a: 'Buenos Aires', o: ['Córdoba', 'Rosario', 'Mendoza'] },
+    { q: 'Which is the largest bay in the world?', a: 'Bay of Bengal', o: ['Hudson Bay', 'Baffin Bay', 'Gulf of Mexico'] },
+    { q: 'What is the capital of Thailand?', a: 'Bangkok', o: ['Phuket', 'Chiang Mai', 'Pattaya'] },
+    { q: 'Which is the smallest country in the world?', a: 'Vatican City', o: ['Monaco', 'Nauru', 'Tuvalu'] },
+    { q: 'How many seconds are in a day?', a: '86400', o: ['3600', '43200', '100000'] },
+    { q: 'What is the capital of Greece?', a: 'Athens', o: ['Thessaloniki', 'Patras', 'Heraklion'] },
+    { q: 'Which is the largest island in the world?', a: 'Greenland', o: ['New Guinea', 'Borneo', 'Madagascar'] },
+    { q: 'What is the capital of Portugal?', a: 'Lisbon', o: ['Porto', 'Braga', 'Coimbra'] },
+    { q: 'Which is the most common blood type?', a: 'O+', o: ['A+', 'B+', 'AB+'] },
+    { q: 'How many valves does the human heart have?', a: '4', o: ['2', '3', '5'] },
+    { q: 'What is the capital of Sweden?', a: 'Stockholm', o: ['Gothenburg', 'Malmö', 'Uppsala'] },
+    { q: 'Which is the largest flower in the world?', a: 'Rafflesia', o: ['Titan Arum', 'Sunflower', 'Lotus'] },
+    { q: 'What is the capital of Norway?', a: 'Oslo', o: ['Bergen', 'Trondheim', 'Stavanger'] },
+    { q: 'Which is the most famous comet?', a: 'Halley', o: ['Encke', 'Hale-Bopp', 'Hyakutake'] },
+    { q: 'How many keys are on a standard piano?', a: '88', o: ['76', '84', '92'] },
+    { q: 'What is the capital of Finland?', a: 'Helsinki', o: ['Espoo', 'Tampere', 'Vantaa'] },
+    { q: 'Which is the largest peninsula in the world?', a: 'Arabian', o: ['Indian', 'Indochinese', 'Scandinavian'] },
+    { q: 'What is the capital of Denmark?', a: 'Copenhagen', o: ['Aarhus', 'Odense', 'Aalborg'] },
+    { q: 'Which is the most abundant metal in Earth\'s crust?', a: 'Aluminum', o: ['Iron', 'Magnesium', 'Titanium'] },
+    { q: 'How many rings are on the Olympic flag?', a: '5', o: ['4', '6', '7'] },
+    { q: 'What is the capital of Switzerland?', a: 'Bern', o: ['Zurich', 'Geneva', 'Basel'] },
+    { q: 'Which is the largest bird in the world?', a: 'Ostrich', o: ['Emu', 'Albatross', 'Penguin'] },
+    { q: 'What is the capital of Austria?', a: 'Vienna', o: ['Salzburg', 'Innsbruck', 'Graz'] },
+    { q: 'Which is the most popular sport in the world?', a: 'Soccer', o: ['Cricket', 'Basketball', 'Tennis'] },
+    { q: 'How many players are on a basketball team on the court?', a: '5', o: ['6', '7', '4'] },
+    { q: 'What is the capital of Belgium?', a: 'Brussels', o: ['Antwerp', 'Ghent', 'Bruges'] },
+    { q: 'Which is the largest sea in the world?', a: 'Philippine Sea', o: ['Coral Sea', 'Arabian Sea', 'South China Sea'] },
+    { q: 'What is the capital of Netherlands?', a: 'Amsterdam', o: ['Rotterdam', 'The Hague', 'Utrecht'] },
+    { q: 'Which is the most populated city in the world?', a: 'Tokyo', o: ['Delhi', 'Shanghai', 'Sao Paulo'] },
+    { q: 'How many colors are in the Italian flag?', a: '3', o: ['2', '4', '5'] },
+    { q: 'What is the capital of Poland?', a: 'Warsaw', o: ['Kraków', 'Łódź', 'Wrocław'] },
+    { q: 'Which is the largest lake in Africa?', a: 'Victoria', o: ['Tanganyika', 'Malawi', 'Chad'] },
+    { q: 'What is the capital of Ireland?', a: 'Dublin', o: ['Cork', 'Galway', 'Limerick'] },
+    { q: 'Which is the most famous desert in Asia?', a: 'Gobi', o: ['Thar', 'Karakum', 'Taklamakan'] },
+    { q: 'How many sides does a pentagon have?', a: '5', o: ['4', '6', '7'] },
+    { q: 'What is the capital of New Zealand?', a: 'Wellington', o: ['Auckland', 'Christchurch', 'Dunedin'] },
+    { q: 'Which is the largest reef system?', a: 'Great Barrier Reef', o: ['Belize Barrier Reef', 'New Caledonia Barrier Reef', 'Andros Barrier Reef'] },
+    { q: 'What is the capital of Singapore?', a: 'Singapore', o: ['Kuala Lumpur', 'Jakarta', 'Bangkok'] },
+    { q: 'Which is the most expensive spice?', a: 'Saffron', o: ['Vanilla', 'Cardamom', 'Cinnamon'] },
+    { q: 'How many states are in India?', a: '28', o: ['29', '27', '30'] },
+    { q: 'What is the capital of Malaysia?', a: 'Kuala Lumpur', o: ['Putrajaya', 'George Town', 'Johor Bahru'] },
+    { q: 'Which is the largest canyon in the world?', a: 'Grand Canyon', o: ['Copper Canyon', 'Fish River Canyon', 'Colca Canyon'] },
+    { q: 'What is the capital of Philippines?', a: 'Manila', o: ['Quezon City', 'Davao City', 'Cebu City'] },
+    { q: 'Which is the most active volcano?', a: 'Kilauea', o: ['Etna', 'Stromboli', 'Yasur'] },
+    { q: 'How many bones are in a shark?', a: '0', o: ['10', '50', '100'] },
+    { q: 'What is the capital of Pakistan?', a: 'Islamabad', o: ['Karachi', 'Lahore', 'Faisalabad'] },
+    { q: 'Which is the largest cat species?', a: 'Tiger', o: ['Lion', 'Leopard', 'Jaguar'] },
+    { q: 'What is the capital of Bangladesh?', a: 'Dhaka', o: ['Chittagong', 'Khulna', 'Rajshahi'] },
+    { q: 'Which is the most common element in Earth\'s atmosphere?', a: 'Nitrogen', o: ['Oxygen', 'Argon', 'CO2'] },
+    { q: 'How many legs does a butterfly have?', a: '6', o: ['4', '8', '2'] },
+    { q: 'What is the capital of Nigeria?', a: 'Abuja', o: ['Lagos', 'Kano', 'Ibadan'] },
+    { q: 'Which is the largest moon of Jupiter?', a: 'Ganymede', o: ['Callisto', 'Io', 'Europa'] },
+    { q: 'What is the capital of Kenya?', a: 'Nairobi', o: ['Mombasa', 'Kisumu', 'Nakuru'] },
+    { q: 'Which is the most famous ship that sank?', a: 'Titanic', o: ['Lusitania', 'Bismarck', 'Endurance'] },
+    { q: 'How many players are on a volleyball team on the court?', a: '6', o: ['5', '7', '4'] },
+    { q: 'What is the capital of Ethiopia?', a: 'Addis Ababa', o: ['Dire Dawa', 'Mekelle', 'Gondar'] },
+    { q: 'Which is the largest rodent in the world?', a: 'Capybara', o: ['Beaver', 'Porcupine', 'Nutria'] },
   ];
 
   const generateRound = useCallback(() => {
-    const item = data[Math.floor(Math.random() * data.length)];
+    let item, key;
+    let attempts = 0;
+
+    do {
+      item = data[Math.floor(Math.random() * data.length)];
+      key = item.q;
+      attempts++;
+    } while (isInHistory(key) && attempts < 200);
+
+    addToHistory(key);
     const shuffledOptions = [item.a, ...item.o].sort(() => Math.random() - 0.5);
     setProblem({ question: item.q, answer: item.a });
     setOptions(shuffledOptions);
-  }, []);
+  }, [isInHistory, addToHistory]);
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -792,6 +1145,7 @@ const GuessAns = () => {
     setScore(0);
     setTimeLeft(30);
     setGameState('playing');
+    clearHistory();
     generateRound();
   };
 
@@ -800,7 +1154,6 @@ const GuessAns = () => {
       setScore(prev => prev + 1);
       generateRound();
     } else {
-      setTimeLeft(prev => Math.max(0, prev - 2));
       generateRound();
     }
   };
@@ -875,7 +1228,6 @@ const ReactionTest = () => {
     if (gameState === 'waiting') {
       if (timeoutId) clearTimeout(timeoutId);
       setGameState('start');
-      alert("Too early! Wait for the green screen.");
     } else if (gameState === 'ready') {
       const time = Date.now() - startTime;
       setReactionTime(time);
@@ -985,7 +1337,7 @@ export default function Games() {
                       <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${game.color} opacity-5 blur-3xl group-hover:opacity-20 transition-opacity`}></div>
                       
                       <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${game.color} flex items-center justify-center mb-6 shadow-lg`}>
-                        <game.icon className="text-white w-7 h-7" />
+                        {React.createElement(game.icon, { className: "text-white w-7 h-7" } as any)}
                       </div>
 
                       <h3 className="text-2xl font-bold mb-3 group-hover:neon-text transition-colors">

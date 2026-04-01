@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -38,32 +38,57 @@ export default function Home() {
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
+  const unsubscribesRef = useRef<Map<string, () => void>>(new Map());
+
   useEffect(() => {
     setLoadingClasses(true);
+    
     const unsubscribeClasses = getClasses((classes) => {
       setClasses(classes);
       setAllData(prev => ({ ...prev, classes }));
       setLoadingClasses(false);
       
+      // Clean up old subject/chapter listeners that are no longer needed
+      const currentClassIds = new Set(classes.map(c => c.id));
+      unsubscribesRef.current.forEach((unsub, key) => {
+        if (key.startsWith('sub_') && !currentClassIds.has(key.replace('sub_', ''))) {
+          unsub();
+          unsubscribesRef.current.delete(key);
+        }
+      });
+
       // Fetch subjects and chapters for global search
       classes.forEach(cls => {
-        getSubjectsByClass(cls.id, (subjects) => {
-          setAllData(prev => {
-            const existingIds = new Set(prev.subjects.map(s => s.id));
-            const newSubjects = subjects.filter(s => !existingIds.has(s.id));
-            return { ...prev, subjects: [...prev.subjects, ...newSubjects] };
-          });
+        if (!unsubscribesRef.current.has(`sub_${cls.id}`)) {
+          const unsubscribeSubjects = getSubjectsByClass(cls.id, (subjects) => {
+            setAllData(prev => {
+              const otherSubjects = prev.subjects.filter(s => s.classId !== cls.id);
+              return { ...prev, subjects: [...otherSubjects, ...subjects] };
+            });
 
-          subjects.forEach(sub => {
-            getChaptersBySubject(sub.id, (chapters) => {
-              setAllData(prev => {
-                const existingIds = new Set(prev.chapters.map(c => c.id));
-                const newChapters = chapters.filter(c => !existingIds.has(c.id));
-                return { ...prev, chapters: [...prev.chapters, ...newChapters] };
-              });
+            // Clean up old chapter listeners for this class
+            const currentSubjectIds = new Set(subjects.map(s => s.id));
+            unsubscribesRef.current.forEach((unsub, key) => {
+              if (key.startsWith(`ch_${cls.id}_`) && !currentSubjectIds.has(key.replace(`ch_${cls.id}_`, ''))) {
+                unsub();
+                unsubscribesRef.current.delete(key);
+              }
+            });
+
+            subjects.forEach(sub => {
+              if (!unsubscribesRef.current.has(`ch_${cls.id}_${sub.id}`)) {
+                const unsubscribeChapters = getChaptersBySubject(sub.id, (chapters) => {
+                  setAllData(prev => {
+                    const otherChapters = prev.chapters.filter(c => c.subjectId !== sub.id);
+                    return { ...prev, chapters: [...otherChapters, ...chapters] };
+                  });
+                });
+                unsubscribesRef.current.set(`ch_${cls.id}_${sub.id}`, unsubscribeChapters);
+              }
             });
           });
-        });
+          unsubscribesRef.current.set(`sub_${cls.id}`, unsubscribeSubjects);
+        }
       });
     });
     
@@ -79,6 +104,8 @@ export default function Home() {
 
     return () => {
       unsubscribeClasses();
+      unsubscribesRef.current.forEach(unsub => unsub());
+      unsubscribesRef.current.clear();
     };
   }, []);
 
@@ -119,132 +146,134 @@ export default function Home() {
     });
   }, [searchTerm, allData]);
 
-  const quote = "Education is the most powerful weapon which you can use to change the world.";
+  const quote = "Find someone who loves you more than you love them.";
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-16 pb-12">
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto text-center mb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-6"
-        >
-          🚀 Welcome to Study-hub by Vijay Ninama
-        </motion.div>
-        
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight leading-tight min-h-[1.2em]">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
-            {displayText}
-          </span>
-          <span className="animate-pulse text-neon-blue">|</span>
-        </h1>
-        
-        <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 italic min-h-[3em]">
-          "{quote}"
-        </p>
+      <section className="bg-transparent pt-4 pb-12 px-4 mb-12">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-8"
+          >
+            🚀 Welcome to Study-hub by Vijay Ninama
+          </motion.div>
+          
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-10 tracking-tight leading-tight min-h-[1.2em]">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
+              {displayText}
+            </span>
+            <span className="animate-pulse text-neon-blue">|</span>
+          </h1>
+          
+          <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 italic min-h-[3em]">
+            "{quote}"
+          </p>
 
-        {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative group mb-12 search-container">
-          <div className="absolute -inset-1 bg-gradient-to-r from-neon-blue to-neon-purple rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-          <div className="relative flex items-center bg-dark-bg border border-white/10 rounded-2xl px-4 py-3">
-            <Search className="text-white/40 w-5 h-5 mr-3" />
-            <input
-              type="text"
-              placeholder="Search for classes, subjects, or chapters..."
-              className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/20"
-              value={searchTerm}
-              onFocus={() => searchTerm.trim() && setIsSearching(true)}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          {/* Search Bar */}
+          <div className="max-w-xl mx-auto relative group search-container">
+            <div className="relative flex items-center bg-dark-card border border-white/10 rounded-2xl px-6 py-2 shadow-[0_0_25px_rgba(0,242,255,0.2)] group-hover:shadow-[0_0_45px_rgba(0,242,255,0.35)] transition-all">
+              <Search className="text-white/40 w-5 h-5 mr-4" />
+              <input
+                type="text"
+                placeholder="Search for classes, subjects, or chapters..."
+                className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/20 text-base"
+                value={searchTerm}
+                onFocus={() => searchTerm.trim() && setIsSearching(true)}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {/* Search Results Dropdown */}
+            <AnimatePresence>
+              {isSearching && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 right-0 mt-4 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60] max-h-[60vh] overflow-y-auto no-scrollbar"
+                >
+                  <div className="p-4 space-y-6">
+                    {results.classes.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                          <GraduationCap size={12} /> Classes
+                        </h3>
+                        <div className="grid gap-1">
+                          {results.classes.map(c => (
+                            <Link 
+                              key={c.id} 
+                              to={`/class/${c.id}`} 
+                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                            >
+                              <span className="text-sm font-medium">{c.name}</span>
+                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.subjects.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                          <BookOpen size={12} /> Subjects
+                        </h3>
+                        <div className="grid gap-1">
+                          {results.subjects.map(s => (
+                            <Link 
+                              key={s.id} 
+                              to={`/class/${s.classId}/subject/${s.id}`} 
+                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                            >
+                              <span className="text-sm font-medium">{s.name}</span>
+                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-purple group-hover:translate-x-1 transition-all" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.chapters.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                          <Star size={12} /> Chapters
+                        </h3>
+                        <div className="grid gap-1">
+                          {results.chapters.map(c => (
+                            <Link 
+                              key={c.id} 
+                              to={`/class/${c.classId}/subject/${c.subjectId}/chapter/${c.id}`} 
+                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                            >
+                              <span className="text-sm font-medium">{c.name}</span>
+                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-pink group-hover:translate-x-1 transition-all" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.classes.length === 0 && results.subjects.length === 0 && results.chapters.length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-white/40 text-sm italic">No results found for "{searchTerm}"</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {/* Search Results Dropdown */}
-          <AnimatePresence>
-            {isSearching && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-0 right-0 mt-4 bg-dark-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60] max-h-[60vh] overflow-y-auto no-scrollbar"
-              >
-                <div className="p-4 space-y-6">
-                  {results.classes.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                        <GraduationCap size={12} /> Classes
-                      </h3>
-                      <div className="grid gap-1">
-                        {results.classes.map(c => (
-                          <Link 
-                            key={c.id} 
-                            to={`/class/${c.id}`} 
-                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                          >
-                            <span className="text-sm font-medium">{c.name}</span>
-                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {results.subjects.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                        <BookOpen size={12} /> Subjects
-                      </h3>
-                      <div className="grid gap-1">
-                        {results.subjects.map(s => (
-                          <Link 
-                            key={s.id} 
-                            to={`/class/${s.classId}/subject/${s.id}`} 
-                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                          >
-                            <span className="text-sm font-medium">{s.name}</span>
-                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-purple group-hover:translate-x-1 transition-all" />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {results.chapters.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                        <Star size={12} /> Chapters
-                      </h3>
-                      <div className="grid gap-1">
-                        {results.chapters.map(c => (
-                          <Link 
-                            key={c.id} 
-                            to={`/class/${c.classId}/subject/${c.subjectId}/chapter/${c.id}`} 
-                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                          >
-                            <span className="text-sm font-medium">{c.name}</span>
-                            <ArrowRight size={14} className="text-white/20 group-hover:text-neon-pink group-hover:translate-x-1 transition-all" />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {results.classes.length === 0 && results.subjects.length === 0 && results.chapters.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-white/40 text-sm italic">No results found for "{searchTerm}"</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </section>
 
-      {/* Recently Viewed */}
-      {recentChapters.length > 0 && (
-        <section className="max-w-7xl mx-auto mb-20">
-          <div className="flex items-center gap-3 mb-8">
+      <div className="px-4">
+        {/* Recently Viewed */}
+        {recentChapters.length > 0 && (
+        <section className="max-w-7xl mx-auto mb-16">
+          <div className="flex items-center gap-3 mb-6">
             <History className="text-neon-purple" />
             <h2 className="text-2xl font-display font-bold">Continue Studying</h2>
           </div>
@@ -347,5 +376,6 @@ export default function Home() {
         </div>
       </section>
     </div>
-  );
+  </div>
+);
 }

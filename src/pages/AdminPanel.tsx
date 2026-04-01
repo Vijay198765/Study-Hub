@@ -6,10 +6,10 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { storage, db, auth } from '../firebase';
+import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   collection, query, orderBy, onSnapshot, deleteDoc, doc 
@@ -27,8 +27,9 @@ import {
 } from '../services/dataService';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
+import { useTheme } from '../contexts/ThemeContext';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -137,12 +138,12 @@ export default function AdminPanel() {
     const qResults = query(collection(db, 'testResults'), orderBy('completedAt', 'desc'));
     const unsubResults = onSnapshot(qResults, (snapshot) => {
       setTestResults(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestResult)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'testResults'));
     
     const q = query(collection(db, 'siteComments'), orderBy('createdAt', 'desc'));
     const unsubComments = onSnapshot(q, (snapshot) => {
       setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
     return () => {
       unsubClasses();
@@ -208,10 +209,10 @@ export default function AdminPanel() {
       });
       
       await Promise.all(updates);
-      toast.success('Order updated successfully');
+      setToast({ message: 'Order updated successfully', type: 'success' });
     } catch (error) {
       console.error("Error updating order:", error);
-      toast.error('Failed to update order');
+      setToast({ message: 'Failed to update order', type: 'error' });
     }
   };
 
@@ -320,6 +321,8 @@ export default function AdminPanel() {
 
   const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
 
+  const { theme, updateTheme, resetTheme } = useTheme();
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
@@ -397,6 +400,13 @@ export default function AdminPanel() {
                 >
                   <BarChart3 size={16} className="inline-block mr-1.5" />
                   Stats
+                </button>
+                <button 
+                  onClick={() => setActiveTab('theme')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'theme' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Palette size={16} className="inline-block mr-1.5" />
+                  Theme
                 </button>
               </>
             )}
@@ -1249,6 +1259,197 @@ export default function AdminPanel() {
                     <p className="text-white/30 italic">Please select a class and subject to manage chapter MCQs.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'theme' && (
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-xl font-display font-bold text-white mb-2">Theme Management</h3>
+                <p className="text-sm text-white/40">Control the global colors of your application. Changes are applied instantly to all users.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Brand & Accent Colors */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Palette size={18} className="text-neon-blue" />
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Brand & Accent</h4>
+                  </div>
+                  
+                  {[
+                    { label: 'Neon Blue', key: 'neonBlue' },
+                    { label: 'Neon Purple', key: 'neonPurple' },
+                    { label: 'Neon Pink', key: 'neonPink' },
+                    { label: 'Neon Magenta', key: 'neonMagenta' },
+                    { label: 'Accent Color', key: 'accentColor' },
+                  ].map((item) => (
+                    <div key={item.key} className="space-y-2">
+                      <label className="text-xs text-white/60 flex justify-between">
+                        {item.label}
+                        <span className="text-[10px] font-mono text-white/20">{(theme as any)[item.key]}</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="color" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Surface & Text Colors */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Layout size={18} className="text-neon-purple" />
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Surface & Text</h4>
+                  </div>
+
+                  {[
+                    { label: 'Background', key: 'darkBg' },
+                    { label: 'Card Background', key: 'darkCard' },
+                    { label: 'Border Color', key: 'darkBorder' },
+                    { label: 'Primary Text', key: 'textPrimary' },
+                    { label: 'Secondary Text', key: 'textSecondary' },
+                  ].map((item) => (
+                    <div key={item.key} className="space-y-2">
+                      <label className="text-xs text-white/60 flex justify-between">
+                        {item.label}
+                        <span className="text-[10px] font-mono text-white/20">{(theme as any)[item.key]}</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="color" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Functional Colors */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap size={18} className="text-yellow-400" />
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Functional</h4>
+                  </div>
+
+                  {[
+                    { label: 'Success', key: 'successColor' },
+                    { label: 'Error', key: 'errorColor' },
+                    { label: 'Warning', key: 'warningColor' },
+                    { label: 'Info', key: 'infoColor' },
+                  ].map((item) => (
+                    <div key={item.key} className="space-y-2">
+                      <label className="text-xs text-white/60 flex justify-between">
+                        {item.label}
+                        <span className="text-[10px] font-mono text-white/20">{(theme as any)[item.key]}</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="color" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={(theme as any)[item.key]}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="pt-10">
+                    <button 
+                      onClick={() => {
+                        setConfirmAction({
+                          title: 'Reset Theme',
+                          message: 'Are you sure you want to reset all colors to default?',
+                          onConfirm: async () => {
+                            await resetTheme();
+                            setConfirmAction(null);
+                            setToast({ message: 'Theme reset to default!', type: 'success' });
+                          }
+                        });
+                      }}
+                      className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      <RefreshCcw size={14} />
+                      Reset to Defaults
+                    </button>
+                  </div>
+                </div>
+
+                {/* Watermark Settings */}
+                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Type size={18} className="text-neon-pink" />
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Watermark</h4>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60">Text Content</label>
+                    <input 
+                      type="text" 
+                      value={theme.watermarkText}
+                      onChange={(e) => updateTheme({ watermarkText: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 flex justify-between">
+                      Opacity
+                      <span>{Math.round(theme.watermarkOpacity * 100)}%</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="0.5" 
+                      step="0.01"
+                      value={theme.watermarkOpacity}
+                      onChange={(e) => updateTheme({ watermarkOpacity: parseFloat(e.target.value) })}
+                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-pink"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 flex justify-between">
+                      Rotation
+                      <span>{theme.watermarkRotate}°</span>
+                    </label>
+                    <input 
+                      type="range" 
+                      min="-90" 
+                      max="90" 
+                      step="1"
+                      value={theme.watermarkRotate}
+                      onChange={(e) => updateTheme({ watermarkRotate: parseInt(e.target.value) })}
+                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-pink"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

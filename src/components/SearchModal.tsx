@@ -95,9 +95,9 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="relative w-full max-w-2xl bg-dark-bg border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]"
+            className="relative w-full max-w-2xl bg-dark-card border border-white/10 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[70vh]"
           >
-            <div className="p-6 border-b border-white/10 flex items-center gap-4 bg-white/5">
+            <div className="p-6 border-b border-white/10 flex items-center gap-4 bg-white/[0.02] shadow-[0_0_15px_rgba(0,242,255,0.1)]">
               <Search className="text-neon-blue" size={24} />
               <input
                 autoFocus

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // For Vercel/Production, we use environment variables.
@@ -73,4 +73,15 @@ export function handleFirestoreError(error: any, operationType: OperationType, p
   
   console.error(`Firestore Error [${operationType}] on [${path}]:`, errInfo);
   throw new Error(JSON.stringify(errInfo));
+}
+
+export async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. ");
+    }
+    // Skip logging for other errors, as this is simply a connection test.
+  }
 }

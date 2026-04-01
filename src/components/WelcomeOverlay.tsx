@@ -101,7 +101,7 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full btn-neon bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>

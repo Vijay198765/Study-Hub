@@ -14,10 +14,10 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 import { Class, Subject, Chapter, QuizQuestion } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 import { DEFAULT_MCQS } from '../constants/mcqs';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { 
   collection, addDoc, onSnapshot, query, where, 
-  orderBy, serverTimestamp, deleteDoc, doc, getDocs,
+  orderBy, serverTimestamp, deleteDoc, doc, getDocs, getDoc,
   limit
 } from 'firebase/firestore';
 
@@ -44,7 +44,55 @@ export default function ChapterDetail() {
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
   const [showReview, setShowReview] = useState(false);
   const [userRole, setUserRole] = useState<'student' | 'admin'>('student');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const isAdmin = userRole === 'admin';
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // PDF Caching Logic
+  const cacheResource = async (url: string) => {
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open('pdf-cache');
+        const response = await fetch(url);
+        if (response.ok) {
+          await cache.put(url, response);
+          console.log('Resource cached:', url);
+        }
+      } catch (error) {
+        console.error('Failed to cache resource:', error);
+      }
+    }
+  };
+
+  const getCachedUrl = async (url: string) => {
+    if ('caches' in window) {
+      const cache = await caches.open('pdf-cache');
+      const response = await cache.match(url);
+      if (response) {
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      }
+    }
+    return url;
+  };
+
+  const handlePreview = async (url: string) => {
+    setLoading(true);
+    const effectiveUrl = isOffline ? await getCachedUrl(url) : url;
+    if (!isOffline) cacheResource(url); // Cache for next time
+    setPreviewUrl(effectiveUrl);
+    setLoading(false);
+  };
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
@@ -88,16 +136,16 @@ export default function ChapterDetail() {
         );
         getDocs(progressQ).then(snapshot => {
           setIsCompleted(!snapshot.empty);
-        });
+        }).catch(error => handleFirestoreError(error, OperationType.GET, 'userProgress'));
 
       // Fetch user role
       if (auth.currentUser) {
-        getDocs(query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid)))
-          .then(snapshot => {
-            if (!snapshot.empty) {
-              setUserRole(snapshot.docs[0].data().role);
+        getDoc(doc(db, 'users', auth.currentUser.uid))
+          .then(docSnap => {
+            if (docSnap.exists()) {
+              setUserRole(docSnap.data().role);
             }
-          });
+          }).catch(error => handleFirestoreError(error, OperationType.GET, `users/${auth.currentUser?.uid}`));
       }
 
         // Fetch quiz history
@@ -110,7 +158,7 @@ export default function ChapterDetail() {
         );
         onSnapshot(historyQ, (snapshot) => {
           setQuizHistory(snapshot.docs.map(doc => doc.data()));
-        });
+        }, (error) => handleFirestoreError(error, OperationType.GET, 'quizHistory'));
       }
     }
 
@@ -200,7 +248,13 @@ export default function ChapterDetail() {
           }
         }
       }
-    }, 1000);
+    }, 1500);
+  };
+
+  const showQuizAnswer = () => {
+    const correctIdx = effectiveQuiz[currentQuestionIdx].correctAnswer;
+    setSelectedOption(correctIdx);
+    alert(`The correct answer is: ${effectiveQuiz[currentQuestionIdx].options[correctIdx]}`);
   };
 
   const resetQuiz = () => {
@@ -307,44 +361,48 @@ export default function ChapterDetail() {
   const enabledResources = chapter.resources.filter(r => r.enabled);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
-          <Link to="/" className="hover:text-neon-blue transition-colors">Home</Link>
-          <ChevronRight size={12} />
-          <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
-          <ChevronRight size={12} />
-          <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
-          <ChevronRight size={12} />
-          <span className="text-white/60 break-words">{chapter.name}</span>
-        </div>
+    <div className="min-h-screen pt-24 pb-12">
+      <section className="bg-transparent border-b border-white/5 pt-8 pb-12 px-4 mb-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
+            <Link to="/" className="hover:text-neon-blue transition-colors">Home</Link>
+            <ChevronRight size={12} />
+            <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
+            <ChevronRight size={12} />
+            <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
+            <ChevronRight size={12} />
+            <span className="text-white/60 break-words">{chapter.name}</span>
+          </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl md:text-4xl font-display font-bold break-words">{chapter.name}</h1>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-4 mb-2">
+                <h1 className="text-3xl md:text-4xl font-display font-bold break-words">{chapter.name}</h1>
+              </div>
+              <p className="text-white/50 break-words">{subject?.name} • {currentClass?.name}</p>
             </div>
-            <p className="text-white/50 break-words">{subject?.name} • {currentClass?.name}</p>
-          </div>
-          
-          <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
-            <button 
-              onClick={() => setActiveTab('resources')}
-              className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'resources' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
-            >
-              Resources
-            </button>
-            {chapter.quizEnabled !== false && (
+            
+            <div className="flex bg-black p-1 rounded-xl border border-white/10 shrink-0">
               <button 
-                onClick={() => setActiveTab('quiz')}
-                className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'text-white/60 hover:text-white'}`}
+                onClick={() => setActiveTab('resources')}
+                className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'resources' ? 'bg-neon-blue text-black shadow-lg shadow-neon-blue/20' : 'text-white/60 hover:text-white'}`}
               >
-                Quiz
+                Resources
               </button>
-            )}
+              {chapter.quizEnabled !== false && (
+                <button 
+                  onClick={() => setActiveTab('quiz')}
+                  className={`px-4 md:px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'quiz' ? 'bg-neon-blue text-black shadow-lg shadow-neon-blue/20' : 'text-white/60 hover:text-white'}`}
+                >
+                  Quiz
+                </button>
+              )}
+            </div>
           </div>
         </div>
+      </section>
 
+      <div className="max-w-7xl mx-auto px-4">
         <div className="mb-8 flex justify-end">
           <button 
             onClick={toggleProgress}
@@ -352,7 +410,7 @@ export default function ChapterDetail() {
               "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all font-medium",
               isCompleted 
                 ? "bg-green-500/10 border-green-500/50 text-green-400" 
-                : "bg-white/5 border-white/10 text-white/60 hover:border-neon-blue/50 hover:text-white"
+                : "bg-black border-white/10 text-white/60 hover:border-neon-blue/50 hover:text-white"
             )}
           >
             {isCompleted ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
@@ -370,19 +428,23 @@ export default function ChapterDetail() {
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               {enabledResources.map((res) => (
-                <div key={res.id} className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4">
+                <div 
+                  key={res.id} 
+                  onClick={() => handlePreview(res.url)}
+                  className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
+                >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
                       {getResourceIcon(res.type)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] uppercase tracking-widest transition-all font-bold">{res.type}</p>
+                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">{res.type}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
                     <button 
-                      onClick={() => setPreviewUrl(res.url)}
+                      onClick={() => handlePreview(res.url)}
                       className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
                       title="Preview"
                     >
@@ -600,6 +662,12 @@ export default function ChapterDetail() {
                       );
                     })}
                   </div>
+                  <button 
+                    onClick={showQuizAnswer}
+                    className="mt-8 text-white/40 hover:text-white text-sm font-bold flex items-center gap-2 mx-auto transition-colors"
+                  >
+                    <HelpCircle size={14} /> Show Answer
+                  </button>
                 </div>
               )}
             </motion.div>

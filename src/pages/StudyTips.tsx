@@ -61,7 +61,7 @@ export default function StudyTips() {
               </div>
               
               <div className="flex items-center justify-center gap-4 mb-8">
-                <button onClick={toggleTimer} className="w-16 h-16 rounded-full bg-neon-blue text-black flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_20px_rgba(0,242,255,0.4)]">
+                <button onClick={toggleTimer} className="w-16 h-16 rounded-full bg-neon-blue text-black flex items-center justify-center hover:scale-110 transition-transform shadow-lg shadow-neon-blue/20">
                   {isActive ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
                 </button>
                 <button onClick={resetTimer} className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
