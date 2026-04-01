@@ -46,7 +46,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinLoadingComplete(true);
-    }, 1500);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -114,48 +114,50 @@ export default function App() {
     };
   }, []);
 
-  if (loading || !minLoadingComplete) {
-    return <LoadingScreen />;
-  }
-
   return (
     <ThemeProvider>
-      <ErrorBoundary>
-        {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
-        <div className="flex flex-col min-h-screen relative overflow-hidden">
-          <Watermark />
-          
-          <Navbar isAdmin={isAdmin} user={userProfile} />
-          
-          <main className="flex-grow">
-            <AnimatePresence mode="wait">
-              <Routes location={location}>
-                <Route path="/" element={<Home />} />
-                <Route path="/classes" element={<Home />} />
-                <Route path="/class/:classId" element={<ClassDetail />} />
-                <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
-                <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
-                <Route path="/tips" element={<StudyTips />} />
-                <Route path="/games" element={<Games />} />
-                <Route path="/comments" element={<LiveComments />} />
-                <Route path="/tests" element={<Tests />} />
-                <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/admin" 
-                  element={
-                    <ProtectedRoute isAdmin={isAdmin}>
-                      <AdminPanel />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </AnimatePresence>
-          </main>
+      <AnimatePresence mode="wait">
+        {(loading || !minLoadingComplete) ? (
+          <LoadingScreen key="loading" />
+        ) : (
+          <ErrorBoundary key="app">
+            {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
+            <div className="flex flex-col min-h-screen relative overflow-hidden">
+              <Watermark />
+              
+              <Navbar isAdmin={isAdmin} user={userProfile} />
+              
+              <main className="flex-grow">
+                <AnimatePresence mode="wait">
+                  <Routes location={location}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/classes" element={<Home />} />
+                    <Route path="/class/:classId" element={<ClassDetail />} />
+                    <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
+                    <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
+                    <Route path="/tips" element={<StudyTips />} />
+                    <Route path="/games" element={<Games />} />
+                    <Route path="/comments" element={<LiveComments />} />
+                    <Route path="/tests" element={<Tests />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route 
+                      path="/admin" 
+                      element={
+                        <ProtectedRoute isAdmin={isAdmin}>
+                          <AdminPanel />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </AnimatePresence>
+              </main>
 
-          <Footer />
-        </div>
-      </ErrorBoundary>
+              <Footer />
+            </div>
+          </ErrorBoundary>
+        )}
+      </AnimatePresence>
     </ThemeProvider>
   );
 }

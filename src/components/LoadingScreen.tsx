@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Float, PerspectiveCamera, Text, MeshWobbleMaterial, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -194,12 +194,14 @@ export const LoadingScreen = () => {
     >
       <div className="absolute inset-0">
         <Canvas 
-          shadows={false} 
-          dpr={[1, 1]} 
-          gl={{ antialias: false, powerPreference: "high-performance" }}
+          shadows 
+          dpr={[1, 2]} 
+          gl={{ antialias: true, powerPreference: "high-performance" }}
         >
-          <PerspectiveCamera makeDefault position={[0, 2, 8]} fov={50} />
-          <Scene />
+          <Suspense fallback={null}>
+            <PerspectiveCamera makeDefault position={[0, 2, 8]} fov={50} />
+            <Scene />
+          </Suspense>
         </Canvas>
       </div>
       
