@@ -1,11 +1,14 @@
-import React, { useRef, useMemo, Suspense } from 'react';
+import React, { useRef, useMemo, Suspense, useEffect, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars, Float, PerspectiveCamera, Text, MeshWobbleMaterial, OrbitControls, Environment } from '@react-three/drei';
+import { Stars, Float, PerspectiveCamera, Text, MeshWobbleMaterial, OrbitControls, Environment, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'motion/react';
 
 const Robot = () => {
   const group = useRef<THREE.Group>(null);
+  const leftArm = useRef<THREE.Mesh>(null);
+  const rightArm = useRef<THREE.Mesh>(null);
+  const head = useRef<THREE.Mesh>(null);
   
   const bodyGeo = useMemo(() => new THREE.BoxGeometry(0.6, 0.6, 0.4), []);
   const headGeo = useMemo(() => new THREE.BoxGeometry(0.4, 0.35, 0.35), []);
@@ -20,22 +23,39 @@ const Robot = () => {
   const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8" }), []);
 
   useFrame((state) => {
+    const t = state.clock.getElapsedTime();
     if (group.current) {
-      const t = state.clock.getElapsedTime();
       group.current.rotation.y = Math.sin(t * 0.5) * 0.2;
-      group.current.position.y = Math.sin(t * 2) * 0.1;
+      group.current.position.y = Math.sin(t * 2) * 0.15;
+    }
+    if (leftArm.current) {
+      leftArm.current.rotation.x = Math.sin(t * 3) * 0.8;
+      leftArm.current.rotation.z = -0.2 + Math.sin(t * 2) * 0.1;
+    }
+    if (rightArm.current) {
+      rightArm.current.rotation.x = Math.cos(t * 3) * 0.8;
+      rightArm.current.rotation.z = 0.2 + Math.sin(t * 2) * 0.1;
+    }
+    if (head.current) {
+      head.current.rotation.y = Math.sin(t * 1.5) * 0.4;
+      head.current.rotation.x = Math.sin(t * 2) * 0.1;
     }
   });
 
   return (
     <group ref={group} position={[0, 0.5, 0]}>
       <mesh position={[0, 0.4, 0]} geometry={bodyGeo} material={bodyMat} castShadow />
-      <mesh position={[0, 0.9, 0]} geometry={headGeo} material={headMat} castShadow>
+      <mesh ref={head} position={[0, 0.9, 0]} geometry={headGeo} material={headMat} castShadow>
         <mesh position={[-0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
         <mesh position={[0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
+        {/* Scanning Line */}
+        <mesh position={[0, 0.05, 0.19]}>
+          <planeGeometry args={[0.25, 0.01]} />
+          <meshBasicMaterial color="#00ffff" transparent opacity={0.8} />
+        </mesh>
       </mesh>
-      <mesh position={[-0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
-      <mesh position={[0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
+      <mesh ref={leftArm} position={[-0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
+      <mesh ref={rightArm} position={[0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
       <mesh position={[-0.15, 0, 0]} geometry={legGeo} material={legMat} castShadow />
       <mesh position={[0.15, 0, 0]} geometry={legGeo} material={legMat} castShadow />
     </group>
@@ -49,11 +69,16 @@ const FloatingIsland = () => {
   const coneGeo = useMemo(() => new THREE.ConeGeometry(0.3, 0.6, 6), []);
   const sphereGeo = useMemo(() => new THREE.SphereGeometry(0.25, 8, 8), []);
 
-  const islandMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4ade80", roughness: 0.8 }), []);
+  const islandMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4ade80", roughness: 0.8, emissive: "#4ade80", emissiveIntensity: 0.1 }), []);
   const dirtMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#78350f", roughness: 1 }), []);
   const trunkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#451a03" }), []);
   const leafMat1 = useMemo(() => new THREE.MeshStandardMaterial({ color: "#166534" }), []);
   const leafMat2 = useMemo(() => new THREE.MeshStandardMaterial({ color: "#15803d" }), []);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    islandMat.emissiveIntensity = 0.1 + Math.sin(t * 2) * 0.05;
+  });
 
   return (
     <group position={[0, -0.5, 0]}>
@@ -76,7 +101,13 @@ const FloatingIsland = () => {
 const OrbitingPlanet = ({ color, distance, speed, size }: { color: string, distance: number, speed: number, size: number }) => {
   const ref = useRef<THREE.Group>(null);
   const geo = useMemo(() => new THREE.SphereGeometry(size, 16, 16), [size]);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 }), [color]);
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ 
+    color, 
+    emissive: color, 
+    emissiveIntensity: 0.8,
+    roughness: 0.2,
+    metalness: 0.8
+  }), [color]);
   
   useFrame((state) => {
     if (ref.current) {
@@ -90,11 +121,13 @@ const OrbitingPlanet = ({ color, distance, speed, size }: { color: string, dista
 
   return (
     <group ref={ref}>
-      <mesh castShadow geometry={geo} material={mat} />
+      <mesh castShadow geometry={geo} material={mat}>
+        <pointLight color={color} intensity={0.5} distance={2} />
+      </mesh>
       {color === '#facc15' && (
         <mesh rotation={[Math.PI / 2.5, 0, 0]}>
           <torusGeometry args={[size * 1.8, 0.02, 2, 32]} />
-          <meshStandardMaterial color={color} transparent opacity={0.6} />
+          <meshStandardMaterial color={color} transparent opacity={0.6} emissive={color} emissiveIntensity={1} />
         </mesh>
       )}
     </group>
@@ -157,9 +190,10 @@ const Scene = () => {
   return (
     <>
       <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
-      <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+      <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
+      <ambientLight intensity={0.8} />
+      <pointLight position={[10, 10, 10]} intensity={2} castShadow />
+      <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
       
       <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
         <FloatingIsland />
@@ -178,50 +212,73 @@ const Scene = () => {
       <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
       <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
       
-      <Environment preset="city" />
       <Rig />
     </>
   );
 };
 
 export const LoadingScreen = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
       className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden"
     >
-      <div className="absolute inset-0">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, ease: "easeOut" }}
+        className="absolute inset-0"
+      >
         <Canvas 
           shadows 
           dpr={[1, 2]} 
-          gl={{ antialias: true, powerPreference: "high-performance" }}
+          gl={{ antialias: true, alpha: true }}
+          onCreated={() => setIsCanvasReady(true)}
         >
-          <Suspense fallback={null}>
-            <PerspectiveCamera makeDefault position={[0, 2, 8]} fov={50} />
-            <Scene />
-          </Suspense>
+          <PerspectiveCamera 
+            makeDefault 
+            position={[0, isMobile ? 3 : 2, isMobile ? 10 : 8]} 
+            fov={isMobile ? 60 : 50} 
+          />
+          <Scene />
         </Canvas>
-      </div>
+      </motion.div>
       
-      <div className="relative z-10 mt-auto mb-20 flex flex-col items-center gap-4 px-6 text-center max-w-lg">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="relative z-10 mt-auto mb-16 sm:mb-20 flex flex-col items-center gap-4 px-6 text-center w-full max-w-lg"
+      >
         <motion.div
           animate={{ 
             scale: [1, 1.05, 1],
-            opacity: [0.7, 1, 0.7]
+            opacity: [0.7, 1, 0.7],
+            textShadow: ["0 0 5px #00f2ff", "0 0 20px #00f2ff", "0 0 5px #00f2ff"]
           }}
           transition={{ 
             duration: 2,
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="text-neon-blue font-display text-xl md:text-2xl font-bold tracking-[0.15em] uppercase drop-shadow-[0_0_10px_rgba(0,242,255,0.5)]"
+          className="text-neon-blue font-display text-lg sm:text-xl md:text-2xl font-bold tracking-[0.15em] uppercase drop-shadow-[0_0_10px_rgba(0,242,255,0.5)]"
         >
           Igniting Knowledge
         </motion.div>
         
-        <div className="w-full max-w-[280px] h-1 bg-white/10 rounded-full overflow-hidden border border-white/5">
+        <div className="w-full max-w-[240px] sm:max-w-[280px] h-1 bg-white/10 rounded-full overflow-hidden border border-white/5">
           <motion.div 
             animate={{ 
               x: ["-100%", "100%"]
@@ -235,10 +292,10 @@ export const LoadingScreen = () => {
           />
         </div>
         
-        <p className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-mono leading-relaxed">
+        <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-mono leading-relaxed max-w-[200px] sm:max-w-none">
           Syncing with the Knowledge Galaxy...
         </p>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };
