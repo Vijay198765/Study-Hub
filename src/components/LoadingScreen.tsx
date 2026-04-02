@@ -264,37 +264,47 @@ export const LoadingScreen = () => {
       >
         <motion.div
           animate={{ 
-            scale: [1, 1.05, 1],
-            opacity: [0.7, 1, 0.7],
-            textShadow: ["0 0 5px #00f2ff", "0 0 20px #00f2ff", "0 0 5px #00f2ff"]
+            scale: [1, 1.1, 1],
+            opacity: [0.8, 1, 0.8],
+            letterSpacing: ["0.15em", "0.25em", "0.15em"],
+            textShadow: [
+              "0 0 10px #00f2ff, 0 0 20px #00f2ff",
+              "0 0 30px #00f2ff, 0 0 50px #00f2ff",
+              "0 0 10px #00f2ff, 0 0 20px #00f2ff"
+            ]
           }}
           transition={{ 
-            duration: 2,
+            duration: 3,
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="text-neon-blue font-display text-lg sm:text-xl md:text-2xl font-bold tracking-[0.15em] uppercase drop-shadow-[0_0_10px_rgba(0,242,255,0.5)]"
+          className="text-neon-blue font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] uppercase drop-shadow-[0_0_15px_rgba(0,242,255,0.7)]"
         >
           Igniting Knowledge
         </motion.div>
         
-        <div className="w-full max-w-[240px] sm:max-w-[280px] h-1 bg-white/10 rounded-full overflow-hidden border border-white/5">
+        <div className="w-full max-w-[280px] sm:max-w-[320px] h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5 relative">
           <motion.div 
+            initial={{ x: "-100%" }}
             animate={{ 
               x: ["-100%", "100%"]
             }}
             transition={{ 
-              duration: 4,
+              duration: 2.5,
               repeat: Infinity,
-              ease: "linear"
+              ease: "easeInOut"
             }}
-            className="w-1/2 h-full bg-gradient-to-r from-transparent via-neon-blue to-transparent"
+            className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-neon-blue to-transparent shadow-[0_0_10px_#00f2ff]"
           />
         </div>
         
-        <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-[0.3em] font-mono leading-relaxed max-w-[200px] sm:max-w-none">
+        <motion.p 
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="text-white/60 text-[10px] sm:text-[12px] uppercase tracking-[0.4em] font-mono leading-relaxed max-w-[250px] sm:max-w-none"
+        >
           Syncing with the Knowledge Galaxy...
-        </p>
+        </motion.p>
       </motion.div>
     </motion.div>
   );

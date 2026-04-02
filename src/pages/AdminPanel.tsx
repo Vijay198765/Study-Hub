@@ -293,10 +293,6 @@ export default function AdminPanel() {
       newEntity.quizEnabled = true;
       newEntity.isImportant = false;
     } else if (type === 'test') {
-      if (tests.length > 0) {
-        setToast({ message: "Only one test can exist at a time. Please delete the existing test before creating a new one.", type: 'error' });
-        return;
-      }
       newEntity = {
         id: crypto.randomUUID(),
         classId: selectedClassId || (classes[0]?.id || ''),
