@@ -1,4 +1,4 @@
-export type ResourceType = 'notes' | 'pdf' | 'qa' | 'practice' | 'test';
+export type ResourceType = 'notes' | 'notes1' | 'notes2' | 'pdf' | 'qa' | 'practice' | 'test';
 
 export interface Resource {
   id: string;

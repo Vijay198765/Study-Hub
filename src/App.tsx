@@ -65,17 +65,14 @@ export default function App() {
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
-      const specialName = localStorage.getItem('studentName') || 'Vijay-Admin';
+      setUser(firebaseUser);
+      
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
 
       if (firebaseUser) {
-        setUser(firebaseUser);
-        
-        if (unsubscribeProfile) {
-          unsubscribeProfile();
-          unsubscribeProfile = null;
-        }
-
         // Listen to user profile changes
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeProfile = onSnapshot(userRef, (doc) => {
@@ -100,26 +97,14 @@ export default function App() {
           handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
           setLoading(false);
         });
-
-        setShowWelcome(false);
-      } else if (isSpecial) {
-        setIsAdmin(true);
-        const specialProfile = {
-          uid: 'special-vijay-admin',
-          name: specialName,
-          email: 'vijay-admin@special.com',
-          role: 'admin',
-          photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay'
-        };
-        setUserProfile(specialProfile);
-        setUser(specialProfile);
-        setLoading(false);
-        setShowWelcome(false);
       } else {
         setIsAdmin(false);
         setUserProfile(null);
-        setUser(null);
         setLoading(false);
+      }
+
+      if (firebaseUser) {
+        setShowWelcome(false);
       }
     });
 
