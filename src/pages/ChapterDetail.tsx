@@ -285,8 +285,6 @@ export default function ChapterDetail() {
   const getResourceIcon = (type: string) => {
     switch (type) {
       case 'notes': return <FileText className="text-blue-400" />;
-      case 'notes1': return <FileText className="text-cyan-400" />;
-      case 'notes2': return <FileText className="text-indigo-400" />;
       case 'pdf': return <Book className="text-red-400" />;
       case 'qa': return <FileQuestion className="text-green-400" />;
       case 'practice': return <ClipboardList className="text-yellow-400" />;
@@ -420,9 +418,7 @@ export default function ChapterDetail() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
-                        {res.type === 'notes1' ? 'Notes 1' : res.type === 'notes2' ? 'Notes 2' : res.type}
-                      </p>
+                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">{res.type}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
