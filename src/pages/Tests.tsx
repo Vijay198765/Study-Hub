@@ -24,6 +24,9 @@ export default function Tests() {
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
+    const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+    const specialName = localStorage.getItem('studentName') || 'Vijay-Admin';
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (unsubscribeProfile) {
         unsubscribeProfile();
@@ -37,6 +40,15 @@ export default function Tests() {
             setUserProfile(doc.data());
           }
         }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
+      } else if (isSpecial) {
+        setIsGuest(false);
+        setUserProfile({
+          uid: 'special-vijay-admin',
+          name: specialName,
+          email: 'vijay-admin@special.com',
+          role: 'student',
+          photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay'
+        });
       } else {
         setIsGuest(true);
         setUserProfile(null);
@@ -306,22 +318,25 @@ export default function Tests() {
                           const ranks = calculateRanks(leaderboard);
                           const currentUserName = userProfile?.name || '';
                           return leaderboard.map((result, idx) => (
-                            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentUid === auth.currentUser?.uid ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
+                            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${result.studentUid === (auth.currentUser?.uid || 'special-vijay-admin') ? 'bg-neon-blue/10 border-neon-blue/50' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
                               <div className="flex items-center gap-3 min-w-0">
+                                <div className={`flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold shrink-0 ${
+                                  ranks[idx] === 1 ? 'bg-yellow-400 text-black' : 
+                                  ranks[idx] === 2 ? 'bg-slate-300 text-black' : 
+                                  ranks[idx] === 3 ? 'bg-amber-600 text-white' : 
+                                  'bg-white/10 text-white/40'
+                                }`}>
+                                  #{ranks[idx]}
+                                </div>
                                 <UserName 
                                   userUid={result.studentUid || ''} 
                                   fallback={result.studentName} 
                                   fallbackPhoto={result.studentPhotoURL}
                                   showPhoto={true}
-                                  photoClassName={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                    ranks[idx] === 1 ? 'bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 
-                                    ranks[idx] === 2 ? 'bg-slate-300 text-black' : 
-                                    ranks[idx] === 3 ? 'bg-amber-600 text-white' : 
-                                    'bg-white/10 text-white/40'
-                                  }`}
-                                  className={`text-sm font-medium truncate ${result.studentUid === auth.currentUser?.uid ? 'text-neon-blue' : 'text-white'}`}
+                                  photoClassName="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold shrink-0 bg-white/10 text-white/40"
+                                  className={`text-sm font-medium truncate ${result.studentUid === (auth.currentUser?.uid || 'special-vijay-admin') ? 'text-neon-blue' : 'text-white'}`}
                                 />
-                                {result.studentUid === auth.currentUser?.uid && <span className="text-[8px] uppercase bg-neon-blue/20 px-1 rounded text-neon-blue font-bold">You</span>}
+                                {result.studentUid === (auth.currentUser?.uid || 'special-vijay-admin') && <span className="text-[8px] uppercase bg-neon-blue/20 px-1 rounded text-neon-blue font-bold">You</span>}
                               </div>
                               <div className="text-right shrink-0 ml-2">
                                 <div className="flex items-center gap-1 text-neon-blue font-bold">

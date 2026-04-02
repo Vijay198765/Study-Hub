@@ -29,6 +29,8 @@ import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuesti
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
+import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
+
 type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
@@ -319,6 +321,36 @@ export default function AdminPanel() {
 
   const { theme, updateTheme, resetTheme } = useTheme();
 
+  const seedSpecialTests = async () => {
+    setIsSaving(true);
+    try {
+      const sstTest: Test = {
+        id: 'sst-special-test',
+        classId: selectedClassId || (classes[0]?.id || 'default'),
+        title: 'SST Special Test (20 MCQs)',
+        questions: SST_TEST_QUESTIONS,
+        active: true,
+        createdAt: new Date()
+      };
+      const scienceTest: Test = {
+        id: 'science-special-test',
+        classId: selectedClassId || (classes[0]?.id || 'default'),
+        title: 'Science Special Test (20 MCQs)',
+        questions: SCIENCE_TEST_QUESTIONS,
+        active: true,
+        createdAt: new Date()
+      };
+      await saveTest(sstTest);
+      await saveTest(scienceTest);
+      setToast({ message: "Special tests seeded successfully!", type: 'success' });
+    } catch (error) {
+      console.error("Error seeding tests:", error);
+      setToast({ message: "Failed to seed tests.", type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
@@ -382,6 +414,14 @@ export default function AdminPanel() {
                 >
                   <ClipboardList size={16} className="inline-block mr-1.5" />
                   Tests
+                </button>
+                <button 
+                  onClick={seedSpecialTests}
+                  disabled={isSaving}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  <RefreshCcw size={16} className={`inline-block mr-1.5 ${isSaving ? 'animate-spin' : ''}`} />
+                  Seed Special Tests
                 </button>
                 <button 
                   onClick={() => setActiveTab('results')}
@@ -1773,6 +1813,8 @@ export default function AdminPanel() {
                                         >
                                           <option value="pdf" className="bg-dark-bg">PDF Document</option>
                                           <option value="notes" className="bg-dark-bg">Study Notes</option>
+                                          <option value="notes1" className="bg-dark-bg">Notes 1</option>
+                                          <option value="notes2" className="bg-dark-bg">Notes 2</option>
                                           <option value="qa" className="bg-dark-bg">Q&A</option>
                                           <option value="practice" className="bg-dark-bg">Practice</option>
                                           <option value="test" className="bg-dark-bg">Test</option>
