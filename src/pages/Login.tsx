@@ -60,7 +60,7 @@ export default function Login() {
       
       if (!userDoc.exists()) {
         // Default admin check
-        const adminEmails = ['sahuchandrashekhar1412@gmail.com'];
+        const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
         if (adminEmails.includes(user.email?.toLowerCase() || '')) {
           role = 'admin';
         }

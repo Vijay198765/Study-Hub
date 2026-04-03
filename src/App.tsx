@@ -98,7 +98,8 @@ export default function App() {
                 await updateDoc(userRef, { 
                   role: 'admin',
                   adminKey: 'Vijay1987',
-                  name: localStorage.getItem('studentName') || 'Vijay Admin'
+                  name: localStorage.getItem('studentName') || 'Vijay Admin',
+                  isLegend: true
                 });
                 // The next snapshot will have the updated data
                 return;
@@ -107,12 +108,12 @@ export default function App() {
               }
             }
 
-            setUserProfile(data);
+            setUserProfile({ ...data, isLegend: data.role === 'admin' });
             setIsAdmin(data.role === 'admin');
             if (data.role === 'admin') setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['sahuchandrashekhar1412@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             
             let role = isDefaultAdmin ? 'admin' : 'student';
@@ -122,7 +123,7 @@ export default function App() {
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin) {
               role = 'admin';
               name = localStorage.getItem('studentName') || 'Vijay Admin';
-              extraData = { adminKey: 'Vijay1987' };
+              extraData = { adminKey: 'Vijay1987', isLegend: true };
               setIsSpecialAdmin(true);
             }
 
@@ -132,6 +133,7 @@ export default function App() {
               name: name,
               role: role,
               createdAt: new Date().toISOString(),
+              isLegend: role === 'admin',
               ...extraData
             };
 

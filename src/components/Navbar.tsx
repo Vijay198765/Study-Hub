@@ -127,14 +127,24 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
                 }}
                 className="flex items-center gap-2 text-white/70 hover:text-neon-blue transition-colors"
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center relative">
                   {user.photoURL ? (
                     <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <User size={16} />
                   )}
+                  {user.isLegend && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-neon-blue rounded-full border-2 border-dark-card flex items-center justify-center">
+                      <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm font-medium hidden xl:block">{user.name}</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium hidden xl:block leading-none">{user.name}</span>
+                  {user.isLegend && (
+                    <span className="text-[8px] text-neon-blue font-bold uppercase tracking-widest hidden xl:block mt-0.5">Legend</span>
+                  )}
+                </div>
               </button>
               <button onClick={handleLogout} className="btn-neon flex items-center gap-2 py-1.5 px-4 text-xs">
                 <LogOut className="w-3 h-3" /> Logout

@@ -19,7 +19,10 @@ export default function Footer() {
         localStorage.setItem('isAdminLogin', 'true');
         localStorage.setItem('hasSkippedLogin', 'false');
         toast.success('Admin access granted!');
-        window.location.reload();
+        // Small delay to ensure auth state is persisted before redirect
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 500);
       } catch (error) {
         console.error("Secret login error:", error);
         toast.error('Failed to authenticate anonymously');
