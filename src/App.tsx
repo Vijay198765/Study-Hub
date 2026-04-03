@@ -23,14 +23,15 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
-  if (!isAdmin) return <Navigate to="/login" replace />;
+const ProtectedRoute = ({ children, isAdmin, isSpecialAdmin }: { children: React.ReactNode, isAdmin: boolean, isSpecialAdmin: boolean }) => {
+  if (!isAdmin && !isSpecialAdmin) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 export default function App() {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,13 @@ export default function App() {
   // Test connection on boot
   useEffect(() => {
     testConnection();
+    
+    // Check for special admin status immediately
+    const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+    const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+    if (isSpecial && isAdminLogin) {
+      setIsSpecialAdmin(true);
+    }
   }, []);
 
   // Minimum loading time for the animation
@@ -65,6 +73,7 @@ export default function App() {
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       setUser(firebaseUser);
       
       if (unsubscribeProfile) {
@@ -100,12 +109,11 @@ export default function App() {
 
             setUserProfile(data);
             setIsAdmin(data.role === 'admin');
+            if (data.role === 'admin') setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
             const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
-            const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
-            const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
             
             let role = isDefaultAdmin ? 'admin' : 'student';
             let name = firebaseUser.displayName || 'Student';
@@ -115,6 +123,7 @@ export default function App() {
               role = 'admin';
               name = localStorage.getItem('studentName') || 'Vijay Admin';
               extraData = { adminKey: 'Vijay1987' };
+              setIsSpecialAdmin(true);
             }
 
             const newUserProfile = {
@@ -144,14 +153,9 @@ export default function App() {
         });
       } else {
         setIsAdmin(false);
+        setIsSpecialAdmin(false);
         setUserProfile(null);
         setLoading(false);
-        // Clear stale special login if it's not admin
-        if (isSpecial) {
-          localStorage.removeItem('isSpecialLogin');
-          localStorage.removeItem('isAdminLogin');
-          localStorage.removeItem('studentName');
-        }
       }
 
       if (firebaseUser) {
@@ -176,7 +180,7 @@ export default function App() {
             <div className="flex flex-col min-h-screen relative overflow-hidden">
               <Watermark />
               
-              <Navbar isAdmin={isAdmin} user={userProfile} />
+              <Navbar isAdmin={isAdmin || isSpecialAdmin} user={userProfile} />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -194,7 +198,7 @@ export default function App() {
                     <Route 
                       path="/admin" 
                       element={
-                        <ProtectedRoute isAdmin={isAdmin}>
+                        <ProtectedRoute isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin}>
                           <AdminPanel />
                         </ProtectedRoute>
                       } 

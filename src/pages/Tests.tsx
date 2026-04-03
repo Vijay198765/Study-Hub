@@ -38,6 +38,15 @@ export default function Tests() {
         unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
           if (doc.exists()) {
             setUserProfile(doc.data());
+          } else if (isSpecial) {
+            // Fallback if profile not created yet but we have special flags
+            setUserProfile({
+              uid: user.uid,
+              name: specialName,
+              email: 'vijay-admin@special.com',
+              role: 'admin',
+              photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay'
+            });
           }
         }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
       } else if (isSpecial) {

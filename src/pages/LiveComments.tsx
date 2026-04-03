@@ -22,29 +22,16 @@ interface SiteComment {
   likes: number;
   likedBy: string[];
   parentId?: string;
-  groupId?: string;
-  createdAt: any;
-}
-
-interface SiteGroup {
-  id: string;
-  name: string;
-  description: string;
   createdAt: any;
 }
 
 export default function LiveComments() {
   const [comments, setComments] = useState<SiteComment[]>([]);
-  const [groups, setGroups] = useState<SiteGroup[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('general');
   const [newComment, setNewComment] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isGuest, setIsGuest] = useState(true);
   const [replyTo, setReplyTo] = useState<SiteComment | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showAddGroup, setShowAddGroup] = useState(false);
-  const [groupName, setGroupName] = useState('');
-  const [groupDesc, setGroupDesc] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +53,15 @@ export default function LiveComments() {
             const data = doc.data();
             setUserProfile(data);
             setIsAdmin(data.role === 'admin');
+          } else if (isSpecial && isAdminLogin) {
+            // Fallback if profile not created yet but we have special flags
+            setUserProfile({
+              uid: user.uid,
+              name: specialName,
+              role: 'admin',
+              photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay'
+            });
+            setIsAdmin(true);
           }
         }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
       } else if (isSpecial) {
@@ -90,38 +86,12 @@ export default function LiveComments() {
       setComments(data);
     }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
-    const unsubscribeGroups = onSnapshot(collection(db, 'siteGroups'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteGroup));
-      if (data.length === 0) {
-        setGroups([{ id: 'general', name: 'General', description: 'Public discussion', createdAt: new Date() }]);
-      } else {
-        setGroups(data);
-      }
-    });
-
     return () => {
       unsubscribeAuth();
       unsubscribeComments();
-      unsubscribeGroups();
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, []);
-
-  const handleAddGroup = async () => {
-    if (!isAdmin || !groupName.trim()) return;
-    try {
-      await addDoc(collection(db, 'siteGroups'), {
-        name: groupName.trim(),
-        description: groupDesc.trim(),
-        createdAt: serverTimestamp()
-      });
-      setGroupName('');
-      setGroupDesc('');
-      setShowAddGroup(false);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'siteGroups');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +105,6 @@ export default function LiveComments() {
       text: newComment.trim(),
       likes: 0,
       likedBy: [],
-      groupId: selectedGroupId,
       createdAt: serverTimestamp()
     };
     
@@ -190,9 +159,8 @@ export default function LiveComments() {
     }
   };
 
-  const filteredComments = comments.filter(c => (c.groupId || 'general') === selectedGroupId);
-  const rootComments = filteredComments.filter(c => !c.parentId);
-  const getReplies = (parentId: string) => filteredComments.filter(c => c.parentId === parentId);
+  const rootComments = comments.filter(c => !c.parentId);
+  const getReplies = (parentId: string) => comments.filter(c => c.parentId === parentId);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black text-white font-sans">
@@ -211,43 +179,9 @@ export default function LiveComments() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Groups Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold uppercase tracking-tight text-neon-blue">Groups</h3>
-                {isAdmin && (
-                  <button 
-                    onClick={() => setShowAddGroup(true)}
-                    className="p-2 bg-neon-blue/10 text-neon-blue rounded-lg hover:bg-neon-blue/20 transition-all"
-                  >
-                    <Plus size={16} />
-                  </button>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                {groups.map(group => (
-                  <button
-                    key={group.id}
-                    onClick={() => setSelectedGroupId(group.id)}
-                    className={`w-full text-left px-4 py-3 rounded-xl transition-all border ${
-                      selectedGroupId === group.id 
-                        ? 'bg-neon-blue/10 border-neon-blue/50 text-neon-blue' 
-                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="font-bold text-sm">{group.name}</div>
-                    <div className="text-[10px] opacity-60 truncate">{group.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
+        <div className="max-w-4xl mx-auto">
           {/* Comments Area */}
-          <div className="lg:col-span-3">
+          <div className="w-full">
             <div 
               ref={scrollRef}
               className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 sm:p-8 mb-8 min-h-[500px] max-h-[600px] overflow-y-auto custom-scrollbar"
@@ -367,54 +301,7 @@ export default function LiveComments() {
         </div>
       </div>
 
-      {/* Add Group Modal */}
-      <AnimatePresence>
-        {showAddGroup && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-dark-bg border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold uppercase tracking-tight">Add New Group</h3>
-                <button onClick={() => setShowAddGroup(false)} className="text-white/40 hover:text-white">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Group Name</label>
-                  <input 
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    placeholder="e.g., Science Discussion"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Description</label>
-                  <input 
-                    type="text"
-                    value={groupDesc}
-                    onChange={(e) => setGroupDesc(e.target.value)}
-                    placeholder="Brief description..."
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue"
-                  />
-                </div>
-                <button 
-                  onClick={handleAddGroup}
-                  className="btn-neon w-full py-3 uppercase tracking-widest mt-4"
-                >
-                  Create Group
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Add Group Modal removed */}
     </div>
   );
 }
