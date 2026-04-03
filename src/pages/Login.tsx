@@ -16,6 +16,14 @@ export default function Login() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+        const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+
+        if (isSpecial && isAdminLogin) {
+          navigate('/admin');
+          return;
+        }
+
         // If user is already logged in, check their role and redirect
         getDoc(doc(db, 'users', user.uid)).then((userDoc) => {
           if (userDoc.exists() && userDoc.data().role === 'admin') {
@@ -23,6 +31,9 @@ export default function Login() {
           } else {
             navigate('/');
           }
+        }).catch(() => {
+          // Fallback if doc read fails
+          navigate('/');
         });
       }
     });
@@ -49,7 +60,7 @@ export default function Login() {
       
       if (!userDoc.exists()) {
         // Default admin check
-        const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
+        const adminEmails = ['sahuchandrashekhar1412@gmail.com'];
         if (adminEmails.includes(user.email?.toLowerCase() || '')) {
           role = 'admin';
         }

@@ -204,7 +204,8 @@ service cloud.firestore {
              data.testId is string && data.testId.size() > 0 &&
              data.studentName is string && data.studentName.size() > 0 &&
              data.score is number && data.total is number &&
-             data.completedAt is timestamp;
+             (data.completedAt is timestamp || data.completedAt == request.time) &&
+             (!('studentUid' in data) || (data.studentUid is string && data.studentUid == request.auth.uid));
     }
 
     function isValidSiteComment(data) {
@@ -214,7 +215,8 @@ service cloud.firestore {
              data.likes is number &&
              data.likedBy is list &&
              (data.createdAt is timestamp || data.createdAt == request.time) &&
-             (!('parentId' in data) || (data.parentId is string && data.parentId.size() > 0));
+             (!('parentId' in data) || (data.parentId is string && data.parentId.size() > 0)) &&
+             (!('userUid' in data) || (data.userUid is string && data.userUid == request.auth.uid));
     }
 
     // ===============================================================
@@ -286,15 +288,15 @@ service cloud.firestore {
 
     match /testResults/{resultId} {
       allow read: if true;
-      allow create: if isValidTestResult(request.resource.data);
+      allow create: if isAuthenticated() && isValidTestResult(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /siteComments/{commentId} {
       allow read: if true;
-      allow create: if isValidSiteComment(request.resource.data);
-      allow update: if isValidSiteComment(request.resource.data) && 
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']));
+      allow create: if isAuthenticated() && isValidSiteComment(request.resource.data);
+      allow update: if isAuthenticated() && isValidSiteComment(request.resource.data) && 
+                      (isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])));
       allow delete: if isAdmin();
     }
   }

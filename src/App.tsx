@@ -112,7 +112,7 @@ export default function App() {
             if (data.role === 'admin') setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
+            const adminEmails = ['sahuchandrashekhar1412@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             
             let role = isDefaultAdmin ? 'admin' : 'student';

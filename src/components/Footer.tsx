@@ -61,7 +61,7 @@ export default function Footer() {
                 onClick={handleSecretLogin}
                 className="btn-neon w-full py-3 uppercase tracking-widest"
               >
-                Access Dashboard
+                Login
               </button>
             </motion.div>
           </div>

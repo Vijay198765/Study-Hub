@@ -65,7 +65,14 @@ export default function UserName({
           subscribers.forEach(sub => sub(userData));
         }
       }, (error) => {
-        handleFirestoreError(error, OperationType.GET, `users/${userUid}`);
+        // Silently fail for permission errors (common for guests)
+        if (error?.code === 'permission-denied') {
+          const userData = { name: fallback, photoURL: fallbackPhoto };
+          userCache[userUid] = userData;
+          subscribers.forEach(sub => sub(userData));
+        } else {
+          handleFirestoreError(error, OperationType.GET, `users/${userUid}`);
+        }
       });
       listeners[userUid] = { unsubscribe, subscribers };
     }
