@@ -72,8 +72,32 @@ export default function Tests() {
   useEffect(() => {
     if (selectedTest) {
       const unsub = getTestResults(selectedTest.id, (results) => {
-        // Sort by score descending, then by time (if available)
-        const sorted = [...results].sort((a, b) => b.score - a.score);
+        // Deduplicate by student name, keeping the latest result
+        const latestByName: { [key: string]: TestResult } = {};
+        
+        // Sort by time descending first to ensure we pick the latest one for each name
+        const sortedByTime = [...results].sort((a, b) => {
+          const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+          const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+          return timeB - timeA;
+        });
+
+        sortedByTime.forEach(res => {
+          const nameKey = res.studentName.toLowerCase().trim();
+          if (!latestByName[nameKey]) {
+            latestByName[nameKey] = res;
+          }
+        });
+
+        const deduplicated = Object.values(latestByName);
+
+        // Sort by score descending, then by time
+        const sorted = deduplicated.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+          const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+          return timeB - timeA;
+        });
         setLeaderboard(sorted);
       });
       return () => unsub();
@@ -138,7 +162,31 @@ export default function Tests() {
       await saveTestResult(result);
       // Refresh leaderboard for the current test
       const unsub = getTestResults(activeTest.id, (results) => {
-        setLeaderboard(results);
+        // Deduplicate by student name, keeping the latest result
+        const latestByName: { [key: string]: TestResult } = {};
+        
+        const sortedByTime = [...results].sort((a, b) => {
+          const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+          const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+          return timeB - timeA;
+        });
+
+        sortedByTime.forEach(res => {
+          const nameKey = res.studentName.toLowerCase().trim();
+          if (!latestByName[nameKey]) {
+            latestByName[nameKey] = res;
+          }
+        });
+
+        const deduplicated = Object.values(latestByName);
+
+        const sorted = deduplicated.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          const timeA = a.completedAt?.toMillis?.() || a.completedAt?.getTime?.() || 0;
+          const timeB = b.completedAt?.toMillis?.() || b.completedAt?.getTime?.() || 0;
+          return timeB - timeA;
+        });
+        setLeaderboard(sorted);
       });
       // We don't need to keep this unsub as it's just a one-time refresh or short-lived
       setTimeout(unsub, 2000); 

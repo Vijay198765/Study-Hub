@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageSquare, Heart, Send, Trash2, CornerDownRight, 
-  User, X, MessageCircle, Info, AlertCircle, ThumbsUp
+  User, X, MessageCircle, Info, AlertCircle, ThumbsUp, Plus
 } from 'lucide-react';
 import { 
   collection, addDoc, onSnapshot, query, orderBy, 
-  serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, getDoc
+  serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -22,16 +22,29 @@ interface SiteComment {
   likes: number;
   likedBy: string[];
   parentId?: string;
+  groupId?: string;
+  createdAt: any;
+}
+
+interface SiteGroup {
+  id: string;
+  name: string;
+  description: string;
   createdAt: any;
 }
 
 export default function LiveComments() {
   const [comments, setComments] = useState<SiteComment[]>([]);
+  const [groups, setGroups] = useState<SiteGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('general');
   const [newComment, setNewComment] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isGuest, setIsGuest] = useState(true);
   const [replyTo, setReplyTo] = useState<SiteComment | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAddGroup, setShowAddGroup] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupDesc, setGroupDesc] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +55,10 @@ export default function LiveComments() {
         unsubscribeProfile = null;
       }
 
+      const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+      const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+      const specialName = localStorage.getItem('studentName') || 'Vijay Admin';
+
       if (user) {
         setIsGuest(false);
         unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
@@ -51,6 +68,15 @@ export default function LiveComments() {
             setIsAdmin(data.role === 'admin');
           }
         }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.uid}`));
+      } else if (isSpecial) {
+        setIsGuest(false);
+        setIsAdmin(isAdminLogin);
+        setUserProfile({
+          uid: isAdminLogin ? 'special-admin-vijay' : 'special-vijay-admin',
+          name: specialName,
+          role: isAdminLogin ? 'admin' : 'student',
+          photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay'
+        });
       } else {
         setIsGuest(true);
         setUserProfile(null);
@@ -64,18 +90,38 @@ export default function LiveComments() {
       setComments(data);
     }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
+    const unsubscribeGroups = onSnapshot(collection(db, 'siteGroups'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteGroup));
+      if (data.length === 0) {
+        setGroups([{ id: 'general', name: 'General', description: 'Public discussion', createdAt: new Date() }]);
+      } else {
+        setGroups(data);
+      }
+    });
+
     return () => {
       unsubscribeAuth();
       unsubscribeComments();
+      unsubscribeGroups();
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, []);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  const handleAddGroup = async () => {
+    if (!isAdmin || !groupName.trim()) return;
+    try {
+      await addDoc(collection(db, 'siteGroups'), {
+        name: groupName.trim(),
+        description: groupDesc.trim(),
+        createdAt: serverTimestamp()
+      });
+      setGroupName('');
+      setGroupDesc('');
+      setShowAddGroup(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'siteGroups');
     }
-  }, [comments]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,12 +129,13 @@ export default function LiveComments() {
 
     const commentData: any = {
       userName: userProfile.name,
-      userEmail: auth.currentUser?.email,
+      userEmail: auth.currentUser?.email || userProfile.email || '',
       userPhotoURL: auth.currentUser?.photoURL || userProfile.photoURL || '',
-      userUid: auth.currentUser?.uid,
+      userUid: auth.currentUser?.uid || userProfile.uid,
       text: newComment.trim(),
       likes: 0,
       likedBy: [],
+      groupId: selectedGroupId,
       createdAt: serverTimestamp()
     };
     
@@ -143,12 +190,13 @@ export default function LiveComments() {
     }
   };
 
-  const rootComments = comments.filter(c => !c.parentId);
-  const getReplies = (parentId: string) => comments.filter(c => c.parentId === parentId);
+  const filteredComments = comments.filter(c => (c.groupId || 'general') === selectedGroupId);
+  const rootComments = filteredComments.filter(c => !c.parentId);
+  const getReplies = (parentId: string) => filteredComments.filter(c => c.parentId === parentId);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black text-white font-sans">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center">
           <motion.h1 
@@ -163,125 +211,223 @@ export default function LiveComments() {
           </p>
         </div>
 
-        {/* Comments Area */}
-        <div 
-          ref={scrollRef}
-          className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 sm:p-8 mb-8 min-h-[500px] max-h-[600px] overflow-y-auto custom-scrollbar"
-        >
-          {rootComments.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
-              <MessageCircle size={48} className="opacity-20" />
-              <p className="font-mono text-sm uppercase tracking-widest">No comments yet. Be the first!</p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Groups Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold uppercase tracking-tight text-neon-blue">Groups</h3>
+                {isAdmin && (
+                  <button 
+                    onClick={() => setShowAddGroup(true)}
+                    className="p-2 bg-neon-blue/10 text-neon-blue rounded-lg hover:bg-neon-blue/20 transition-all"
+                  >
+                    <Plus size={16} />
+                  </button>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                {groups.map(group => (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedGroupId(group.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all border ${
+                      selectedGroupId === group.id 
+                        ? 'bg-neon-blue/10 border-neon-blue/50 text-neon-blue' 
+                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="font-bold text-sm">{group.name}</div>
+                    <div className="text-[10px] opacity-60 truncate">{group.description}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-8">
-              {rootComments.map((comment: SiteComment) => (
-                  <div key={comment.id} className="space-y-4">
-                    <CommentItem 
-                      comment={comment} 
-                      onLike={() => handleLike(comment)}
-                      onReply={() => setReplyTo(comment)}
-                      onDelete={() => handleDelete(comment.id)}
-                      isAdmin={isAdmin}
-                      currentUserId={auth.currentUser?.uid || ''}
-                      isGuest={isGuest}
-                    />
-                    
-                    {/* Replies */}
-                    <div className="ml-8 sm:ml-12 space-y-4 border-l border-zinc-800 pl-4 sm:pl-8">
-                      {getReplies(comment.id).map((reply: SiteComment) => (
-                        <div key={reply.id}>
-                          <CommentItem 
-                            comment={reply} 
-                            onLike={() => handleLike(reply)}
-                            onDelete={() => handleDelete(reply.id)}
-                            isAdmin={isAdmin}
-                            isReply={true}
-                            currentUserId={auth.currentUser?.uid || ''}
-                            isGuest={isGuest}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* Input Area */}
-        <div className="relative pt-12">
-          <AnimatePresence>
-            {replyTo && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full left-0 right-0 mb-4 bg-neon-blue/10 border border-neon-blue/20 p-3 rounded-xl flex items-center justify-between z-10"
-              >
-                <div className="flex items-center gap-2 text-neon-blue text-sm font-medium">
-                  <CornerDownRight size={16} />
-                  <span>Replying to <span className="font-bold">{replyTo.userName}</span></span>
+          {/* Comments Area */}
+          <div className="lg:col-span-3">
+            <div 
+              ref={scrollRef}
+              className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 sm:p-8 mb-8 min-h-[500px] max-h-[600px] overflow-y-auto custom-scrollbar"
+            >
+              {rootComments.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
+                  <MessageCircle size={48} className="opacity-20" />
+                  <p className="font-mono text-sm uppercase tracking-widest">No comments yet. Be the first!</p>
                 </div>
-                <button 
-                  onClick={() => setReplyTo(null)}
-                  className="text-neon-blue hover:bg-neon-blue/20 p-1 rounded-md transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              ) : (
+                <div className="space-y-8">
+                  {rootComments.map((comment: SiteComment) => (
+                    <div key={comment.id} className="space-y-4">
+                      <CommentItem 
+                        comment={comment} 
+                        onLike={() => handleLike(comment)}
+                        onReply={() => setReplyTo(comment)}
+                        onDelete={() => handleDelete(comment.id)}
+                        isAdmin={isAdmin}
+                        currentUserId={auth.currentUser?.uid || ''}
+                        isGuest={isGuest}
+                      />
+                      
+                      {/* Replies */}
+                      <div className="ml-8 sm:ml-12 space-y-4 border-l border-zinc-800 pl-4 sm:pl-8">
+                        {getReplies(comment.id).map((reply: SiteComment) => (
+                          <div key={reply.id}>
+                            <CommentItem 
+                              comment={reply} 
+                              onLike={() => handleLike(reply)}
+                              onDelete={() => handleDelete(reply.id)}
+                              isAdmin={isAdmin}
+                              isReply={true}
+                              currentUserId={auth.currentUser?.uid || ''}
+                              isGuest={isGuest}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {isGuest ? (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
-              <p className="text-gray-400 font-mono text-sm uppercase tracking-widest mb-4">You must be logged in to post messages</p>
-              <button 
-                onClick={() => window.location.href = '/login'}
-                className="btn-neon px-8 py-3 uppercase tracking-wider"
-              >
-                Login to Chat
-              </button>
+            {/* Input Area */}
+            <div className="relative pt-12">
+              <AnimatePresence>
+                {replyTo && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute bottom-full left-0 right-0 mb-4 bg-neon-blue/10 border border-neon-blue/20 p-3 rounded-xl flex items-center justify-between z-10"
+                  >
+                    <div className="flex items-center gap-2 text-neon-blue text-sm font-medium">
+                      <CornerDownRight size={16} />
+                      <span>Replying to <span className="font-bold">{replyTo.userName}</span></span>
+                    </div>
+                    <button 
+                      onClick={() => setReplyTo(null)}
+                      className="text-neon-blue hover:bg-neon-blue/20 p-1 rounded-md transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {isGuest ? (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+                  <p className="text-gray-400 font-mono text-sm uppercase tracking-widest mb-4">You must be logged in to post messages</p>
+                  <button 
+                    onClick={() => window.location.href = '/login'}
+                    className="btn-neon px-8 py-3 uppercase tracking-wider"
+                  >
+                    Login to Chat
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="flex gap-4">
+                  <div className="flex-grow relative">
+                    <textarea 
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder={`Posting as ${userProfile?.name}...`}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue transition-all resize-none h-16 sm:h-20"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSubmit(e);
+                        }
+                      }}
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={!newComment.trim()}
+                    className="btn-neon p-4 sm:px-8 flex items-center gap-2"
+                  >
+                    <Send size={20} />
+                    <span className="hidden sm:inline uppercase tracking-wider">Post</span>
+                  </button>
+                </form>
+              )}
+              
+              {!isGuest && (
+                <div className="mt-4 flex justify-end items-center px-2">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 font-mono uppercase">
+                    <Info size={12} />
+                    <span>Be respectful to others</span>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex gap-4">
-              <div className="flex-grow relative">
-                <textarea 
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={`Posting as ${userProfile?.name}...`}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue transition-all resize-none h-16 sm:h-20"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e);
-                    }
-                  }}
-                />
-              </div>
-              <button 
-                type="submit"
-                disabled={!newComment.trim()}
-                className="btn-neon p-4 sm:px-8 flex items-center gap-2"
-              >
-                <Send size={20} />
-                <span className="hidden sm:inline uppercase tracking-wider">Post</span>
-              </button>
-            </form>
-          )}
-          
-          {!isGuest && (
-            <div className="mt-4 flex justify-end items-center px-2">
-              <div className="flex items-center gap-2 text-xs text-gray-500 font-mono uppercase">
-                <Info size={12} />
-                <span>Be respectful to others</span>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
+
+      {/* Add Group Modal */}
+      <AnimatePresence>
+        {showAddGroup && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-dark-bg border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold uppercase tracking-tight">Add New Group</h3>
+                <button onClick={() => setShowAddGroup(false)} className="text-white/40 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Group Name</label>
+                  <input 
+                    type="text"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder="e.g., Science Discussion"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Description</label>
+                  <input 
+                    type="text"
+                    value={groupDesc}
+                    onChange={(e) => setGroupDesc(e.target.value)}
+                    placeholder="Brief description..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue"
+                  />
+                </div>
+                <button 
+                  onClick={handleAddGroup}
+                  className="btn-neon w-full py-3 uppercase tracking-widest mt-4"
+                >
+                  Create Group
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+interface CommentItemProps {
+  comment: SiteComment;
+  onLike: () => void;
+  onReply?: () => void;
+  onDelete: () => void;
+  isAdmin: boolean;
+  isReply?: boolean;
+  currentUserId: string;
+  isGuest: boolean;
 }
 
 function CommentItem({ 
@@ -293,16 +439,7 @@ function CommentItem({
   isReply = false,
   currentUserId,
   isGuest
-}: { 
-  comment: SiteComment; 
-  onLike: () => void | Promise<void>; 
-  onReply?: () => void | Promise<void>; 
-  onDelete: () => void | Promise<void>; 
-  isAdmin: boolean;
-  isReply?: boolean;
-  currentUserId: string;
-  isGuest: boolean;
-}) {
+}: CommentItemProps) {
   const isLiked = comment.likedBy?.includes(currentUserId);
 
   return (
@@ -321,9 +458,11 @@ function CommentItem({
             photoClassName={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}
             className="font-bold text-sm sm:text-base"
           />
-          <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
-            {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-          </span>
+          {isAdmin && (
+            <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
+              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+            </span>
+          )}
         </div>
         {isAdmin && (
           <button 

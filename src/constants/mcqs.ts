@@ -61,6 +61,66 @@ export const DEFAULT_MCQS: Record<string, QuizQuestion[]> = {
       question: "What is the unit of electric current?",
       options: ["Volt", "Ohm", "Ampere", "Watt"],
       correctAnswer: 2
+    },
+    {
+      id: 's11',
+      question: "Which organ in the human body produces insulin?",
+      options: ["Liver", "Pancreas", "Kidney", "Heart"],
+      correctAnswer: 1
+    },
+    {
+      id: 's12',
+      question: "What is the hardest natural substance on Earth?",
+      options: ["Gold", "Iron", "Diamond", "Platinum"],
+      correctAnswer: 2
+    },
+    {
+      id: 's13',
+      question: "Which gas do plants release during photosynthesis?",
+      options: ["Carbon Dioxide", "Nitrogen", "Oxygen", "Hydrogen"],
+      correctAnswer: 2
+    },
+    {
+      id: 's14',
+      question: "What is the boiling point of water at sea level?",
+      options: ["90°C", "100°C", "110°C", "120°C"],
+      correctAnswer: 1
+    },
+    {
+      id: 's15',
+      question: "Which planet is the largest in our solar system?",
+      options: ["Earth", "Mars", "Jupiter", "Saturn"],
+      correctAnswer: 2
+    },
+    {
+      id: 's16',
+      question: "What is the main component of natural gas?",
+      options: ["Ethane", "Propane", "Methane", "Butane"],
+      correctAnswer: 2
+    },
+    {
+      id: 's17',
+      question: "Which metal is liquid at room temperature?",
+      options: ["Iron", "Mercury", "Copper", "Aluminum"],
+      correctAnswer: 1
+    },
+    {
+      id: 's18',
+      question: "What is the power house of the cell?",
+      options: ["Nucleus", "Ribosome", "Mitochondria", "Golgi Body"],
+      correctAnswer: 2
+    },
+    {
+      id: 's19',
+      question: "Which blood group is known as the universal donor?",
+      options: ["A+", "B+", "AB+", "O-"],
+      correctAnswer: 3
+    },
+    {
+      id: 's20',
+      question: "What is the speed of light in vacuum?",
+      options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"],
+      correctAnswer: 0
     }
   ],
   'Math': [
@@ -185,6 +245,66 @@ export const DEFAULT_MCQS: Record<string, QuizQuestion[]> = {
       question: "The French Revolution began in:",
       options: ["1776", "1789", "1799", "1804"],
       correctAnswer: 1
+    },
+    {
+      id: 'h11',
+      question: "Who was the first woman to win a Nobel Prize?",
+      options: ["Mother Teresa", "Marie Curie", "Indira Gandhi", "Florence Nightingale"],
+      correctAnswer: 1
+    },
+    {
+      id: 'h12',
+      question: "The Indus Valley Civilization flourished around:",
+      options: ["2500 BCE", "1500 BCE", "500 BCE", "500 CE"],
+      correctAnswer: 0
+    },
+    {
+      id: 'h13',
+      question: "Who was the founder of the Maurya Empire?",
+      options: ["Ashoka", "Chandragupta Maurya", "Bindusara", "Harsha"],
+      correctAnswer: 1
+    },
+    {
+      id: 'h14',
+      question: "The Dandi March was led by:",
+      options: ["Subhas Chandra Bose", "Mahatma Gandhi", "Jawaharlal Nehru", "Bhagat Singh"],
+      correctAnswer: 1
+    },
+    {
+      id: 'h15',
+      question: "Which battle marked the end of the Mughal Empire's power?",
+      options: ["Battle of Panipat", "Battle of Plassey", "Battle of Buxar", "Battle of Haldighati"],
+      correctAnswer: 2
+    },
+    {
+      id: 'h16',
+      question: "Who wrote the 'Discovery of India'?",
+      options: ["Mahatma Gandhi", "Jawaharlal Nehru", "Rabindranath Tagore", "Sardar Patel"],
+      correctAnswer: 1
+    },
+    {
+      id: 'h17',
+      question: "The capital of the Vijayanagara Empire was:",
+      options: ["Hampi", "Mysore", "Madurai", "Bijapur"],
+      correctAnswer: 0
+    },
+    {
+      id: 'h18',
+      question: "Who was the first Governor-General of independent India?",
+      options: ["Lord Mountbatten", "C. Rajagopalachari", "Dr. Rajendra Prasad", "Jawaharlal Nehru"],
+      correctAnswer: 0
+    },
+    {
+      id: 'h19',
+      question: "The 'Swaraj is my birthright' slogan was given by:",
+      options: ["Bal Gangadhar Tilak", "Lala Lajpat Rai", "Bipin Chandra Pal", "Bhagat Singh"],
+      correctAnswer: 0
+    },
+    {
+      id: 'h20',
+      question: "In which year did India become a Republic?",
+      options: ["1947", "1948", "1949", "1950"],
+      correctAnswer: 3
     }
   ],
   'Geography': [

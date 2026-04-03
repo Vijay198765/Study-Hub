@@ -1,9 +1,73 @@
-import React from 'react';
-import { Mail, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Heart, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export default function Footer() {
+  const [showSecretLogin, setShowSecretLogin] = useState(false);
+  const [secretKey, setSecretKey] = useState('');
+
+  const handleSecretLogin = async () => {
+    if (secretKey === 'Vijay1987') {
+      try {
+        await signInAnonymously(auth);
+        localStorage.setItem('isSpecialLogin', 'true');
+        localStorage.setItem('studentName', 'Vijay Admin');
+        localStorage.setItem('isAdminLogin', 'true');
+        localStorage.setItem('hasSkippedLogin', 'false');
+        toast.success('Admin access granted!');
+        window.location.reload();
+      } catch (error) {
+        console.error("Secret login error:", error);
+        toast.error('Failed to authenticate anonymously');
+      }
+    } else {
+      toast.error('Invalid secret key');
+    }
+    setShowSecretLogin(false);
+    setSecretKey('');
+  };
+
   return (
-    <footer className="bg-dark-card border-t border-white/5 py-12 mt-12">
+    <footer className="bg-dark-card border-t border-white/5 py-12 mt-12 relative">
+      <AnimatePresence>
+        {showSecretLogin && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-dark-bg border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold uppercase tracking-tight">Secret Login</h3>
+                <button onClick={() => setShowSecretLogin(false)} className="text-white/40 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+              <input 
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder="Enter secret key"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-white outline-none focus:border-neon-blue mb-6"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSecretLogin()}
+              />
+              <button 
+                onClick={handleSecretLogin}
+                className="btn-neon w-full py-3 uppercase tracking-widest"
+              >
+                Access Dashboard
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">Study-hub</h3>
@@ -40,7 +104,12 @@ export default function Footer() {
       </div>
       
       <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-white/5 text-center text-white/30 text-sm">
-        © {new Date().getFullYear()} Study-hub by Vijay Ninama. All rights reserved.
+        <span 
+          className="cursor-pointer hover:text-white transition-colors"
+          onClick={() => setShowSecretLogin(true)}
+        >
+          ©
+        </span> {new Date().getFullYear()} Study-hub by Vijay Ninama. All rights reserved.
       </div>
     </footer>
   );

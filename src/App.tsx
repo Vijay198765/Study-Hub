@@ -18,7 +18,7 @@ import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 
@@ -72,25 +72,70 @@ export default function App() {
         unsubscribeProfile = null;
       }
 
+      const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+      const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+      const specialName = localStorage.getItem('studentName') || 'Vijay Admin';
+
       if (firebaseUser) {
         // Listen to user profile changes
         const userRef = doc(db, 'users', firebaseUser.uid);
-        unsubscribeProfile = onSnapshot(userRef, (doc) => {
-          if (doc.exists()) {
-            const data = doc.data();
+        unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Upgrade anonymous user to admin if they have the special login flags
+            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && data.role !== 'admin') {
+              try {
+                await updateDoc(userRef, { 
+                  role: 'admin',
+                  adminKey: 'Vijay1987',
+                  name: localStorage.getItem('studentName') || 'Vijay Admin'
+                });
+                // The next snapshot will have the updated data
+                return;
+              } catch (error) {
+                console.error("Error upgrading anonymous admin:", error);
+              }
+            }
+
             setUserProfile(data);
             setIsAdmin(data.role === 'admin');
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['vijayninama683@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
-            setIsAdmin(isDefaultAdmin);
-            setUserProfile({
+            const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+            const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+            
+            let role = isDefaultAdmin ? 'admin' : 'student';
+            let name = firebaseUser.displayName || 'Student';
+            let extraData: any = {};
+
+            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin) {
+              role = 'admin';
+              name = localStorage.getItem('studentName') || 'Vijay Admin';
+              extraData = { adminKey: 'Vijay1987' };
+            }
+
+            const newUserProfile = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: firebaseUser.displayName || 'Student',
-              role: isDefaultAdmin ? 'admin' : 'student'
-            });
+              email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
+              name: name,
+              role: role,
+              createdAt: new Date().toISOString(),
+              ...extraData
+            };
+
+            try {
+              await setDoc(userRef, newUserProfile);
+              setUserProfile(newUserProfile);
+              setIsAdmin(role === 'admin');
+            } catch (error) {
+              console.error("Error creating user profile:", error);
+              // If we can't create the doc (e.g. permissions), at least set local state
+              setUserProfile(newUserProfile);
+              setIsAdmin(role === 'admin');
+            }
           }
           setLoading(false);
         }, (error) => {
@@ -101,6 +146,12 @@ export default function App() {
         setIsAdmin(false);
         setUserProfile(null);
         setLoading(false);
+        // Clear stale special login if it's not admin
+        if (isSpecial) {
+          localStorage.removeItem('isSpecialLogin');
+          localStorage.removeItem('isAdminLogin');
+          localStorage.removeItem('studentName');
+        }
       }
 
       if (firebaseUser) {
@@ -137,7 +188,7 @@ export default function App() {
                     <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
                     <Route path="/tips" element={<StudyTips />} />
                     <Route path="/games" element={<Games />} />
-                    <Route path="/comments" element={<LiveComments />} />
+                    <Route path="/live-club" element={<LiveComments />} />
                     <Route path="/tests" element={<Tests />} />
                     <Route path="/login" element={<Login />} />
                     <Route 

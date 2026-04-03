@@ -196,3 +196,12 @@ export const saveTestResult = async (result: TestResult) => {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
+
+export const saveSiteComment = async (comment: any) => {
+  const path = `siteComments/${comment.id}`;
+  try {
+    await setDoc(doc(db, 'siteComments', comment.id), comment);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};

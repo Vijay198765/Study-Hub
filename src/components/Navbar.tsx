@@ -33,6 +33,9 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('isSpecialLogin');
+      localStorage.removeItem('isAdminLogin');
+      localStorage.removeItem('studentName');
       navigate('/');
     } catch (error) {
       console.error("Logout error:", error);
@@ -62,7 +65,7 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
     { name: 'Tests', path: '/tests', icon: ClipboardList },
     { name: 'Study Tips', path: '/tips', icon: Lightbulb },
     { name: 'Games', path: '/games', icon: Gamepad2 },
-    { name: 'Wall', path: '/comments', icon: MessageSquare },
+    { name: 'Live Club', path: '/live-club', icon: MessageSquare },
     ...(isAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];
 

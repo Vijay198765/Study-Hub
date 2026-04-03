@@ -35,14 +35,6 @@ export default function Login() {
       return;
     }
 
-    if (name.trim() === 'Vijay-Admin') {
-      localStorage.setItem('studentName', 'Vijay-Admin');
-      localStorage.setItem('hasSkippedLogin', 'false');
-      localStorage.setItem('isSpecialLogin', 'true');
-      navigate('/');
-      return;
-    }
-
     setLoading(true);
     setError('');
     const provider = new GoogleAuthProvider();
@@ -57,7 +49,8 @@ export default function Login() {
       
       if (!userDoc.exists()) {
         // Default admin check
-        if (user.email === 'vijayninama683@gmail.com') {
+        const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
+        if (adminEmails.includes(user.email?.toLowerCase() || '')) {
           role = 'admin';
         }
         await setDoc(userRef, {

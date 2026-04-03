@@ -106,8 +106,9 @@ service cloud.firestore {
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
           (request.auth.token != null && 
-           request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" && 
-           request.auth.token.get('email_verified', false) == true)
+           (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" || 
+            request.auth.token.get('email', '').lower() == "sahuchandrashekhar1412@gmail.com") && 
+           request.auth.token.email_verified == true)
         );
     }
 
@@ -148,7 +149,8 @@ service cloud.firestore {
              data.email is string && data.email.size() > 0 &&
              data.role in ['admin', 'student'] &&
              (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000));
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
+             (!('adminKey' in data) || (data.adminKey is string && data.adminKey == 'Vijay1987'));
     }
 
     function isValidSettings(data) {
@@ -243,9 +245,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
-        (request.resource.data.role == 'student' || (request.resource.data.role == 'admin' && request.auth.token.email.lower() == "vijayninama683@gmail.com"));
+        (request.resource.data.role == 'student' || 
+          (request.resource.data.role == 'admin' && 
+            (
+              (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" || 
+               request.auth.token.get('email', '').lower() == "sahuchandrashekhar1412@gmail.com") ||
+              (request.auth.token.firebase.sign_in_provider == 'anonymous' && 
+               request.resource.data.get('adminKey', '') == 'Vijay1987')
+            )
+          )
+        );
       allow update: if isAuthenticated() && (isAdmin() || (request.auth.uid == userId && request.resource.data.role == resource.data.role)) && isValidUser(request.resource.data);
       allow delete: if isAdmin();
     }

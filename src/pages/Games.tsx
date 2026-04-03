@@ -479,11 +479,11 @@ const SpeedClicker = () => {
     if (gameState === 'playing' && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && gameState === 'playing') {
       setGameState('end');
       if (score > 20) confetti();
     }
-  }, [gameState, timeLeft, score]);
+  }, [gameState, timeLeft === 0]); // Only re-run when gameState changes or time hits 0
 
   const startGame = () => {
     setScore(0);
@@ -691,7 +691,8 @@ const SpaceDodge = () => {
           const moved = prev.map(o => ({ ...o, y: o.y + 1.5 }));
           const filtered = moved.filter(o => o.y < 100);
           
-          const collision = filtered.some(o => o.y > 85 && Math.abs(o.x - playerPos) < 10);
+          // Reduced collision radius from 10 to 6 for better accuracy
+          const collision = filtered.some(o => o.y > 85 && Math.abs(o.x - playerPos) < 6);
           if (collision) {
             setGameState('end');
             return [];
@@ -708,6 +709,13 @@ const SpaceDodge = () => {
     }
     requestRef.current = requestAnimationFrame(update);
   }, [playerPos]);
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (gameState !== 'playing') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    setPlayerPos(Math.max(5, Math.min(95, x)));
+  };
 
   useEffect(() => {
     if (gameState === 'playing') {
@@ -729,7 +737,10 @@ const SpaceDodge = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-[500px] bg-black rounded-xl overflow-hidden border border-white/10">
+    <div 
+      className="relative w-full h-[500px] bg-black rounded-xl overflow-hidden border border-white/10 touch-none"
+      onPointerMove={handlePointerMove}
+    >
       {gameState === 'start' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20 bg-black/60 backdrop-blur-sm">
           <Target size={64} className="mb-6 text-blue-400" />

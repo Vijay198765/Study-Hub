@@ -6,13 +6,14 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { signOut } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -23,7 +24,8 @@ import {
   getSubjectsByClass, saveSubject, removeSubject, 
   getChaptersBySubject, saveChapter, removeChapter, 
   getUsers, saveUser, removeUser,
-  getTests, saveTest, removeTest
+  getTests, saveTest, removeTest,
+  saveTestResult, saveSiteComment
 } from '../services/dataService';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
@@ -351,15 +353,159 @@ export default function AdminPanel() {
     }
   };
 
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const seedMCQTests = async () => {
+    if (!window.confirm('This will add 20-question Science and SST tests to the platform. Continue?')) return;
+    setIsSeeding(true);
+    try {
+      const scienceTest = {
+        title: 'Science Mega Test (20 MCQ)',
+        category: 'Science',
+        duration: 20,
+        questions: DEFAULT_MCQS['Science'],
+        createdAt: serverTimestamp(),
+        enabled: true
+      };
+      const sstTest = {
+        title: 'SST Mega Test (20 MCQ)',
+        category: 'SST',
+        duration: 20,
+        questions: DEFAULT_MCQS['History'], // Using History as SST for now
+        createdAt: serverTimestamp(),
+        enabled: true
+      };
+      await addDoc(collection(db, 'tests'), scienceTest);
+      await addDoc(collection(db, 'tests'), sstTest);
+      setToast({ message: 'MCQ Tests seeded successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Error seeding tests:', error);
+      setToast({ message: 'Failed to seed tests', type: 'error' });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const backupData = async () => {
+    setIsBackingUp(true);
+    try {
+      const data = {
+        classes,
+        subjects,
+        chapters,
+        tests,
+        testResults,
+        siteComments,
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `study-hub-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setToast({ message: 'Backup created successfully!', type: 'success' });
+    } catch (error) {
+      console.error("Backup error:", error);
+      setToast({ message: 'Failed to create backup', type: 'error' });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const restoreData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!window.confirm('This will overwrite existing data. Are you sure?')) return;
+
+    setIsRestoring(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        
+        // Restore classes
+        if (data.classes) {
+          for (const cls of data.classes) await saveClass(cls);
+        }
+        // Restore subjects
+        if (data.subjects) {
+          for (const sub of data.subjects) await saveSubject(sub);
+        }
+        // Restore chapters
+        if (data.chapters) {
+          for (const ch of data.chapters) await saveChapter(ch);
+        }
+        // Restore tests
+        if (data.tests) {
+          for (const t of data.tests) await saveTest(t);
+        }
+        // Restore test results
+        if (data.testResults) {
+          for (const res of data.testResults) await saveTestResult(res);
+        }
+        // Restore site comments
+        if (data.siteComments) {
+          for (const comment of data.siteComments) {
+            await saveSiteComment(comment);
+          }
+        }
+
+        setToast({ message: 'Data restored successfully!', type: 'success' });
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (error) {
+        console.error("Restore error:", error);
+        setToast({ message: 'Failed to restore data. Invalid file format.', type: 'error' });
+      } finally {
+        setIsRestoring(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
-            <p className="text-sm text-white/40">Manage your educational ecosystem.</p>
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
+              <p className="text-sm text-white/40">Manage your educational ecosystem.</p>
+            </div>
+            <button 
+              onClick={async () => {
+                await signOut(auth);
+                localStorage.removeItem('isSpecialLogin');
+                localStorage.removeItem('isAdminLogin');
+                localStorage.removeItem('studentName');
+                window.location.href = '/';
+              }}
+              className="md:hidden px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all border border-red-500/20 flex items-center gap-2"
+            >
+              <LogOut size={14} />
+              Logout
+            </button>
           </div>
-          <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={async () => {
+                await signOut(auth);
+                localStorage.removeItem('isSpecialLogin');
+                localStorage.removeItem('isAdminLogin');
+                localStorage.removeItem('studentName');
+                window.location.href = '/';
+              }}
+              className="hidden md:flex px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all border border-red-500/20 items-center gap-2"
+            >
+              <LogOut size={14} />
+              Logout
+            </button>
+            <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
             {!isLimitedAdmin && (
               <>
                 <button 
@@ -416,13 +562,18 @@ export default function AdminPanel() {
                   Tests
                 </button>
                 <button 
-                  onClick={seedSpecialTests}
-                  disabled={isSaving}
+                  onClick={backupData}
+                  disabled={isBackingUp}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
                 >
-                  <RefreshCcw size={16} className={`inline-block mr-1.5 ${isSaving ? 'animate-spin' : ''}`} />
-                  Seed Special Tests
+                  <Download size={16} className="inline-block mr-1.5" />
+                  Backup
                 </button>
+                <label className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-amber-500 text-white hover:bg-amber-600 cursor-pointer">
+                  <Upload size={16} className="inline-block mr-1.5" />
+                  Restore
+                  <input type="file" accept=".json" onChange={restoreData} className="hidden" />
+                </label>
                 <button 
                   onClick={() => setActiveTab('results')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'results' ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-white/60 hover:text-white'}`}
@@ -449,8 +600,9 @@ export default function AdminPanel() {
             <div className="w-4 shrink-0" />
           </div>
         </div>
+      </div>
 
-        {/* Content Area */}
+      {/* Content Area */}
         <div className="glass-card p-6 min-h-[600px]">
           {activeTab === 'classes' && (
             <div className="space-y-6">
@@ -810,7 +962,7 @@ export default function AdminPanel() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
                               {user.photoURL ? (
-                                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
+                                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/40">
                                   <Users size={20} />
@@ -837,7 +989,7 @@ export default function AdminPanel() {
                             >
                               Toggle Role
                             </button>
-                            {user.email !== 'vijayninama683@gmail.com' && (
+                            {user.email !== 'vijayninama683@gmail.com' && user.email !== 'sahuchandrashekhar1412@gmail.com' && (
                               <button 
                                 onClick={() => handleDelete('user', user.uid, user.email)}
                                 className="text-red-400/40 hover:text-red-400 transition-all"
@@ -850,6 +1002,13 @@ export default function AdminPanel() {
                         </td>
                       </tr>
                     ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-20 text-center text-white/20 italic">
+                          No users found.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1485,6 +1644,8 @@ export default function AdminPanel() {
                       className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-pink"
                     />
                   </div>
+                  <div className="pt-4 border-t border-white/10">
+                  </div>
                 </div>
               </div>
             </div>
@@ -1813,8 +1974,6 @@ export default function AdminPanel() {
                                         >
                                           <option value="pdf" className="bg-dark-bg">PDF Document</option>
                                           <option value="notes" className="bg-dark-bg">Study Notes</option>
-                                          <option value="notes1" className="bg-dark-bg">Notes 1</option>
-                                          <option value="notes2" className="bg-dark-bg">Notes 2</option>
                                           <option value="qa" className="bg-dark-bg">Q&A</option>
                                           <option value="practice" className="bg-dark-bg">Practice</option>
                                           <option value="test" className="bg-dark-bg">Test</option>

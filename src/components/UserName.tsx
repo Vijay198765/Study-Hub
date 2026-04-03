@@ -49,34 +49,25 @@ export default function UserName({
       const subscribers = new Set<typeof updateState>();
       subscribers.add(updateState);
       
-      // We can only listen to the current user's profile due to security rules
-      // (PII protection prevents reading other users' documents)
-      if (userUid === auth.currentUser?.uid) {
-        const unsubscribe = onSnapshot(doc(db, 'users', userUid), (doc) => {
-          if (doc.exists()) {
-            const data = doc.data();
-            const userData = { 
-              name: data.name || fallback, 
-              photoURL: data.photoURL || fallbackPhoto 
-            };
-            userCache[userUid] = userData;
-            subscribers.forEach(sub => sub(userData));
-          } else {
-            const userData = { name: fallback, photoURL: fallbackPhoto };
-            userCache[userUid] = userData;
-            subscribers.forEach(sub => sub(userData));
-          }
-        }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${userUid}`);
-        });
-        listeners[userUid] = { unsubscribe, subscribers };
-      } else {
-        // For other users, we rely on the fallback data provided via props
-        const userData = { name: fallback, photoURL: fallbackPhoto };
-        userCache[userUid] = userData;
-        subscribers.forEach(sub => sub(userData));
-        listeners[userUid] = { unsubscribe: () => {}, subscribers };
-      }
+      // We can now listen to any user's profile due to updated security rules
+      const unsubscribe = onSnapshot(doc(db, 'users', userUid), (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          const userData = { 
+            name: data.name || fallback, 
+            photoURL: data.photoURL || fallbackPhoto 
+          };
+          userCache[userUid] = userData;
+          subscribers.forEach(sub => sub(userData));
+        } else {
+          const userData = { name: fallback, photoURL: fallbackPhoto };
+          userCache[userUid] = userData;
+          subscribers.forEach(sub => sub(userData));
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `users/${userUid}`);
+      });
+      listeners[userUid] = { unsubscribe, subscribers };
     }
 
     return () => {
