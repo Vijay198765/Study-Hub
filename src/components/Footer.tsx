@@ -4,30 +4,65 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
 import { signInAnonymously } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function Footer() {
   const [showSecretLogin, setShowSecretLogin] = useState(false);
   const [secretKey, setSecretKey] = useState('');
 
   const handleSecretLogin = async () => {
+    console.log("Secret login attempt with key:", secretKey);
     if (secretKey === 'Vijay1987') {
       try {
-        await signInAnonymously(auth);
+        console.log("Secret key matches! Setting flags and signing in...");
         localStorage.setItem('isSpecialLogin', 'true');
         localStorage.setItem('studentName', 'Vijay Admin');
         localStorage.setItem('isAdminLogin', 'true');
         localStorage.setItem('hasSkippedLogin', 'false');
+        
+        const userCredential = await signInAnonymously(auth);
+        const user = userCredential.user;
+
+        // Create user document to grant admin privileges in Firestore
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+
+        if (!userDoc.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: 'anonymous@studyhub.com',
+            name: 'Vijay Admin',
+            role: 'admin',
+            adminKey: 'Vijay1987',
+            createdAt: new Date().toISOString()
+          });
+        } else {
+          // Ensure it has admin role and key
+          await setDoc(userRef, {
+            role: 'admin',
+            adminKey: 'Vijay1987'
+          }, { merge: true });
+        }
+        
         toast.success('Admin access granted!');
         // Small delay to ensure auth state is persisted before redirect
         setTimeout(() => {
           window.location.href = '/admin';
-        }, 500);
-      } catch (error) {
+        }, 1000);
+      } catch (error: any) {
         console.error("Secret login error:", error);
-        toast.error('Failed to authenticate anonymously');
+        window.dispatchEvent(new CustomEvent('firebase-auth-error', { detail: error }));
+        if (error.code === 'auth/admin-restricted-operation') {
+          toast.error('Anonymous login is disabled. Please enable it in Firebase Console > Authentication > Sign-in method.', {
+            duration: 10000,
+          });
+        } else {
+          toast.error('Failed to authenticate: ' + (error.message || 'Unknown error'));
+        }
       }
     } else {
+      console.log("Invalid secret key.");
       toast.error('Invalid secret key');
     }
     setShowSecretLogin(false);
@@ -108,8 +143,9 @@ export default function Footer() {
       
       <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-white/5 text-center text-white/30 text-sm">
         <span 
-          className="cursor-pointer hover:text-white transition-colors"
+          className="cursor-pointer hover:text-white transition-colors p-2 inline-block"
           onClick={() => setShowSecretLogin(true)}
+          title="Secret Login"
         >
           ©
         </span> {new Date().getFullYear()} Study-hub by Vijay Ninama. All rights reserved.

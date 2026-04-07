@@ -22,6 +22,9 @@ import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 
+import FirebaseSetupGuide from './components/FirebaseSetupGuide';
+import firebaseConfig from '../firebase-applet-config.json';
+
 // Protected Route Component
 const ProtectedRoute = ({ children, isAdmin, isSpecialAdmin }: { children: React.ReactNode, isAdmin: boolean, isSpecialAdmin: boolean }) => {
   if (!isAdmin && !isSpecialAdmin) return <Navigate to="/login" replace />;
@@ -37,10 +40,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [minLoadingComplete, setMinLoadingComplete] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
 
   // Test connection on boot
   useEffect(() => {
-    testConnection();
+    const checkConnection = async () => {
+      try {
+        await testConnection();
+      } catch (error: any) {
+        if (error.message?.includes('the client is offline') || error.message?.includes('unavailable')) {
+          setFirebaseError(prev => prev === 'auth' ? 'both' : 'firestore');
+        }
+      }
+    };
+    checkConnection();
     
     // Check for special admin status immediately
     const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
@@ -48,6 +61,17 @@ export default function App() {
     if (isSpecial && isAdminLogin) {
       setIsSpecialAdmin(true);
     }
+  }, []);
+
+  // Listen for auth errors globally
+  useEffect(() => {
+    const handleAuthError = (event: any) => {
+      if (event.detail?.code === 'auth/admin-restricted-operation') {
+        setFirebaseError(prev => prev === 'firestore' ? 'both' : 'auth');
+      }
+    };
+    window.addEventListener('firebase-auth-error', handleAuthError);
+    return () => window.removeEventListener('firebase-auth-error', handleAuthError);
   }, []);
 
   // Minimum loading time for the animation
@@ -62,6 +86,10 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  useEffect(() => {
+    console.log("App State: User:", user?.uid, "isAdmin:", isAdmin, "isSpecialAdmin:", isSpecialAdmin, "loading:", loading);
+  }, [user, isAdmin, isSpecialAdmin, loading]);
 
   useEffect(() => {
     // Check if we need to show welcome screen
@@ -91,6 +119,7 @@ export default function App() {
         unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+            console.log("App: User profile loaded:", data);
             
             // Upgrade anonymous user to admin if they have the special login flags
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && data.role !== 'admin') {
@@ -102,18 +131,21 @@ export default function App() {
                   isLegend: true
                 });
                 // The next snapshot will have the updated data
+                setIsAdmin(true);
+                setIsSpecialAdmin(true);
                 return;
               } catch (error) {
                 console.error("Error upgrading anonymous admin:", error);
               }
             }
 
-            setUserProfile({ ...data, isLegend: data.role === 'admin' });
-            setIsAdmin(data.role === 'admin');
-            if (data.role === 'admin') setIsSpecialAdmin(true);
+            setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
+            const isUserAdmin = data.role === 'admin';
+            setIsAdmin(isUserAdmin);
+            if (isUserAdmin) setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['vijayninama683@gmail.com', 'sahuchandrashekhar1412@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             
             let role = isDefaultAdmin ? 'admin' : 'student';
@@ -125,6 +157,7 @@ export default function App() {
               name = localStorage.getItem('studentName') || 'Vijay Admin';
               extraData = { adminKey: 'Vijay1987', isLegend: true };
               setIsSpecialAdmin(true);
+              setIsAdmin(true);
             }
 
             const newUserProfile = {
@@ -178,6 +211,7 @@ export default function App() {
           <LoadingScreen key="loading" />
         ) : (
           <ErrorBoundary key="app">
+            {firebaseError && <FirebaseSetupGuide errorType={firebaseError} projectId={firebaseConfig.projectId} />}
             {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
             <div className="flex flex-col min-h-screen relative overflow-hidden">
               <Watermark />

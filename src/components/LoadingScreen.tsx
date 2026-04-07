@@ -23,7 +23,7 @@ const Robot = () => {
   const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8" }), []);
 
   useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+    const t = state.clock.elapsedTime;
     if (group.current) {
       group.current.rotation.y = Math.sin(t * 0.5) * 0.2;
       group.current.position.y = Math.sin(t * 2) * 0.15;
@@ -76,7 +76,7 @@ const FloatingIsland = () => {
   const leafMat2 = useMemo(() => new THREE.MeshStandardMaterial({ color: "#15803d" }), []);
 
   useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+    const t = state.clock.elapsedTime;
     islandMat.emissiveIntensity = 0.1 + Math.sin(t * 2) * 0.05;
   });
 
@@ -111,7 +111,7 @@ const OrbitingPlanet = ({ color, distance, speed, size }: { color: string, dista
   
   useFrame((state) => {
     if (ref.current) {
-      const t = state.clock.getElapsedTime() * speed;
+      const t = state.clock.elapsedTime * speed;
       ref.current.position.x = Math.cos(t) * distance;
       ref.current.position.z = Math.sin(t) * distance;
       ref.current.position.y = Math.sin(t * 0.5) * (distance * 0.2);
@@ -143,7 +143,7 @@ const FloatingBook = ({ position, color }: { position: [number, number, number],
   
   useFrame((state) => {
     if (ref.current) {
-      const t = state.clock.getElapsedTime();
+      const t = state.clock.elapsedTime;
       ref.current.position.y = position[1] + Math.sin(t * 2 + position[0]) * 0.1;
       ref.current.rotation.y += 0.01;
       ref.current.rotation.z = Math.sin(t) * 0.1;
@@ -168,7 +168,7 @@ const BouncingIcon = ({ position, color, type }: { position: [number, number, nu
   
   useFrame((state) => {
     if (ref.current) {
-      const t = state.clock.getElapsedTime();
+      const t = state.clock.elapsedTime;
       ref.current.position.y = position[1] + Math.abs(Math.sin(t * 3 + position[0])) * 0.5;
       ref.current.rotation.x += 0.02;
       ref.current.rotation.z += 0.01;
@@ -242,7 +242,7 @@ export const LoadingScreen = () => {
         className="absolute inset-0"
       >
         <Canvas 
-          shadows 
+          shadows={{ type: THREE.PCFShadowMap }} 
           dpr={[1, 2]} 
           gl={{ antialias: true, alpha: true }}
           onCreated={() => setIsCanvasReady(true)}

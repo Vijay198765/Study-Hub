@@ -104,12 +104,17 @@ export default function ChapterDetail() {
         const historyQ = query(
           collection(db, 'quizHistory'),
           where('userId', '==', auth.currentUser.uid),
-          where('chapterId', '==', chapterId),
-          orderBy('completedAt', 'desc'),
-          limit(5)
+          where('chapterId', '==', chapterId)
         );
         onSnapshot(historyQ, (snapshot) => {
-          setQuizHistory(snapshot.docs.map(doc => doc.data()));
+          const history = snapshot.docs.map(doc => doc.data());
+          // Sort client-side to avoid needing a composite index
+          const sorted = history.sort((a: any, b: any) => {
+            const timeA = a.completedAt?.toMillis?.() || (a.completedAt?.seconds * 1000) || 0;
+            const timeB = b.completedAt?.toMillis?.() || (b.completedAt?.seconds * 1000) || 0;
+            return timeB - timeA;
+          });
+          setQuizHistory(sorted.slice(0, 5));
         }, (error) => handleFirestoreError(error, OperationType.GET, 'quizHistory'));
       }
     }

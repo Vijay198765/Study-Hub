@@ -76,8 +76,10 @@ export const getGlobalLeaderboard = (callback: (results: TestResult[]) => void) 
 // Classes
 export const getClasses = (callback: (classes: Class[]) => void) => {
   const path = 'classes';
-  const q = query(collection(db, path), orderBy('order', 'asc'));
+  console.log("dataService: Fetching classes from path:", path);
+  const q = query(collection(db, path));
   return onSnapshot(q, (snapshot) => {
+    console.log(`dataService: Received ${snapshot.size} classes`);
     const classes = snapshot.docs.map(doc => doc.data() as Class);
     // Fallback to name if order is missing
     const sorted = classes.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));

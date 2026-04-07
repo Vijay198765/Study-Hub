@@ -13,7 +13,7 @@ import { storage, db, auth, handleFirestoreError, OperationType } from '../fireb
 import { signOut } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -40,12 +40,30 @@ const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('classes');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   
   const userEmail = auth.currentUser?.email?.toLowerCase();
-  const isLimitedAdmin = false; // Removed tagoreteam2025@gmail.com authority
-  
+  const isLimitedAdmin = false; 
+
   useEffect(() => {
-    // No longer needed
+    const checkAdminStatus = async () => {
+      if (auth.currentUser) {
+        const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
+        const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
+        setIsSpecialAdmin(isSpecial && isAdminLogin);
+
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        const docSnap = await getDocs(query(collection(db, 'users'))); // Fallback check or direct get
+        // Better: just check the current user doc
+        onSnapshot(userRef, (snap) => {
+          if (snap.exists()) {
+            setIsAdmin(snap.data().role === 'admin');
+          }
+        });
+      }
+    };
+    checkAdminStatus();
   }, []);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
@@ -68,6 +86,45 @@ export default function AdminPanel() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
+  const downloadBackup = async () => {
+    setIsBackingUp(true);
+    try {
+      const collections = [
+        'classes', 'subjects', 'chapters', 'users', 
+        'quizHistory', 'comments', 'tests', 'testResults', 'siteComments'
+      ];
+      
+      const backupData: any = {};
+      
+      for (const colName of collections) {
+        const querySnapshot = await getDocs(collection(db, colName));
+        backupData[colName] = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `studyhub_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setToast({ message: 'Backup downloaded successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Backup error:', error);
+      setToast({ message: 'Failed to generate backup', type: 'error' });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
 
   const handleFileUpload = async (file: File, resourceId: string, index: number) => {
     if (!file || uploadingResource === resourceId) return;
@@ -135,6 +192,7 @@ export default function AdminPanel() {
 
   // Load initial data
   useEffect(() => {
+    console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
     const unsubTests = getTests(setTests);
@@ -156,7 +214,7 @@ export default function AdminPanel() {
       unsubResults();
       unsubComments();
     };
-  }, []);
+  }, [auth.currentUser?.uid]);
 
   // Load subjects when class changes
   useEffect(() => {
@@ -353,9 +411,46 @@ export default function AdminPanel() {
     }
   };
 
-  const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
+
+  const bootstrapInitialData = async () => {
+    if (!window.confirm('This will populate your database with initial classes and subjects. Continue?')) return;
+    setIsBootstrapping(true);
+    try {
+      const initialClasses = [
+        { id: 'class-9', name: 'Class 9', enabled: true, order: 0 },
+        { id: 'class-10', name: 'Class 10', enabled: true, order: 1 }
+      ];
+
+      const initialSubjects = [
+        { id: 'sci-9', classId: 'class-9', name: 'Science', enabled: true, order: 0 },
+        { id: 'sst-9', classId: 'class-9', name: 'Social Science', enabled: true, order: 1 },
+        { id: 'sci-10', classId: 'class-10', name: 'Science', enabled: true, order: 0 },
+        { id: 'sst-10', classId: 'class-10', name: 'Social Science', enabled: true, order: 1 }
+      ];
+
+      const initialChapters = [
+        { id: 'sci-9-ch1', classId: 'class-9', subjectId: 'sci-9', name: 'Matter in Our Surroundings', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
+        { id: 'sst-9-ch1', classId: 'class-9', subjectId: 'sst-9', name: 'The French Revolution', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
+        { id: 'sci-10-ch1', classId: 'class-10', subjectId: 'sci-10', name: 'Chemical Reactions and Equations', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
+        { id: 'sst-10-ch1', classId: 'class-10', subjectId: 'sst-10', name: 'The Rise of Nationalism in Europe', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true }
+      ];
+
+      for (const cls of initialClasses) await saveClass(cls);
+      for (const sub of initialSubjects) await saveSubject(sub);
+      for (const ch of initialChapters) await saveChapter(ch);
+
+      setToast({ message: 'Initial data populated successfully!', type: 'success' });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error('Bootstrap error:', error);
+      setToast({ message: 'Failed to bootstrap data. Check your Firestore rules.', type: 'error' });
+    } finally {
+      setIsBootstrapping(false);
+    }
+  };
 
   const seedMCQTests = async () => {
     if (!window.confirm('This will add 20-question Science and SST tests to the platform. Continue?')) return;
@@ -477,8 +572,17 @@ export default function AdminPanel() {
               <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">Admin Panel</h1>
               <p className="text-sm text-white/40">Manage your educational ecosystem.</p>
             </div>
-            <button 
-              onClick={async () => {
+            <div className="flex items-center gap-2 md:hidden">
+              <button 
+                onClick={downloadBackup}
+                disabled={isBackingUp}
+                title="Download Backup"
+                className="px-3 py-2 rounded-xl bg-neon-blue/10 text-neon-blue text-xs font-bold hover:bg-neon-blue/20 transition-all border border-neon-blue/20 flex items-center gap-2 disabled:opacity-50"
+              >
+                {isBackingUp ? <RefreshCcw size={14} className="animate-spin" /> : <Download size={14} />}
+              </button>
+              <button 
+                onClick={async () => {
                 await signOut(auth);
                 localStorage.removeItem('isSpecialLogin');
                 localStorage.removeItem('isAdminLogin');
@@ -491,7 +595,27 @@ export default function AdminPanel() {
               Logout
             </button>
           </div>
-          <div className="flex items-center gap-4">
+        </div>
+            <div className="flex items-center gap-4">
+            <div className="hidden lg:flex flex-col items-end mr-4">
+              <span className="text-[10px] text-white/40 font-mono">UID: {auth.currentUser?.uid?.slice(0, 8)}...</span>
+              <span className="text-[10px] text-neon-blue font-mono uppercase">Role: {isAdmin ? 'Admin' : (isSpecialAdmin ? 'Special' : 'User')}</span>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="hidden md:flex px-4 py-2 rounded-xl bg-white/5 text-white/60 text-xs font-bold hover:bg-white/10 transition-all border border-white/10 items-center gap-2"
+            >
+              <RefreshCcw size={14} />
+              Refresh
+            </button>
+            <button 
+              onClick={downloadBackup}
+              disabled={isBackingUp}
+              className="hidden md:flex px-4 py-2 rounded-xl bg-neon-blue/10 text-neon-blue text-xs font-bold hover:bg-neon-blue/20 transition-all border border-neon-blue/20 items-center gap-2 disabled:opacity-50"
+            >
+              {isBackingUp ? <RefreshCcw size={14} className="animate-spin" /> : <Download size={14} />}
+              {isBackingUp ? 'Backing up...' : 'Backup Data'}
+            </button>
             <button 
               onClick={async () => {
                 await signOut(auth);
@@ -505,7 +629,9 @@ export default function AdminPanel() {
               <LogOut size={14} />
               Logout
             </button>
-            <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
+          </div>
+        </div>
+        <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
             {!isLimitedAdmin && (
               <>
                 <button 
@@ -562,6 +688,14 @@ export default function AdminPanel() {
                   Tests
                 </button>
                 <button 
+                  onClick={bootstrapInitialData}
+                  disabled={isBootstrapping}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-neon-blue text-black hover:bg-neon-blue/80 disabled:opacity-50"
+                >
+                  <Zap size={16} className="inline-block mr-1.5" />
+                  {isBootstrapping ? 'Bootstrapping...' : 'Bootstrap Data'}
+                </button>
+                <button 
                   onClick={backupData}
                   disabled={isBackingUp}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
@@ -599,8 +733,6 @@ export default function AdminPanel() {
             )}
             <div className="w-4 shrink-0" />
           </div>
-        </div>
-      </div>
 
       {/* Content Area */}
         <div className="glass-card p-6 min-h-[600px]">
@@ -989,7 +1121,7 @@ export default function AdminPanel() {
                             >
                               Toggle Role
                             </button>
-                            {user.email !== 'vijayninama683@gmail.com' && user.email !== 'sahuchandrashekhar1412@gmail.com' && (
+                            {user.email !== 'vijayninama683@gmail.com' && (
                               <button 
                                 onClick={() => handleDelete('user', user.uid, user.email)}
                                 className="text-red-400/40 hover:text-red-400 transition-all"
@@ -2551,6 +2683,6 @@ export default function AdminPanel() {
           </div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
+      </div>
+    );
+  }
