@@ -413,44 +413,6 @@ export default function AdminPanel() {
 
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [isBootstrapping, setIsBootstrapping] = useState(false);
-
-  const bootstrapInitialData = async () => {
-    if (!window.confirm('This will populate your database with initial classes and subjects. Continue?')) return;
-    setIsBootstrapping(true);
-    try {
-      const initialClasses = [
-        { id: 'class-9', name: 'Class 9', enabled: true, order: 0 },
-        { id: 'class-10', name: 'Class 10', enabled: true, order: 1 }
-      ];
-
-      const initialSubjects = [
-        { id: 'sci-9', classId: 'class-9', name: 'Science', enabled: true, order: 0 },
-        { id: 'sst-9', classId: 'class-9', name: 'Social Science', enabled: true, order: 1 },
-        { id: 'sci-10', classId: 'class-10', name: 'Science', enabled: true, order: 0 },
-        { id: 'sst-10', classId: 'class-10', name: 'Social Science', enabled: true, order: 1 }
-      ];
-
-      const initialChapters = [
-        { id: 'sci-9-ch1', classId: 'class-9', subjectId: 'sci-9', name: 'Matter in Our Surroundings', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
-        { id: 'sst-9-ch1', classId: 'class-9', subjectId: 'sst-9', name: 'The French Revolution', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
-        { id: 'sci-10-ch1', classId: 'class-10', subjectId: 'sci-10', name: 'Chemical Reactions and Equations', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true },
-        { id: 'sst-10-ch1', classId: 'class-10', subjectId: 'sst-10', name: 'The Rise of Nationalism in Europe', enabled: true, order: 0, resources: [], quiz: [], isImportant: false, quizEnabled: true }
-      ];
-
-      for (const cls of initialClasses) await saveClass(cls);
-      for (const sub of initialSubjects) await saveSubject(sub);
-      for (const ch of initialChapters) await saveChapter(ch);
-
-      setToast({ message: 'Initial data populated successfully!', type: 'success' });
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-      console.error('Bootstrap error:', error);
-      setToast({ message: 'Failed to bootstrap data. Check your Firestore rules.', type: 'error' });
-    } finally {
-      setIsBootstrapping(false);
-    }
-  };
 
   const seedMCQTests = async () => {
     if (!window.confirm('This will add 20-question Science and SST tests to the platform. Continue?')) return;
@@ -686,14 +648,6 @@ export default function AdminPanel() {
                 >
                   <ClipboardList size={16} className="inline-block mr-1.5" />
                   Tests
-                </button>
-                <button 
-                  onClick={bootstrapInitialData}
-                  disabled={isBootstrapping}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-neon-blue text-black hover:bg-neon-blue/80 disabled:opacity-50"
-                >
-                  <Zap size={16} className="inline-block mr-1.5" />
-                  {isBootstrapping ? 'Bootstrapping...' : 'Bootstrap Data'}
                 </button>
                 <button 
                   onClick={backupData}
