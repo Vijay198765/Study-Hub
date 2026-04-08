@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -42,6 +42,9 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('classes');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockKey, setUnlockKey] = useState('');
+  const [unlockError, setUnlockError] = useState(false);
   
   const userEmail = auth.currentUser?.email?.toLowerCase();
   const isLimitedAdmin = false; 
@@ -524,6 +527,76 @@ export default function AdminPanel() {
     };
     reader.readAsText(file);
   };
+
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black px-4 pt-20">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md glass-card p-8 text-center relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink"></div>
+          
+          <div className="w-16 h-16 rounded-2xl bg-neon-blue/10 flex items-center justify-center mx-auto mb-6 text-neon-blue">
+            <Lock size={32} />
+          </div>
+          <h2 className="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Dashboard Locked</h2>
+          <p className="text-white/40 text-sm mb-8">Enter the security key to access the admin panel.</p>
+          
+          <div className="space-y-4">
+            <input 
+              type="password"
+              value={unlockKey}
+              onChange={(e) => {
+                setUnlockKey(e.target.value);
+                setUnlockError(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (unlockKey === '1987') {
+                    setIsUnlocked(true);
+                  } else {
+                    setUnlockError(true);
+                  }
+                }
+              }}
+              placeholder="••••"
+              className={`w-full bg-white/5 border ${unlockError ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white text-center text-2xl tracking-[0.5em] focus:border-neon-blue outline-none transition-all font-mono`}
+              autoFocus
+            />
+            {unlockError && (
+              <motion.p 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-red-500 text-[10px] font-bold uppercase tracking-widest"
+              >
+                Invalid Security Key
+              </motion.p>
+            )}
+            <button 
+              onClick={() => {
+                if (unlockKey === '1987') {
+                  setIsUnlocked(true);
+                } else {
+                  setUnlockError(true);
+                }
+              }}
+              className="btn-neon w-full py-4 uppercase tracking-widest font-bold"
+            >
+              Unlock Dashboard
+            </button>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="w-full py-3 text-white/40 hover:text-white text-xs uppercase tracking-widest transition-colors"
+            >
+              Back to Home
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black">

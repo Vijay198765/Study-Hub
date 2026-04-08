@@ -48,7 +48,7 @@ export default function Footer() {
         toast.success('Admin access granted!');
         // Small delay to ensure auth state is persisted before redirect
         setTimeout(() => {
-          window.location.href = '/admin';
+          window.location.href = '/';
         }, 1000);
       } catch (error: any) {
         console.error("Secret login error:", error);

@@ -20,14 +20,14 @@ export default function Login() {
         const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
 
         if (isSpecial && isAdminLogin) {
-          navigate('/admin');
+          navigate('/');
           return;
         }
 
         // If user is already logged in, check their role and redirect
         getDoc(doc(db, 'users', user.uid)).then((userDoc) => {
           if (userDoc.exists() && userDoc.data().role === 'admin') {
-            navigate('/admin');
+            navigate('/');
           } else {
             navigate('/');
           }
@@ -83,11 +83,7 @@ export default function Login() {
       localStorage.setItem('studentName', name.trim());
       localStorage.removeItem('hasSkippedLogin');
 
-      if (role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      navigate('/');
     } catch (err: any) {
       console.error("Login error:", err);
       if (err.code === 'auth/popup-blocked') {
