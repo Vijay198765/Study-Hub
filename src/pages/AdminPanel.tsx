@@ -230,7 +230,18 @@ export default function AdminPanel() {
 
     const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
       if (snap.exists()) {
-        setSiteConfig({ id: snap.id, ...snap.data() });
+        const data = snap.data();
+        setSiteConfig({ 
+          id: snap.id, 
+          welcomeEmailSubject: '',
+          welcomeEmailTemplate: '',
+          welcomeEmailSender: 'tagoreteam2025@gmail.com',
+          emailjsServiceId: '',
+          emailjsTemplateId: '',
+          emailjsPublicKey: '',
+          isRatingEnabled: true,
+          ...data 
+        });
       } else {
         // Initialize default config
         setDoc(doc(db, 'config', 'site'), {
@@ -354,8 +365,12 @@ export default function AdminPanel() {
       else if (type === 'test') await saveTest(dataToSave as Test);
       else if (type === 'group') {
         const groupRef = doc(db, 'groups', dataToSave.id);
+        // Clean undefined fields
+        const cleanData = Object.fromEntries(
+          Object.entries(dataToSave).filter(([_, v]) => v !== undefined)
+        );
         await setDoc(groupRef, {
-          ...dataToSave,
+          ...cleanData,
           updatedAt: serverTimestamp()
         }, { merge: true });
       }
@@ -2148,12 +2163,12 @@ export default function AdminPanel() {
                   <button 
                     onClick={() => {
                       setDoc(doc(db, 'config', 'site'), { 
-                        welcomeEmailSubject: siteConfig.welcomeEmailSubject,
-                        welcomeEmailTemplate: siteConfig.welcomeEmailTemplate,
-                        welcomeEmailSender: siteConfig.welcomeEmailSender,
-                        emailjsServiceId: siteConfig.emailjsServiceId,
-                        emailjsTemplateId: siteConfig.emailjsTemplateId,
-                        emailjsPublicKey: siteConfig.emailjsPublicKey,
+                        welcomeEmailSubject: siteConfig.welcomeEmailSubject || '',
+                        welcomeEmailTemplate: siteConfig.welcomeEmailTemplate || '',
+                        welcomeEmailSender: siteConfig.welcomeEmailSender || '',
+                        emailjsServiceId: siteConfig.emailjsServiceId || '',
+                        emailjsTemplateId: siteConfig.emailjsTemplateId || '',
+                        emailjsPublicKey: siteConfig.emailjsPublicKey || '',
                         lastUpdated: serverTimestamp()
                       }, { merge: true });
                       setToast({ message: 'Welcome bot updated!', type: 'success' });

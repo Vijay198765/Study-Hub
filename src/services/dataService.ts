@@ -12,6 +12,17 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Class, Subject, Chapter, User, Test, TestResult } from '../types';
 
+// Helper to remove undefined fields before saving to Firestore
+const cleanData = (data: any) => {
+  const clean: any = {};
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined) {
+      clean[key] = data[key];
+    }
+  });
+  return clean;
+};
+
 // Tests
 export const getTests = (callback: (tests: Test[]) => void) => {
   const path = 'tests';
@@ -24,7 +35,7 @@ export const getTests = (callback: (tests: Test[]) => void) => {
 export const saveTest = async (test: Test) => {
   const path = `tests/${test.id}`;
   try {
-    await setDoc(doc(db, 'tests', test.id), test);
+    await setDoc(doc(db, 'tests', test.id), cleanData(test));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -90,7 +101,7 @@ export const getClasses = (callback: (classes: Class[]) => void) => {
 export const saveClass = async (cls: Class) => {
   const path = `classes/${cls.id}`;
   try {
-    await setDoc(doc(db, 'classes', cls.id), cls);
+    await setDoc(doc(db, 'classes', cls.id), cleanData(cls));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -119,7 +130,7 @@ export const getSubjectsByClass = (classId: string, callback: (subjects: Subject
 export const saveSubject = async (subject: Subject) => {
   const path = `subjects/${subject.id}`;
   try {
-    await setDoc(doc(db, 'subjects', subject.id), subject);
+    await setDoc(doc(db, 'subjects', subject.id), cleanData(subject));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -148,7 +159,7 @@ export const getChaptersBySubject = (subjectId: string, callback: (chapters: Cha
 export const saveChapter = async (chapter: Chapter) => {
   const path = `chapters/${chapter.id}`;
   try {
-    await setDoc(doc(db, 'chapters', chapter.id), chapter);
+    await setDoc(doc(db, 'chapters', chapter.id), cleanData(chapter));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -175,7 +186,7 @@ export const getUsers = (callback: (users: User[]) => void) => {
 export const saveUser = async (user: User) => {
   const path = `users/${user.uid}`;
   try {
-    await setDoc(doc(db, 'users', user.uid), user);
+    await setDoc(doc(db, 'users', user.uid), cleanData(user));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -193,7 +204,7 @@ export const removeUser = async (uid: string) => {
 export const saveTestResult = async (result: TestResult) => {
   const path = `testResults/${result.id}`;
   try {
-    await setDoc(doc(db, 'testResults', result.id), result);
+    await setDoc(doc(db, 'testResults', result.id), cleanData(result));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -202,7 +213,7 @@ export const saveTestResult = async (result: TestResult) => {
 export const saveSiteComment = async (comment: any) => {
   const path = `siteComments/${comment.id}`;
   try {
-    await setDoc(doc(db, 'siteComments', comment.id), comment);
+    await setDoc(doc(db, 'siteComments', comment.id), cleanData(comment));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
