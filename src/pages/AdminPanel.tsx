@@ -16,6 +16,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc 
 } from 'firebase/firestore';
+import emailjs from '@emailjs/browser';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
@@ -60,7 +61,6 @@ export default function AdminPanel() {
         setIsSpecialAdmin(isSpecial && isAdminLogin);
 
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        const docSnap = await getDocs(query(collection(db, 'users'))); // Fallback check or direct get
         // Better: just check the current user doc
         onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
@@ -97,6 +97,8 @@ export default function AdminPanel() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [bulkTopic, setBulkTopic] = useState('');
+  const [bulkData, setBulkData] = useState('');
 
   const downloadBackup = async () => {
     setIsBackingUp(true);
@@ -2081,6 +2083,38 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Service ID</label>
+                      <input 
+                        type="text" 
+                        value={siteConfig.emailjsServiceId || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, emailjsServiceId: e.target.value })}
+                        placeholder="service_xxxxxx"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Template ID</label>
+                      <input 
+                        type="text" 
+                        value={siteConfig.emailjsTemplateId || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, emailjsTemplateId: e.target.value })}
+                        placeholder="template_xxxxxx"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Public Key</label>
+                    <input 
+                      type="text" 
+                      value={siteConfig.emailjsPublicKey || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, emailjsPublicKey: e.target.value })}
+                      placeholder="user_xxxxxx"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Sender Email (Gmail)</label>
                     <input 
@@ -2116,6 +2150,10 @@ export default function AdminPanel() {
                       setDoc(doc(db, 'config', 'site'), { 
                         welcomeEmailSubject: siteConfig.welcomeEmailSubject,
                         welcomeEmailTemplate: siteConfig.welcomeEmailTemplate,
+                        welcomeEmailSender: siteConfig.welcomeEmailSender,
+                        emailjsServiceId: siteConfig.emailjsServiceId,
+                        emailjsTemplateId: siteConfig.emailjsTemplateId,
+                        emailjsPublicKey: siteConfig.emailjsPublicKey,
                         lastUpdated: serverTimestamp()
                       }, { merge: true });
                       setToast({ message: 'Welcome bot updated!', type: 'success' });
@@ -2143,7 +2181,8 @@ export default function AdminPanel() {
                     <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Topic</label>
                     <input 
                       type="text" 
-                      id="bulk-topic"
+                      value={bulkTopic}
+                      onChange={(e) => setBulkTopic(e.target.value)}
                       placeholder="Important Update"
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all"
                     />
@@ -2151,7 +2190,8 @@ export default function AdminPanel() {
                   <div className="space-y-2">
                     <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Data</label>
                     <textarea 
-                      id="bulk-data"
+                      value={bulkData}
+                      onChange={(e) => setBulkData(e.target.value)}
                       rows={4}
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all resize-none"
                       placeholder="Write your message here..."
@@ -2159,29 +2199,64 @@ export default function AdminPanel() {
                   </div>
                   <button 
                     onClick={async () => {
-                      const topic = (document.getElementById('bulk-topic') as HTMLInputElement).value;
-                      const data = (document.getElementById('bulk-data') as HTMLTextAreaElement).value;
-                      if (!topic || !data) {
+                      if (!bulkTopic || !bulkData) {
                         setToast({ message: 'Please enter topic and data', type: 'error' });
                         return;
                       }
                       
                       setIsSaving(true);
                       try {
-                        // In a real app, this would trigger a cloud function to send emails
-                        // For now, we'll log it to a collection
+                        // Log the bulk action
                         await addDoc(collection(db, 'bulkMessages'), {
-                          topic,
-                          data,
+                          topic: bulkTopic,
+                          data: bulkData,
                           sentAt: serverTimestamp(),
                           recipientCount: users.length
                         });
+
+                        // Create individual email documents for the Trigger Email extension
+                        const emailPromises = users.map(async (user) => {
+                          if (!user.email) return;
+                          
+                          // 1. Log to Firestore
+                          await addDoc(collection(db, 'sentEmails'), {
+                            to: user.email,
+                            message: {
+                              subject: bulkTopic,
+                              html: bulkData.replace(/\n/g, '<br/>'),
+                            },
+                            sentAt: serverTimestamp(),
+                            type: 'bulk'
+                          });
+
+                          // 2. Send via EmailJS (if configured)
+                          if (siteConfig.emailjsServiceId && siteConfig.emailjsTemplateId && siteConfig.emailjsPublicKey) {
+                            try {
+                              await emailjs.send(
+                                siteConfig.emailjsServiceId,
+                                siteConfig.emailjsTemplateId,
+                                {
+                                  to_email: user.email,
+                                  to_name: user.name || 'Student',
+                                  subject: bulkTopic,
+                                  message: bulkData,
+                                  from_name: 'Study-hub Bot'
+                                },
+                                siteConfig.emailjsPublicKey
+                              );
+                            } catch (err) {
+                              console.error(`Failed to send email to ${user.email} via EmailJS:`, err);
+                            }
+                          }
+                        });
+
+                        await Promise.all(emailPromises);
                         
-                        setToast({ message: `Message sent to ${users.length} users!`, type: 'success' });
-                        (document.getElementById('bulk-topic') as HTMLInputElement).value = '';
-                        (document.getElementById('bulk-data') as HTMLTextAreaElement).value = '';
+                        setToast({ message: `Emails queued for ${users.length} users!`, type: 'success' });
+                        setBulkTopic('');
+                        setBulkData('');
                       } catch (err) {
-                        setToast({ message: 'Failed to send bulk message', type: 'error' });
+                        setToast({ message: 'Failed to queue bulk messages', type: 'error' });
                       } finally {
                         setIsSaving(false);
                       }

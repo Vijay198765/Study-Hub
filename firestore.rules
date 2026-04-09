@@ -131,8 +131,7 @@ service cloud.firestore {
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
           (request.auth.token != null && 
-           request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" && 
-           request.auth.token.email_verified == true)
+           request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com")
         );
     }
 
@@ -278,13 +277,14 @@ service cloud.firestore {
     }
 
     function isValidSentEmail(data) {
-      return data.keys().hasAll(['to', 'subject', 'body', 'sentAt', 'type']) &&
+      return data.keys().hasAll(['to', 'message', 'sentAt', 'type']) &&
              data.to is string && data.to.size() > 0 &&
-             data.subject is string && data.subject.size() > 0 &&
-             data.body is string && data.body.size() > 0 &&
+             data.message is map &&
+             data.message.keys().hasAll(['subject', 'html']) &&
+             data.message.subject is string &&
+             data.message.html is string &&
              (data.sentAt is timestamp || data.sentAt == request.time) &&
-             data.type is string &&
-             (!('from' in data) || (data.from is string && data.from.size() > 0));
+             data.type is string;
     }
 
     function isValidBulkMessage(data) {

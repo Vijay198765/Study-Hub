@@ -19,6 +19,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import emailjs from '@emailjs/browser';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
@@ -143,34 +144,66 @@ export default function App() {
 
             // Welcome Bot Logic
             if (!data.welcomeSent && data.role !== 'admin') {
+              let welcomeSender = 'tagoreteam2025@gmail.com';
+              let welcomeSubject = 'Welcome to Study-hub!';
+              let welcomeTemplate = 'Hello {name}, welcome to Study-hub! We are glad to have you here.';
+
               try {
                 const configSnap = await getDoc(doc(db, 'config', 'site'));
                 if (configSnap.exists()) {
                   const config = configSnap.data();
-                  
-                  // Check if this is a "new" user (created in the last 24 hours) 
-                  // to avoid sending to very old legacy users who might not have the flag
-                  const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
-                  const now = Date.now();
-                  const isRecent = (now - createdAt) < (24 * 60 * 60 * 1000); // 24 hours
+                  welcomeSender = config.welcomeEmailSender || welcomeSender;
+                  welcomeSubject = config.welcomeEmailSubject || welcomeSubject;
+                  welcomeTemplate = config.welcomeEmailTemplate || welcomeTemplate;
+                }
+                
+                // Check if this is a "new" user (created in the last 24 hours) 
+                const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
+                const now = Date.now();
+                const isRecent = (now - createdAt) < (24 * 60 * 60 * 1000); // 24 hours
 
                   if (isRecent || !data.createdAt) {
                     console.log("Welcome Bot: Sending email to new user:", firebaseUser.email);
+                    
+                    // 1. Log to Firestore (for history)
                     await addDoc(collection(db, 'sentEmails'), {
-                      from: config.welcomeEmailSender || 'tagoreteam2025@gmail.com',
                       to: firebaseUser.email || 'anonymous@studyhub.com',
-                      subject: config.welcomeEmailSubject || 'Welcome to Study-hub!',
-                      body: (config.welcomeEmailTemplate || 'Hello {name}, welcome!').replace('{name}', data.name || 'Student'),
+                      message: {
+                        subject: welcomeSubject,
+                        html: welcomeTemplate.replace('{name}', data.name || 'Student'),
+                      },
                       sentAt: serverTimestamp(),
                       type: 'welcome'
                     });
-                  } else {
-                    console.log("Welcome Bot: Skipping old user:", firebaseUser.email);
+
+                    // 2. Send via EmailJS (if configured)
+                    try {
+                      const configSnap = await getDoc(doc(db, 'config', 'site'));
+                      if (configSnap.exists()) {
+                        const config = configSnap.data();
+                        if (config.emailjsServiceId && config.emailjsTemplateId && config.emailjsPublicKey) {
+                          await emailjs.send(
+                            config.emailjsServiceId,
+                            config.emailjsTemplateId,
+                            {
+                              to_email: firebaseUser.email,
+                              to_name: data.name || 'Student',
+                              subject: welcomeSubject,
+                              message: welcomeTemplate.replace('{name}', data.name || 'Student'),
+                              from_name: 'Study-hub Bot'
+                            },
+                            config.emailjsPublicKey
+                          );
+                          console.log("Welcome Bot: EmailJS delivery successful");
+                        }
+                      }
+                    } catch (emailjsErr) {
+                      console.error("Welcome Bot: EmailJS delivery failed:", emailjsErr);
+                    }
                   }
-                  
-                  // Always mark as sent to prevent re-checks
-                  await updateDoc(userRef, { welcomeSent: true });
-                }
+                
+                // Always mark as sent to prevent re-checks
+                await updateDoc(userRef, { welcomeSent: true });
               } catch (err) {
                 console.error("Error in welcome bot:", err);
               }
