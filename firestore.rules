@@ -91,6 +91,31 @@ service cloud.firestore {
     //   - total: number (required)
     //   - completedAt: timestamp (required)
     //
+    // Collection: groups
+    // Document ID: groupId
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (required)
+    //   - password: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - createdBy: string (required)
+    //
+    // Collection: ratings
+    // Document ID: ratingId
+    // Fields:
+    //   - studentUid: string (required)
+    //   - studentName: string (required)
+    //   - score: number (required)
+    //   - comment: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: config
+    // Document ID: site
+    // Fields:
+    //   - isRatingEnabled: boolean (optional)
+    //   - welcomeEmailSubject: string (optional)
+    //   - welcomeEmailTemplate: string (optional)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -149,8 +174,9 @@ service cloud.firestore {
              data.role in ['admin', 'student'] &&
              (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
-             (!('adminKey' in data) || (data.adminKey is string && data.adminKey == 'Vijay1987')) &&
+             (!('adminKey' in data) || (data.adminKey is string && data.adminKey == 'Vijay101987')) &&
              (!('isLegend' in data) || data.isLegend is bool) &&
+             (!('welcomeSent' in data) || data.welcomeSent is bool) &&
              (!('createdAt' in data) || data.createdAt is string);
     }
 
@@ -217,7 +243,56 @@ service cloud.firestore {
              data.likedBy is list &&
              (data.createdAt is timestamp || data.createdAt == request.time) &&
              (!('parentId' in data) || (data.parentId is string && data.parentId.size() > 0)) &&
-             (!('userUid' in data) || (data.userUid is string && data.userUid == request.auth.uid));
+             (!('groupId' in data) || (data.groupId is string && data.groupId.size() > 0)) &&
+             (!('userUid' in data) || (data.userUid is string && data.userUid.size() > 0));
+    }
+
+    function isValidGroup(data) {
+      return data.keys().hasAll(['name', 'description', 'createdAt', 'createdBy']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.description is string && data.description.size() < 500 &&
+             (!('password' in data) || data.password is string) &&
+             (!('enabled' in data) || data.enabled is bool) &&
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             data.createdBy is string &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp || data.updatedAt == request.time));
+    }
+
+    function isValidRating(data) {
+      return data.keys().hasAll(['studentUid', 'studentName', 'score', 'createdAt']) &&
+             data.studentUid is string && data.studentUid == request.auth.uid &&
+             data.studentName is string && data.studentName.size() > 0 &&
+             data.score is number && data.score >= 1 && data.score <= 10 &&
+             (!('studentEmail' in data) || data.studentEmail is string) &&
+             (!('studentPhotoURL' in data) || data.studentPhotoURL is string) &&
+             (!('comment' in data) || data.comment is string) &&
+             (data.createdAt is timestamp || data.createdAt == request.time);
+    }
+
+    function isValidConfig(data) {
+      return (!('isRatingEnabled' in data) || data.isRatingEnabled is bool) &&
+             (!('welcomeEmailSubject' in data) || data.welcomeEmailSubject is string) &&
+             (!('welcomeEmailTemplate' in data) || data.welcomeEmailTemplate is string) &&
+             (!('welcomeEmailSender' in data) || data.welcomeEmailSender is string) &&
+             (!('lastUpdated' in data) || (data.lastUpdated is timestamp || data.lastUpdated == request.time));
+    }
+
+    function isValidSentEmail(data) {
+      return data.keys().hasAll(['to', 'subject', 'body', 'sentAt', 'type']) &&
+             data.to is string && data.to.size() > 0 &&
+             data.subject is string && data.subject.size() > 0 &&
+             data.body is string && data.body.size() > 0 &&
+             (data.sentAt is timestamp || data.sentAt == request.time) &&
+             data.type is string &&
+             (!('from' in data) || (data.from is string && data.from.size() > 0));
+    }
+
+    function isValidBulkMessage(data) {
+      return data.keys().hasAll(['topic', 'data', 'sentAt', 'recipientCount']) &&
+             data.topic is string && data.topic.size() > 0 &&
+             data.data is string && data.data.size() > 0 &&
+             (data.sentAt is timestamp || data.sentAt == request.time) &&
+             data.recipientCount is number;
     }
 
     // ===============================================================
@@ -255,7 +330,7 @@ service cloud.firestore {
             (
               (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com") ||
               (request.auth.token.firebase.sign_in_provider == 'anonymous' && 
-               request.resource.data.get('adminKey', '') == 'Vijay1987')
+               request.resource.data.get('adminKey', '') == 'Vijay101987')
             )
           )
         );
@@ -266,7 +341,7 @@ service cloud.firestore {
             request.auth.uid == userId && 
             (
               request.resource.data.role == resource.data.role || 
-              (request.resource.data.role == 'admin' && request.resource.data.get('adminKey', '') == 'Vijay1987')
+              (request.resource.data.role == 'admin' && request.resource.data.get('adminKey', '') == 'Vijay101987')
             )
           )
         ) && isValidUser(request.resource.data);
@@ -304,10 +379,40 @@ service cloud.firestore {
 
     match /siteComments/{commentId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidSiteComment(request.resource.data);
+      allow create: if isAuthenticated() && isValidSiteComment(request.resource.data) && 
+                      request.resource.data.get('userUid', '') == request.auth.uid;
       allow update: if isAuthenticated() && isValidSiteComment(request.resource.data) && 
-                      (isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])));
+                      (isAdmin() || 
+                       (request.resource.data.get('userUid', '') == resource.data.get('userUid', '') && 
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])));
       allow delete: if isAdmin();
+    }
+
+    match /groups/{groupId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidGroup(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /ratings/{ratingId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidRating(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidConfig(request.resource.data);
+    }
+
+    match /sentEmails/{emailId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidSentEmail(request.resource.data);
+    }
+
+    match /bulkMessages/{msgId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidBulkMessage(request.resource.data);
     }
   }
 }

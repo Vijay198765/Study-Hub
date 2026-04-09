@@ -6,14 +6,15 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock,
+  Star, Settings, Shield, Mail, Globe
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -33,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'config';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -45,6 +46,8 @@ export default function AdminPanel() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [unlockKey, setUnlockKey] = useState('');
   const [unlockError, setUnlockError] = useState(false);
+  const [unlockAttempts, setUnlockAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   
   const userEmail = auth.currentUser?.email?.toLowerCase();
   const isLimitedAdmin = false; 
@@ -78,6 +81,9 @@ export default function AdminPanel() {
   const [tests, setTests] = useState<Test[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -86,7 +92,7 @@ export default function AdminPanel() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
@@ -195,6 +201,8 @@ export default function AdminPanel() {
 
   // Load initial data
   useEffect(() => {
+    if (!isAdmin) return;
+    
     console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
@@ -210,14 +218,40 @@ export default function AdminPanel() {
       setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
+      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'groups'));
+
+    const unsubRatings = onSnapshot(query(collection(db, 'ratings'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'ratings'));
+
+    const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
+      if (snap.exists()) {
+        setSiteConfig({ id: snap.id, ...snap.data() });
+      } else {
+        // Initialize default config
+        setDoc(doc(db, 'config', 'site'), {
+          isRatingEnabled: true,
+          welcomeEmailSubject: 'Welcome to Study-hub!',
+          welcomeEmailTemplate: 'Hello {name}, welcome to Study-hub! We are glad to have you here.',
+          welcomeEmailSender: 'tagoreteam2025@gmail.com',
+          lastUpdated: serverTimestamp()
+        });
+      }
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'config/site'));
+
     return () => {
       unsubClasses();
       unsubUsers();
       unsubTests();
       unsubResults();
       unsubComments();
+      unsubGroups();
+      unsubRatings();
+      unsubConfig();
     };
-  }, [auth.currentUser?.uid]);
+  }, [auth.currentUser?.uid, isAdmin]);
 
   // Load subjects when class changes
   useEffect(() => {
@@ -281,7 +315,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string) => {
     setDeleteConfirm({ type, id, name });
   };
 
@@ -294,6 +328,8 @@ export default function AdminPanel() {
     else if (type === 'chapter') await removeChapter(id);
     else if (type === 'user') await removeUser(id);
     else if (type === 'test') await removeTest(id);
+    else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
+    else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
     
     setDeleteConfirm(null);
   };
@@ -314,6 +350,13 @@ export default function AdminPanel() {
       else if (type === 'subject') await saveSubject(dataToSave as Subject);
       else if (type === 'chapter') await saveChapter(dataToSave as Chapter);
       else if (type === 'test') await saveTest(dataToSave as Test);
+      else if (type === 'group') {
+        const groupRef = doc(db, 'groups', dataToSave.id);
+        await setDoc(groupRef, {
+          ...dataToSave,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
       
       setEditingEntity(null);
       setToast({ message: "Changes saved successfully!", type: 'success' });
@@ -334,7 +377,7 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test') => {
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group') => {
     const id = Date.now().toString();
     const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
@@ -365,6 +408,15 @@ export default function AdminPanel() {
         questions: [],
         active: true,
         createdAt: new Date()
+      };
+    } else if (type === 'group') {
+      newEntity = {
+        id: Date.now().toString(),
+        name: 'New Group',
+        description: 'A new discussion group',
+        password: '',
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || 'admin'
       };
     }
     
@@ -529,6 +581,28 @@ export default function AdminPanel() {
   };
 
   if (!isUnlocked) {
+    const isLockedOut = lockoutUntil && Date.now() < lockoutUntil;
+    const remainingLockout = lockoutUntil ? Math.ceil((lockoutUntil - Date.now()) / 1000) : 0;
+
+    const handleUnlock = () => {
+      if (isLockedOut) return;
+      
+      if (unlockKey === '101987') {
+        setIsUnlocked(true);
+        setUnlockAttempts(0);
+        setLockoutUntil(null);
+      } else {
+        const newAttempts = unlockAttempts + 1;
+        setUnlockAttempts(newAttempts);
+        setUnlockError(true);
+        if (newAttempts >= 3) {
+          setLockoutUntil(Date.now() + 60000); // 1 minute lockout
+          setUnlockAttempts(0);
+          setToast({ message: 'Too many failed attempts. Locked for 1 minute.', type: 'error' });
+        }
+      }
+    };
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-black px-4 pt-20">
         <motion.div 
@@ -542,7 +616,11 @@ export default function AdminPanel() {
             <Lock size={32} />
           </div>
           <h2 className="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Dashboard Locked</h2>
-          <p className="text-white/40 text-sm mb-8">Enter the security key to access the admin panel.</p>
+          <p className="text-white/40 text-sm mb-8">
+            {isLockedOut 
+              ? `Too many attempts. Try again in ${remainingLockout}s` 
+              : 'Enter the security key to access the admin panel.'}
+          </p>
           
           <div className="space-y-4">
             <input 
@@ -553,38 +631,28 @@ export default function AdminPanel() {
                 setUnlockError(false);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (unlockKey === '1987') {
-                    setIsUnlocked(true);
-                  } else {
-                    setUnlockError(true);
-                  }
-                }
+                if (e.key === 'Enter') handleUnlock();
               }}
+              disabled={isLockedOut}
               placeholder="••••"
-              className={`w-full bg-white/5 border ${unlockError ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white text-center text-2xl tracking-[0.5em] focus:border-neon-blue outline-none transition-all font-mono`}
+              className={`w-full bg-white/5 border ${unlockError ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white text-center text-2xl tracking-[0.5em] focus:border-neon-blue outline-none transition-all font-mono disabled:opacity-50`}
               autoFocus
             />
-            {unlockError && (
+            {unlockError && !isLockedOut && (
               <motion.p 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-red-500 text-[10px] font-bold uppercase tracking-widest"
               >
-                Invalid Security Key
+                Invalid Security Key ({3 - unlockAttempts} attempts left)
               </motion.p>
             )}
             <button 
-              onClick={() => {
-                if (unlockKey === '1987') {
-                  setIsUnlocked(true);
-                } else {
-                  setUnlockError(true);
-                }
-              }}
-              className="btn-neon w-full py-4 uppercase tracking-widest font-bold"
+              onClick={handleUnlock}
+              disabled={isLockedOut}
+              className="btn-neon w-full py-4 uppercase tracking-widest font-bold disabled:opacity-50"
             >
-              Unlock Dashboard
+              {isLockedOut ? `Locked (${remainingLockout}s)` : 'Unlock Dashboard'}
             </button>
             <button 
               onClick={() => window.location.href = '/'}
@@ -707,6 +775,27 @@ export default function AdminPanel() {
                 >
                   <Users size={16} className="inline-block mr-1.5" />
                   Users
+                </button>
+                <button 
+                  onClick={() => setActiveTab('groups')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'groups' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Globe size={16} className="inline-block mr-1.5" />
+                  Groups
+                </button>
+                <button 
+                  onClick={() => setActiveTab('ratings')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'ratings' ? 'bg-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Star size={16} className="inline-block mr-1.5" />
+                  Ratings
+                </button>
+                <button 
+                  onClick={() => setActiveTab('config')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'config' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Settings size={16} className="inline-block mr-1.5" />
+                  Config
                 </button>
                 <button 
                   onClick={() => setActiveTab('comments')}
@@ -1809,6 +1898,303 @@ export default function AdminPanel() {
               </div>
             </div>
           )}
+          {activeTab === 'groups' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search groups..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  onClick={() => addNew('group')}
+                  className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus size={20} />
+                  Add Group
+                </button>
+              </div>
+
+              <div className="grid gap-4">
+                {groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase())).map((group) => (
+                  <motion.div 
+                    key={group.id}
+                    layout
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-blue/50 transition-all group gap-4"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue shrink-0">
+                        <Globe size={24} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-medium text-white break-words">{group.name}</h3>
+                        <p className="text-xs text-white/40 truncate">{group.description || 'No description'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                      {group.password && (
+                        <div className="flex items-center gap-1 text-[10px] text-yellow-400 font-bold uppercase tracking-widest bg-yellow-400/10 px-2 py-1 rounded-full">
+                          <Lock size={10} />
+                          Locked
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleEdit(group, 'group')}
+                          className="p-2 text-white/60 hover:text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-all"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete('group', group.id, group.name)}
+                          className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ratings' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search ratings..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center gap-3">
+                    <span className="text-xs text-white/40 uppercase tracking-widest font-bold">Avg Rating</span>
+                    <span className="text-xl font-display font-bold text-yellow-400">
+                      {(ratings.reduce((acc, r) => acc + r.score, 0) / (ratings.length || 1)).toFixed(1)}
+                    </span>
+                    <Star size={16} className="text-yellow-400 fill-yellow-400" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {ratings.filter(r => r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || r.studentEmail.toLowerCase().includes(searchQuery.toLowerCase())).map((rating) => (
+                  <motion.div 
+                    key={rating.id}
+                    layout
+                    className="p-4 bg-white/5 border border-white/10 rounded-xl hover:border-yellow-400/50 transition-all group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <img 
+                          src={rating.studentPhotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(rating.studentName)}&background=random`} 
+                          alt={rating.studentName}
+                          className="w-12 h-12 rounded-full border border-white/10"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div>
+                          <h3 className="text-white font-medium">{rating.studentName}</h3>
+                          <p className="text-xs text-white/40">{rating.studentEmail}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            {[...Array(10)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                size={12} 
+                                className={`${i < rating.score ? 'text-yellow-400 fill-yellow-400' : 'text-white/10'}`} 
+                              />
+                            ))}
+                            <span className="ml-2 text-xs font-bold text-yellow-400">{rating.score}/10</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDelete('rating', rating.id, `Rating from ${rating.studentName}`)}
+                        className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                    {rating.comment && (
+                      <p className="mt-4 text-sm text-white/60 bg-white/5 p-3 rounded-lg border border-white/5 italic">
+                        "{rating.comment}"
+                      </p>
+                    )}
+                    <div className="mt-4 flex justify-end">
+                      <span className="text-[10px] text-white/20 uppercase tracking-widest">
+                        {rating.createdAt?.toDate ? rating.createdAt.toDate().toLocaleString() : 'N/A'}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+                {ratings.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                    <Star size={48} className="mb-4" />
+                    <p>No ratings yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'config' && siteConfig && (
+            <div className="space-y-8 max-w-3xl">
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
+                      <Star size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold">Rating System</h3>
+                      <p className="text-xs text-white/40">Enable or disable the home page rating popup.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setDoc(doc(db, 'config', 'site'), { isRatingEnabled: !siteConfig.isRatingEnabled }, { merge: true })}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${siteConfig.isRatingEnabled ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'}`}
+                  >
+                    {siteConfig.isRatingEnabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">Welcome Bot (Gmail)</h3>
+                    <p className="text-xs text-white/40">Set the message sent to new users when they join.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Sender Email (Gmail)</label>
+                    <input 
+                      type="email" 
+                      value={siteConfig.welcomeEmailSender || 'tagoreteam2025@gmail.com'}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailSender: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                      placeholder="tagoreteam2025@gmail.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Email Subject</label>
+                    <input 
+                      type="text" 
+                      value={siteConfig.welcomeEmailSubject || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailSubject: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Email Template</label>
+                    <textarea 
+                      value={siteConfig.welcomeEmailTemplate || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailTemplate: e.target.value })}
+                      rows={4}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all resize-none"
+                      placeholder="Use {name} for student name"
+                    />
+                    <p className="text-[10px] text-white/20 italic">Note: Real emails require a backend service integration.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setDoc(doc(db, 'config', 'site'), { 
+                        welcomeEmailSubject: siteConfig.welcomeEmailSubject,
+                        welcomeEmailTemplate: siteConfig.welcomeEmailTemplate,
+                        lastUpdated: serverTimestamp()
+                      }, { merge: true });
+                      setToast({ message: 'Welcome bot updated!', type: 'success' });
+                    }}
+                    className="btn-neon w-full py-3 text-xs uppercase tracking-widest font-bold"
+                  >
+                    Save Bot Config
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center text-neon-purple">
+                    <Globe size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">Bulk Message</h3>
+                    <p className="text-xs text-white/40">Send a message to all registered users.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Topic</label>
+                    <input 
+                      type="text" 
+                      id="bulk-topic"
+                      placeholder="Important Update"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Data</label>
+                    <textarea 
+                      id="bulk-data"
+                      rows={4}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all resize-none"
+                      placeholder="Write your message here..."
+                    />
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      const topic = (document.getElementById('bulk-topic') as HTMLInputElement).value;
+                      const data = (document.getElementById('bulk-data') as HTMLTextAreaElement).value;
+                      if (!topic || !data) {
+                        setToast({ message: 'Please enter topic and data', type: 'error' });
+                        return;
+                      }
+                      
+                      setIsSaving(true);
+                      try {
+                        // In a real app, this would trigger a cloud function to send emails
+                        // For now, we'll log it to a collection
+                        await addDoc(collection(db, 'bulkMessages'), {
+                          topic,
+                          data,
+                          sentAt: serverTimestamp(),
+                          recipientCount: users.length
+                        });
+                        
+                        setToast({ message: `Message sent to ${users.length} users!`, type: 'success' });
+                        (document.getElementById('bulk-topic') as HTMLInputElement).value = '';
+                        (document.getElementById('bulk-data') as HTMLTextAreaElement).value = '';
+                      } catch (err) {
+                        setToast({ message: 'Failed to send bulk message', type: 'error' });
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }}
+                    disabled={isSaving}
+                    className="btn-neon bg-neon-purple text-white w-full py-3 text-xs uppercase tracking-widest font-bold disabled:opacity-50"
+                  >
+                    {isSaving ? 'Sending...' : 'Send to All Users'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1992,6 +2378,34 @@ export default function AdminPanel() {
                       />
                       <label htmlFor="enabled" className="text-sm font-medium text-white">Enabled (Visible to students)</label>
                     </div>
+
+                    {editingEntity.type === 'group' && (
+                      <div className="space-y-6 pt-4 border-t border-white/10">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-white/60">Description</label>
+                          <textarea 
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all resize-none"
+                            rows={3}
+                            value={editingEntity.description || ''}
+                            onChange={(e) => setEditingEntity({ ...editingEntity, description: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-white/60">Group Password (Optional)</label>
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all font-mono"
+                              placeholder="Leave empty for public group"
+                              value={editingEntity.password || ''}
+                              onChange={(e) => setEditingEntity({ ...editingEntity, password: e.target.value })}
+                            />
+                            <Lock size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20" />
+                          </div>
+                          <p className="text-[10px] text-white/20 italic">If set, users will need this password to join the group.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

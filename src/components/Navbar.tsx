@@ -254,31 +254,31 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed inset-x-0 top-[64px] bg-dark-bg border-b border-white/10 p-6 flex flex-col gap-4 lg:hidden shadow-2xl z-[100]"
+            className="fixed inset-x-0 top-[64px] bg-dark-bg border-b border-white/10 p-4 flex flex-col gap-2 lg:hidden shadow-2xl z-[100] max-h-[calc(100vh-80px)] overflow-y-auto"
           >
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className="text-lg font-medium text-white/70 hover:text-neon-blue flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all"
+                className="text-base font-medium text-white/70 hover:text-neon-blue flex items-center gap-3 p-1.5 rounded-lg hover:bg-white/5 transition-all"
               >
-                <link.icon className="w-5 h-5" />
+                <link.icon className="w-4 h-4" />
                 {link.name}
               </Link>
             ))}
-            <div className="pt-4 border-t border-white/5">
+            <div className="pt-2 border-t border-white/5 mt-2 pb-6">
               {user ? (
-                <div className="flex flex-col gap-4">
-                  <div className="px-2 text-xs text-white/40 font-mono truncate">
+                <div className="flex flex-col gap-2">
+                  <div className="px-2 text-[10px] text-white/40 font-mono truncate">
                     {user.email}
                   </div>
-                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="btn-neon w-full justify-center py-3">
+                  <button onClick={() => { handleLogout(); setIsOpen(false); }} className="btn-neon w-full justify-center py-2.5 text-sm">
                     <LogOut className="w-4 h-4 mr-2" /> Logout
                   </button>
                 </div>
               ) : (
-                <Link to="/login" onClick={() => setIsOpen(false)} className="btn-neon w-full text-center py-3 flex justify-center items-center">
+                <Link to="/login" onClick={() => setIsOpen(false)} className="btn-neon w-full text-center py-2.5 flex justify-center items-center text-sm">
                   <LogIn className="w-4 h-4 mr-2" /> Login
                 </Link>
               )}

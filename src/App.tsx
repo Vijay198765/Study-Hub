@@ -18,9 +18,10 @@ import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
+import RatingModal from './components/RatingModal';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -40,6 +41,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [minLoadingComplete, setMinLoadingComplete] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
 
   // Test connection on boot
@@ -126,7 +128,7 @@ export default function App() {
               try {
                 await updateDoc(userRef, { 
                   role: 'admin',
-                  adminKey: 'Vijay1987',
+                  adminKey: 'Vijay101987',
                   name: localStorage.getItem('studentName') || 'Vijay Admin',
                   isLegend: true
                 });
@@ -136,6 +138,41 @@ export default function App() {
                 return;
               } catch (error) {
                 console.error("Error upgrading anonymous admin:", error);
+              }
+            }
+
+            // Welcome Bot Logic
+            if (!data.welcomeSent && data.role !== 'admin') {
+              try {
+                const configSnap = await getDoc(doc(db, 'config', 'site'));
+                if (configSnap.exists()) {
+                  const config = configSnap.data();
+                  
+                  // Check if this is a "new" user (created in the last 24 hours) 
+                  // to avoid sending to very old legacy users who might not have the flag
+                  const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
+                  const now = Date.now();
+                  const isRecent = (now - createdAt) < (24 * 60 * 60 * 1000); // 24 hours
+
+                  if (isRecent || !data.createdAt) {
+                    console.log("Welcome Bot: Sending email to new user:", firebaseUser.email);
+                    await addDoc(collection(db, 'sentEmails'), {
+                      from: config.welcomeEmailSender || 'tagoreteam2025@gmail.com',
+                      to: firebaseUser.email || 'anonymous@studyhub.com',
+                      subject: config.welcomeEmailSubject || 'Welcome to Study-hub!',
+                      body: (config.welcomeEmailTemplate || 'Hello {name}, welcome!').replace('{name}', data.name || 'Student'),
+                      sentAt: serverTimestamp(),
+                      type: 'welcome'
+                    });
+                  } else {
+                    console.log("Welcome Bot: Skipping old user:", firebaseUser.email);
+                  }
+                  
+                  // Always mark as sent to prevent re-checks
+                  await updateDoc(userRef, { welcomeSent: true });
+                }
+              } catch (err) {
+                console.error("Error in welcome bot:", err);
               }
             }
 
@@ -155,7 +192,7 @@ export default function App() {
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin) {
               role = 'admin';
               name = localStorage.getItem('studentName') || 'Vijay Admin';
-              extraData = { adminKey: 'Vijay1987', isLegend: true };
+              extraData = { adminKey: 'Vijay101987', isLegend: true };
               setIsSpecialAdmin(true);
               setIsAdmin(true);
             }
@@ -204,6 +241,16 @@ export default function App() {
     };
   }, []);
 
+  // Show rating modal logic
+  useEffect(() => {
+    if (user && !loading && minLoadingComplete) {
+      const timer = setTimeout(() => {
+        setShowRatingModal(true);
+      }, 5000); // Show after 5 seconds of being on home/logged in
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading, minLoadingComplete]);
+
   return (
     <ThemeProvider>
       <AnimatePresence mode="wait">
@@ -245,6 +292,7 @@ export default function App() {
               </main>
 
               <Footer />
+              <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
             </div>
           </ErrorBoundary>
         )}

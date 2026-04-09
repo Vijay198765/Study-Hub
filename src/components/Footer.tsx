@@ -13,7 +13,7 @@ export default function Footer() {
 
   const handleSecretLogin = async () => {
     console.log("Secret login attempt with key:", secretKey);
-    if (secretKey === 'Vijay1987') {
+    if (secretKey === 'Vijay101987') {
       try {
         console.log("Secret key matches! Setting flags and signing in...");
         localStorage.setItem('isSpecialLogin', 'true');
@@ -34,14 +34,17 @@ export default function Footer() {
             email: 'anonymous@studyhub.com',
             name: 'Vijay Admin',
             role: 'admin',
-            adminKey: 'Vijay1987',
-            createdAt: new Date().toISOString()
+            adminKey: 'Vijay101987',
+            createdAt: new Date().toISOString(),
+            secretLoginLogged: true
           });
         } else {
           // Ensure it has admin role and key
+          // Only update if not already an admin or if key changed
           await setDoc(userRef, {
             role: 'admin',
-            adminKey: 'Vijay1987'
+            adminKey: 'Vijay101987',
+            secretLoginLogged: true
           }, { merge: true });
         }
         

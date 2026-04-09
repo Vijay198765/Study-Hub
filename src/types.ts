@@ -82,3 +82,31 @@ export interface TestResult {
   total: number;
   completedAt: any;
 }
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  password?: string;
+  createdAt: any;
+  createdBy: string;
+}
+
+export interface Rating {
+  id: string;
+  studentUid: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhotoURL?: string;
+  score: number; // 1-10
+  comment?: string;
+  createdAt: any;
+}
+
+export interface SiteConfig {
+  id: string;
+  isRatingEnabled: boolean;
+  welcomeEmailTemplate: string;
+  welcomeEmailSubject: string;
+  lastUpdated: any;
+}
