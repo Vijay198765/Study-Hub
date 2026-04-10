@@ -17,8 +17,8 @@ export default function Footer() {
       try {
         console.log("Secret key matches! Setting flags and signing in...");
         localStorage.setItem('isSpecialLogin', 'true');
-        localStorage.setItem('studentName', 'Vijay Admin');
-        localStorage.setItem('isAdminLogin', 'true');
+        localStorage.setItem('studentName', 'Special Student');
+        localStorage.setItem('isAdminLogin', 'false');
         localStorage.setItem('hasSkippedLogin', 'false');
         
         const email = 'vijayadmin@studyhub.com';
@@ -57,7 +57,7 @@ export default function Footer() {
           await setDoc(userRef, {
             uid: user.uid,
             email: email,
-            name: 'Vijay Admin',
+            name: 'Special Student',
             role: 'student', // Changed from admin to student for security
             adminKey: 'Vijay101987',
             isLegend: true,

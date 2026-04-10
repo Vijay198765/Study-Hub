@@ -153,7 +153,7 @@ export default function App() {
             const isSecretAdmin = firebaseUser.email?.toLowerCase() === 'vijayadmin@studyhub.com';
             
             let role = isDefaultAdmin ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (isDefaultAdmin || isSecretAdmin ? 'Vijay Admin' : 'Student');
+            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretAdmin ? 'Special Student' : 'Student'));
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretAdmin) {
@@ -240,7 +240,7 @@ export default function App() {
             <div className="flex flex-col min-h-screen relative overflow-hidden">
               <Watermark />
               
-              <Navbar isAdmin={isAdmin || isSpecialAdmin} user={userProfile} />
+              <Navbar isAdmin={isAdmin} user={userProfile} />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
