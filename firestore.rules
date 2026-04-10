@@ -388,7 +388,7 @@ service cloud.firestore {
     }
 
     match /ratings/{ratingId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && (resource == null || resource.data.studentUid == request.auth.uid));
       allow create: if isAuthenticated() && isValidRating(request.resource.data);
       allow delete: if isAdmin();
     }

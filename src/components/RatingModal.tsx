@@ -47,15 +47,20 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
     if (!auth.currentUser) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'ratings'), {
+      const ratingData: any = {
         studentUid: auth.currentUser.uid,
         studentName: auth.currentUser.displayName || 'Anonymous',
         studentEmail: auth.currentUser.email || 'No Email',
-        studentPhotoURL: auth.currentUser.photoURL,
         score,
         comment,
         createdAt: serverTimestamp()
-      });
+      };
+
+      if (auth.currentUser.photoURL) {
+        ratingData.studentPhotoURL = auth.currentUser.photoURL;
+      }
+
+      await addDoc(collection(db, 'ratings'), ratingData);
       setHasRated(true);
       setTimeout(onClose, 2000);
     } catch (error) {
