@@ -50,6 +50,12 @@ export interface User {
   name?: string;
   photoURL?: string;
   createdAt: any;
+  deviceInfo?: {
+    userAgent: string;
+    platform: string;
+    language: string;
+    screenResolution: string;
+  };
 }
 
 export interface UserProfile extends User {}

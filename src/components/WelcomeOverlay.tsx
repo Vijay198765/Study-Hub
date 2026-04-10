@@ -30,6 +30,13 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
       const userRef = doc(db, 'users', result.user.uid);
       const userSnap = await getDoc(userRef);
       
+      const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: (navigator as any).platform || 'unknown',
+        language: navigator.language,
+        screenResolution: `${window.screen.width}x${window.screen.height}`
+      };
+      
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           uid: result.user.uid,
@@ -37,13 +44,15 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
           name: name.trim(), // User-input name takes priority
           role: 'student',
           photoURL: result.user.photoURL,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          deviceInfo
         });
       } else {
         // Update name if it's different, but keep role
         await setDoc(userRef, {
           ...userSnap.data(),
           name: name.trim(),
+          deviceInfo
         }, { merge: true });
       }
       

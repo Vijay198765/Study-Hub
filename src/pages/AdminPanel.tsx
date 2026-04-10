@@ -16,7 +16,6 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc 
 } from 'firebase/firestore';
-import emailjs from '@emailjs/browser';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
@@ -97,8 +96,6 @@ export default function AdminPanel() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const [isBackingUp, setIsBackingUp] = useState(false);
-  const [bulkTopic, setBulkTopic] = useState('');
-  const [bulkData, setBulkData] = useState('');
 
   const downloadBackup = async () => {
     setIsBackingUp(true);
@@ -1197,7 +1194,7 @@ export default function AdminPanel() {
 
           {activeTab === 'users' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="relative flex-grow max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input 
@@ -1208,6 +1205,38 @@ export default function AdminPanel() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                <button 
+                  onClick={() => {
+                    const headers = ['Name', 'Email', 'Role', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
+                    const csvData = users.map(u => [
+                      u.name || 'Anonymous',
+                      u.email,
+                      u.role,
+                      u.createdAt,
+                      u.photoURL || '',
+                      u.deviceInfo?.userAgent || 'N/A',
+                      u.deviceInfo?.platform || 'N/A',
+                      u.deviceInfo?.language || 'N/A',
+                      u.deviceInfo?.screenResolution || 'N/A'
+                    ]);
+                    
+                    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", `users_data_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setToast({ message: 'User data downloaded!', type: 'success' });
+                  }}
+                  className="btn-neon bg-emerald-500 text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Download size={20} />
+                  Download Data (CSV)
+                </button>
               </div>
 
               <div className="overflow-x-auto">
@@ -1217,6 +1246,7 @@ export default function AdminPanel() {
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Device Info</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
                     </tr>
                   </thead>
@@ -1242,6 +1272,17 @@ export default function AdminPanel() {
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
                             {user.role}
                           </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          {user.deviceInfo ? (
+                            <div className="text-[10px] text-white/40 space-y-0.5">
+                              <p className="truncate max-w-[150px]" title={user.deviceInfo.userAgent}>UA: {user.deviceInfo.userAgent}</p>
+                              <p>Platform: {user.deviceInfo.platform}</p>
+                              <p>Res: {user.deviceInfo.screenResolution}</p>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-white/20 italic">No info</span>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
@@ -2082,204 +2123,6 @@ export default function AdminPanel() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${siteConfig.isRatingEnabled ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'}`}
                   >
                     {siteConfig.isRatingEnabled ? 'Enabled' : 'Disabled'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
-                    <Mail size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold">Welcome Bot (Gmail)</h3>
-                    <p className="text-xs text-white/40">Set the message sent to new users when they join.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Service ID</label>
-                      <input 
-                        type="text" 
-                        value={siteConfig.emailjsServiceId || ''}
-                        onChange={(e) => setSiteConfig({ ...siteConfig, emailjsServiceId: e.target.value })}
-                        placeholder="service_xxxxxx"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Template ID</label>
-                      <input 
-                        type="text" 
-                        value={siteConfig.emailjsTemplateId || ''}
-                        onChange={(e) => setSiteConfig({ ...siteConfig, emailjsTemplateId: e.target.value })}
-                        placeholder="template_xxxxxx"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">EmailJS Public Key</label>
-                    <input 
-                      type="text" 
-                      value={siteConfig.emailjsPublicKey || ''}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, emailjsPublicKey: e.target.value })}
-                      placeholder="user_xxxxxx"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Sender Email (Gmail)</label>
-                    <input 
-                      type="email" 
-                      value={siteConfig.welcomeEmailSender || 'tagoreteam2025@gmail.com'}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailSender: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                      placeholder="tagoreteam2025@gmail.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Email Subject</label>
-                    <input 
-                      type="text" 
-                      value={siteConfig.welcomeEmailSubject || ''}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailSubject: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Email Template</label>
-                    <textarea 
-                      value={siteConfig.welcomeEmailTemplate || ''}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, welcomeEmailTemplate: e.target.value })}
-                      rows={4}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all resize-none"
-                      placeholder="Use {name} for student name"
-                    />
-                    <p className="text-[10px] text-white/20 italic">Note: Real emails require a backend service integration.</p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setDoc(doc(db, 'config', 'site'), { 
-                        welcomeEmailSubject: siteConfig.welcomeEmailSubject || '',
-                        welcomeEmailTemplate: siteConfig.welcomeEmailTemplate || '',
-                        welcomeEmailSender: siteConfig.welcomeEmailSender || '',
-                        emailjsServiceId: siteConfig.emailjsServiceId || '',
-                        emailjsTemplateId: siteConfig.emailjsTemplateId || '',
-                        emailjsPublicKey: siteConfig.emailjsPublicKey || '',
-                        lastUpdated: serverTimestamp()
-                      }, { merge: true });
-                      setToast({ message: 'Welcome bot updated!', type: 'success' });
-                    }}
-                    className="btn-neon w-full py-3 text-xs uppercase tracking-widest font-bold"
-                  >
-                    Save Bot Config
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center text-neon-purple">
-                    <Globe size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold">Bulk Message</h3>
-                    <p className="text-xs text-white/40">Send a message to all registered users.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Topic</label>
-                    <input 
-                      type="text" 
-                      value={bulkTopic}
-                      onChange={(e) => setBulkTopic(e.target.value)}
-                      placeholder="Important Update"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-white/60 uppercase tracking-widest font-bold">Message Data</label>
-                    <textarea 
-                      value={bulkData}
-                      onChange={(e) => setBulkData(e.target.value)}
-                      rows={4}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-purple outline-none transition-all resize-none"
-                      placeholder="Write your message here..."
-                    />
-                  </div>
-                  <button 
-                    onClick={async () => {
-                      if (!bulkTopic || !bulkData) {
-                        setToast({ message: 'Please enter topic and data', type: 'error' });
-                        return;
-                      }
-                      
-                      setIsSaving(true);
-                      try {
-                        // Log the bulk action
-                        await addDoc(collection(db, 'bulkMessages'), {
-                          topic: bulkTopic,
-                          data: bulkData,
-                          sentAt: serverTimestamp(),
-                          recipientCount: users.length
-                        });
-
-                        // Create individual email documents for the Trigger Email extension
-                        const emailPromises = users.map(async (user) => {
-                          if (!user.email) return;
-                          
-                          // 1. Log to Firestore
-                          await addDoc(collection(db, 'sentEmails'), {
-                            to: user.email,
-                            message: {
-                              subject: bulkTopic,
-                              html: bulkData.replace(/\n/g, '<br/>'),
-                            },
-                            sentAt: serverTimestamp(),
-                            type: 'bulk'
-                          });
-
-                          // 2. Send via EmailJS (if configured)
-                          if (siteConfig.emailjsServiceId && siteConfig.emailjsTemplateId && siteConfig.emailjsPublicKey) {
-                            try {
-                              await emailjs.send(
-                                siteConfig.emailjsServiceId,
-                                siteConfig.emailjsTemplateId,
-                                {
-                                  to_email: user.email,
-                                  to_name: user.name || 'Student',
-                                  subject: bulkTopic,
-                                  message: bulkData,
-                                  from_name: 'Study-hub Bot'
-                                },
-                                siteConfig.emailjsPublicKey
-                              );
-                            } catch (err) {
-                              console.error(`Failed to send email to ${user.email} via EmailJS:`, err);
-                            }
-                          }
-                        });
-
-                        await Promise.all(emailPromises);
-                        
-                        setToast({ message: `Emails queued for ${users.length} users!`, type: 'success' });
-                        setBulkTopic('');
-                        setBulkData('');
-                      } catch (err) {
-                        setToast({ message: 'Failed to queue bulk messages', type: 'error' });
-                      } finally {
-                        setIsSaving(false);
-                      }
-                    }}
-                    disabled={isSaving}
-                    className="btn-neon bg-neon-purple text-white w-full py-3 text-xs uppercase tracking-widest font-bold disabled:opacity-50"
-                  >
-                    {isSaving ? 'Sending...' : 'Send to All Users'}
                   </button>
                 </div>
               </div>
