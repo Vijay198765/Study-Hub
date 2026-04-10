@@ -150,18 +150,18 @@ export default function App() {
             // Fallback for new users or if doc doesn't exist yet
             const adminEmails = ['vijayninama683@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
-            const isSecretAdmin = firebaseUser.email?.toLowerCase() === 'vijayadmin@studyhub.com';
+            const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
             let role = isDefaultAdmin ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretAdmin ? 'Special Student' : 'Student'));
+            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretLogin ? 'Special Student' : 'Student'));
             let extraData: any = {};
 
-            if (isDefaultAdmin || isSecretAdmin) {
+            if (isDefaultAdmin || isSecretLogin) {
               extraData = { adminKey: 'Vijay101987', isLegend: true };
               if (isDefaultAdmin) {
                 setIsAdmin(true);
               }
-              if (isSecretAdmin) {
+              if (isSecretLogin) {
                 setIsSpecialAdmin(true);
               }
             }

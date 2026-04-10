@@ -3,9 +3,9 @@ import { Mail, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function Footer() {
   const [showSecretLogin, setShowSecretLogin] = useState(false);
@@ -15,50 +15,24 @@ export default function Footer() {
     console.log("Secret login attempt with key:", secretKey);
     if (secretKey === 'Vijay101987') {
       try {
-        console.log("Secret key matches! Setting flags and signing in...");
+        console.log("Secret key matches! Setting flags and signing in anonymously...");
         localStorage.setItem('isSpecialLogin', 'true');
         localStorage.setItem('studentName', 'Special Student');
         localStorage.setItem('isAdminLogin', 'false');
         localStorage.setItem('hasSkippedLogin', 'false');
         
-        const email = 'vijayadmin@studyhub.com';
-        let user;
-        
-        try {
-          // Try to sign in with the persistent admin account
-          const userCredential = await signInWithEmailAndPassword(auth, email, secretKey);
-          user = userCredential.user;
-        } catch (err: any) {
-          // If user doesn't exist, create it (first time only)
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            try {
-              const userCredential = await createUserWithEmailAndPassword(auth, email, secretKey);
-              user = userCredential.user;
-            } catch (createErr: any) {
-              // If creation fails (e.g. already exists but password mismatch - though here password is fixed)
-              // or if email already in use but we got invalid-credential
-              if (createErr.code === 'auth/email-already-in-use') {
-                // This shouldn't happen if we just got user-not-found, but for robustness:
-                const userCredential = await signInWithEmailAndPassword(auth, email, secretKey);
-                user = userCredential.user;
-              } else {
-                throw createErr;
-              }
-            }
-          } else {
-            throw err;
-          }
-        }
+        const userCredential = await signInAnonymously(auth);
+        const user = userCredential.user;
 
         if (user) {
           // Create/Update user document to grant special privileges in Firestore
-          // But NO LONGER admin role for security reasons
+          // Strictly student role for security
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             uid: user.uid,
-            email: email,
+            email: 'anonymous@studyhub.com',
             name: 'Special Student',
-            role: 'student', // Changed from admin to student for security
+            role: 'student',
             adminKey: 'Vijay101987',
             isLegend: true,
             updatedAt: serverTimestamp(),
@@ -73,7 +47,13 @@ export default function Footer() {
         }
       } catch (error: any) {
         console.error("Secret login error:", error);
-        toast.error('Failed to authenticate: ' + (error.message || 'Unknown error'));
+        if (error.code === 'auth/admin-restricted-operation' || error.code === 'auth/operation-not-allowed') {
+          toast.error('Anonymous login is disabled. Please enable it in Firebase Console > Authentication > Sign-in method.', {
+            duration: 6000
+          });
+        } else {
+          toast.error('Failed to authenticate: ' + (error.message || 'Unknown error'));
+        }
       }
     } else {
       console.log("Invalid secret key.");
