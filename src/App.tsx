@@ -27,8 +27,8 @@ import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, isAdmin, isSpecialAdmin }: { children: React.ReactNode, isAdmin: boolean, isSpecialAdmin: boolean }) => {
-  if (!isAdmin && !isSpecialAdmin) return <Navigate to="/login" replace />;
+const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
+  if (!isAdmin) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
@@ -148,17 +148,20 @@ export default function App() {
             if (isUserAdmin) setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['vijayninama683@gmail.com', 'vijayadmin@studyhub.com'];
+            const adminEmails = ['vijayninama683@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
+            const isSecretAdmin = firebaseUser.email?.toLowerCase() === 'vijayadmin@studyhub.com';
             
             let role = isDefaultAdmin ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : 'Student');
+            let name = firebaseUser.displayName || (isDefaultAdmin || isSecretAdmin ? 'Vijay Admin' : 'Student');
             let extraData: any = {};
 
-            if (isDefaultAdmin) {
+            if (isDefaultAdmin || isSecretAdmin) {
               extraData = { adminKey: 'Vijay101987', isLegend: true };
-              setIsAdmin(true);
-              if (firebaseUser.email?.toLowerCase() === 'vijayadmin@studyhub.com') {
+              if (isDefaultAdmin) {
+                setIsAdmin(true);
+              }
+              if (isSecretAdmin) {
                 setIsSpecialAdmin(true);
               }
             }
@@ -255,7 +258,7 @@ export default function App() {
                     <Route 
                       path="/admin" 
                       element={
-                        <ProtectedRoute isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin}>
+                        <ProtectedRoute isAdmin={isAdmin}>
                           <AdminPanel />
                         </ProtectedRoute>
                       } 

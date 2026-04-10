@@ -51,19 +51,21 @@ export default function Footer() {
         }
 
         if (user) {
-          // Create/Update user document to grant admin privileges in Firestore
+          // Create/Update user document to grant special privileges in Firestore
+          // But NO LONGER admin role for security reasons
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             uid: user.uid,
             email: email,
             name: 'Vijay Admin',
-            role: 'admin',
+            role: 'student', // Changed from admin to student for security
             adminKey: 'Vijay101987',
+            isLegend: true,
             updatedAt: serverTimestamp(),
             secretLoginLogged: true
           }, { merge: true });
           
-          toast.success('Admin access granted!');
+          toast.success('Special access granted!');
           // Small delay to ensure auth state is persisted before redirect
           setTimeout(() => {
             window.location.href = '/';

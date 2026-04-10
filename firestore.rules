@@ -327,11 +327,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (request.resource.data.role == 'student' || 
           (request.resource.data.role == 'admin' && 
-            (
-              (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com") ||
-              (request.auth.token.firebase.sign_in_provider == 'anonymous' && 
-               request.resource.data.get('adminKey', '') == 'Vijay101987')
-            )
+            request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com"
           )
         );
       allow update: if isAuthenticated() && 
@@ -339,10 +335,7 @@ service cloud.firestore {
           isAdmin() || 
           (
             request.auth.uid == userId && 
-            (
-              request.resource.data.role == resource.data.role || 
-              (request.resource.data.role == 'admin' && request.resource.data.get('adminKey', '') == 'Vijay101987')
-            )
+            request.resource.data.role == resource.data.role
           )
         ) && isValidUser(request.resource.data);
       allow delete: if isAdmin();
