@@ -3,9 +3,9 @@ import { Mail, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
-import { signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function Footer() {
   const [showSecretLogin, setShowSecretLogin] = useState(false);
@@ -21,48 +21,57 @@ export default function Footer() {
         localStorage.setItem('isAdminLogin', 'true');
         localStorage.setItem('hasSkippedLogin', 'false');
         
-        const userCredential = await signInAnonymously(auth);
-        const user = userCredential.user;
+        const email = 'vijayadmin@studyhub.com';
+        let user;
+        
+        try {
+          // Try to sign in with the persistent admin account
+          const userCredential = await signInWithEmailAndPassword(auth, email, secretKey);
+          user = userCredential.user;
+        } catch (err: any) {
+          // If user doesn't exist, create it (first time only)
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            try {
+              const userCredential = await createUserWithEmailAndPassword(auth, email, secretKey);
+              user = userCredential.user;
+            } catch (createErr: any) {
+              // If creation fails (e.g. already exists but password mismatch - though here password is fixed)
+              // or if email already in use but we got invalid-credential
+              if (createErr.code === 'auth/email-already-in-use') {
+                // This shouldn't happen if we just got user-not-found, but for robustness:
+                const userCredential = await signInWithEmailAndPassword(auth, email, secretKey);
+                user = userCredential.user;
+              } else {
+                throw createErr;
+              }
+            }
+          } else {
+            throw err;
+          }
+        }
 
-        // Create user document to grant admin privileges in Firestore
-        const userRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userRef);
-
-        if (!userDoc.exists()) {
+        if (user) {
+          // Create/Update user document to grant admin privileges in Firestore
+          const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             uid: user.uid,
-            email: 'anonymous@studyhub.com',
+            email: email,
             name: 'Vijay Admin',
             role: 'admin',
             adminKey: 'Vijay101987',
-            createdAt: new Date().toISOString(),
-            secretLoginLogged: true
-          });
-        } else {
-          // Ensure it has admin role and key
-          // Only update if not already an admin or if key changed
-          await setDoc(userRef, {
-            role: 'admin',
-            adminKey: 'Vijay101987',
+            updatedAt: serverTimestamp(),
             secretLoginLogged: true
           }, { merge: true });
+          
+          toast.success('Admin access granted!');
+          // Small delay to ensure auth state is persisted before redirect
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
         }
-        
-        toast.success('Admin access granted!');
-        // Small delay to ensure auth state is persisted before redirect
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
       } catch (error: any) {
         console.error("Secret login error:", error);
-        window.dispatchEvent(new CustomEvent('firebase-auth-error', { detail: error }));
-        if (error.code === 'auth/admin-restricted-operation') {
-          toast.error('Anonymous login is disabled. Please enable it in Firebase Console > Authentication > Sign-in method.', {
-            duration: 10000,
-          });
-        } else {
-          toast.error('Failed to authenticate: ' + (error.message || 'Unknown error'));
-        }
+        toast.error('Failed to authenticate: ' + (error.message || 'Unknown error'));
       }
     } else {
       console.log("Invalid secret key.");

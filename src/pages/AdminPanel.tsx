@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock,
-  Star, Settings, Shield, Mail, Globe
+  Star, Shield, Globe
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'config';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -803,13 +803,6 @@ export default function AdminPanel() {
                 >
                   <Star size={16} className="inline-block mr-1.5" />
                   Ratings
-                </button>
-                <button 
-                  onClick={() => setActiveTab('config')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'config' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Settings size={16} className="inline-block mr-1.5" />
-                  Config
                 </button>
                 <button 
                   onClick={() => setActiveTab('comments')}
@@ -2105,29 +2098,6 @@ export default function AdminPanel() {
             </div>
           )}
 
-          {activeTab === 'config' && siteConfig && (
-            <div className="space-y-8 max-w-3xl">
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
-                      <Star size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-bold">Rating System</h3>
-                      <p className="text-xs text-white/40">Enable or disable the home page rating popup.</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setDoc(doc(db, 'config', 'site'), { isRatingEnabled: !siteConfig.isRatingEnabled }, { merge: true })}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${siteConfig.isRatingEnabled ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'}`}
-                  >
-                    {siteConfig.isRatingEnabled ? 'Enabled' : 'Disabled'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

@@ -148,19 +148,19 @@ export default function App() {
             if (isUserAdmin) setIsSpecialAdmin(true);
           } else {
             // Fallback for new users or if doc doesn't exist yet
-            const adminEmails = ['vijayninama683@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com', 'vijayadmin@studyhub.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             
             let role = isDefaultAdmin ? 'admin' : 'student';
-            let name = firebaseUser.displayName || 'Student';
+            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : 'Student');
             let extraData: any = {};
 
-            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin) {
-              role = 'admin';
-              name = localStorage.getItem('studentName') || 'Vijay Admin';
+            if (isDefaultAdmin) {
               extraData = { adminKey: 'Vijay101987', isLegend: true };
-              setIsSpecialAdmin(true);
               setIsAdmin(true);
+              if (firebaseUser.email?.toLowerCase() === 'vijayadmin@studyhub.com') {
+                setIsSpecialAdmin(true);
+              }
             }
 
             const deviceInfo = {
