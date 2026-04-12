@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 export const WhatsAppFloat: React.FC = () => {
-  const whatsappUrl = "https://chat.whatsapp.com/E1vnBNLPge8AHaq2eqZ4FL?mode=gi_t";
+  const whatsappUrl = "https://whatsapp.com/channel/0029Vb8Ik5QCHDylYgh2Wk19";
 
   return (
     <motion.a
@@ -14,7 +14,7 @@ export const WhatsAppFloat: React.FC = () => {
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-11 h-11 bg-[#25D366] text-white rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-[#20ba5a] transition-all duration-300 group"
-      title="Join our WhatsApp Group"
+      title="Follow our WhatsApp Channel"
     >
       <svg 
         viewBox="0 0 24 24" 
@@ -30,7 +30,7 @@ export const WhatsAppFloat: React.FC = () => {
       
       {/* Tooltip */}
       <div className="absolute right-full mr-4 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
-        Join our Study Group
+        Follow our Channel
       </div>
     </motion.a>
   );
