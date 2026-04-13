@@ -28,13 +28,13 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -82,6 +82,7 @@ export default function AdminPanel() {
   const [siteComments, setSiteComments] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -225,6 +226,10 @@ export default function AdminPanel() {
       setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'ratings'));
 
+    const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
+      setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
+
     const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -259,6 +264,7 @@ export default function AdminPanel() {
       unsubComments();
       unsubGroups();
       unsubRatings();
+      unsubLogs();
       unsubConfig();
     };
   }, [auth.currentUser?.uid, isAdmin]);
@@ -846,6 +852,13 @@ export default function AdminPanel() {
                   Stats
                 </button>
                 <button 
+                  onClick={() => setActiveTab('logs')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'logs' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <ClipboardList size={16} className="inline-block mr-1.5" />
+                  Logs
+                </button>
+                <button 
                   onClick={() => setActiveTab('theme')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'theme' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
                 >
@@ -1239,6 +1252,7 @@ export default function AdminPanel() {
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Device Info</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
                     </tr>
@@ -1265,6 +1279,9 @@ export default function AdminPanel() {
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
                             {user.role}
                           </span>
+                        </td>
+                        <td className="py-4 px-4 text-white/60 font-mono text-xs">
+                          {user.ip || user.deviceInfo?.ip || 'N/A'}
                         </td>
                         <td className="py-4 px-4">
                           {user.deviceInfo ? (
@@ -1751,6 +1768,143 @@ export default function AdminPanel() {
                   <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
                     <BookOpen size={48} className="mx-auto text-white/10 mb-4" />
                     <p className="text-white/30 italic">Please select a class and subject to manage chapter MCQs.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'logs' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-grow max-w-md w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search logs by name, email, action or IP..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-neon-blue outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
+                      const csvData = activityLogs.map(log => {
+                        const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
+                        return [
+                          dateObj.toLocaleDateString(),
+                          dateObj.toLocaleTimeString(),
+                          log.userName || 'Anonymous',
+                          log.userEmail || 'N/A',
+                          log.action,
+                          log.ip || 'N/A',
+                          log.resolution || 'N/A',
+                          log.path || 'N/A',
+                          `"${log.userAgent?.replace(/"/g, '""')}"` || 'N/A'
+                        ];
+                      });
+                      
+                      const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement("a");
+                      const url = URL.createObjectURL(blob);
+                      link.setAttribute("href", url);
+                      link.setAttribute("download", `activity_logs_${new Date().toISOString().split('T')[0]}.csv`);
+                      link.style.visibility = 'hidden';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      setToast({ message: 'Logs downloaded successfully!', type: 'success' });
+                    }}
+                    className="btn-neon bg-neon-blue text-black px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                  >
+                    <Download size={20} />
+                    Download Logs (CSV)
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setConfirmAction({
+                        title: 'Clear All Logs',
+                        message: 'Are you sure you want to delete ALL activity logs? This action cannot be undone.',
+                        onConfirm: async () => {
+                          try {
+                            const promises = activityLogs.map(l => deleteDoc(doc(db, 'activityLogs', l.id)));
+                            await Promise.all(promises);
+                            setToast({ message: 'All logs cleared!', type: 'success' });
+                          } catch (err) {
+                            setToast({ message: 'Failed to clear logs.', type: 'error' });
+                          }
+                          setConfirmAction(null);
+                        }
+                      });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all border border-red-500/20"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Timestamp</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Action</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activityLogs
+                      .filter(l => 
+                        (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        l.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (l.ip || '').toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((log) => (
+                      <tr key={log.id} className="border-b border-white/5 hover:bg-white/5 transition-all group">
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="text-white text-xs font-medium">
+                              {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleDateString() : 'N/A'}
+                            </span>
+                            <span className="text-[10px] text-white/40">
+                              {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleTimeString() : 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="text-white text-xs font-medium">{log.userName || 'Anonymous'}</span>
+                            <span className="text-[10px] text-white/40 truncate max-w-[150px]">{log.userEmail || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-xs text-neon-blue font-medium">{log.action}</span>
+                          {log.path && <p className="text-[10px] text-white/20">Path: {log.path}</p>}
+                        </td>
+                        <td className="py-4 px-4 text-white/60 font-mono text-xs">
+                          {log.ip || 'N/A'}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-[10px] text-white/40 space-y-0.5">
+                            <p>Res: {log.resolution || 'N/A'}</p>
+                            <p className="truncate max-w-[200px]" title={log.userAgent}>UA: {log.userAgent}</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {activityLogs.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64 text-white/20">
+                    <ClipboardList size={48} className="mb-4" />
+                    <p>No activity logs found</p>
                   </div>
                 )}
               </div>

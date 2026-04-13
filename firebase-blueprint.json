@@ -52,9 +52,38 @@
         "email": { "type": "string" },
         "name": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "student"] }
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "ip": { "type": "string" },
+        "deviceInfo": {
+          "type": "object",
+          "properties": {
+            "userAgent": { "type": "string" },
+            "platform": { "type": "string" },
+            "language": { "type": "string" },
+            "screenResolution": { "type": "string" },
+            "ip": { "type": "string" }
+          }
+        }
       },
       "required": ["uid", "email", "role"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Logs of user activity on the site",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "path": { "type": "string" },
+        "ip": { "type": "string" },
+        "resolution": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "action", "timestamp"]
     },
     "UserProgress": {
       "title": "UserProgress",
@@ -197,6 +226,10 @@
     "/settings/{settingId}": {
       "schema": "Settings",
       "description": "Global application settings"
+    },
+    "/activityLogs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "User activity logs"
     }
   }
 }

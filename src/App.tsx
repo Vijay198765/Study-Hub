@@ -114,9 +114,18 @@ export default function App() {
 
       const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
-      const specialName = localStorage.getItem('studentName') || 'Vijay Admin';
 
       if (firebaseUser) {
+        // Fetch IP address
+        let userIp = 'unknown';
+        try {
+          const response = await fetch('https://api.ipify.org?format=json');
+          const data = await response.json();
+          userIp = data.ip;
+        } catch (e) {
+          console.error("Failed to fetch IP:", e);
+        }
+
         // Listen to user profile changes
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
@@ -124,6 +133,15 @@ export default function App() {
             const data = docSnap.data();
             console.log("App: User profile loaded:", data);
             
+            // Update IP if it's different or missing
+            if (data.ip !== userIp) {
+              try {
+                await updateDoc(userRef, { ip: userIp });
+              } catch (e) {
+                console.error("Error updating IP:", e);
+              }
+            }
+
             // Upgrade anonymous user to admin if they have the special login flags
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && data.role !== 'admin') {
               try {
@@ -142,11 +160,27 @@ export default function App() {
               }
             }
 
-            // Removed Welcome Bot Logic as requested
             setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
             const isUserAdmin = data.role === 'admin';
             setIsAdmin(isUserAdmin);
             if (isUserAdmin) setIsSpecialAdmin(true);
+
+            // Log activity
+            try {
+              await addDoc(collection(db, 'activityLogs'), {
+                userId: firebaseUser.uid,
+                userName: data.name || 'Anonymous',
+                userEmail: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
+                action: 'Session Started',
+                path: window.location.pathname,
+                ip: userIp,
+                resolution: `${window.screen.width}x${window.screen.height}`,
+                userAgent: navigator.userAgent,
+                timestamp: serverTimestamp()
+              });
+            } catch (e) {
+              console.error("Error logging activity:", e);
+            }
           } else {
             // Fallback for new users or if doc doesn't exist yet
             const adminEmails = ['vijayninama683@gmail.com'];
@@ -171,7 +205,8 @@ export default function App() {
               userAgent: navigator.userAgent,
               platform: (navigator as any).platform || 'unknown',
               language: navigator.language,
-              screenResolution: `${window.screen.width}x${window.screen.height}`
+              screenResolution: `${window.screen.width}x${window.screen.height}`,
+              ip: userIp
             };
 
             const newUserProfile = {
@@ -181,6 +216,7 @@ export default function App() {
               role: role,
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
+              ip: userIp,
               deviceInfo,
               ...extraData
             };
@@ -189,6 +225,19 @@ export default function App() {
               await setDoc(userRef, newUserProfile);
               setUserProfile(newUserProfile);
               setIsAdmin(role === 'admin');
+
+              // Log activity for new user
+              await addDoc(collection(db, 'activityLogs'), {
+                userId: firebaseUser.uid,
+                userName: name,
+                userEmail: newUserProfile.email,
+                action: 'Account Created & Session Started',
+                path: window.location.pathname,
+                ip: userIp,
+                resolution: deviceInfo.screenResolution,
+                userAgent: deviceInfo.userAgent,
+                timestamp: serverTimestamp()
+              });
             } catch (error) {
               console.error("Error creating user profile:", error);
               // If we can't create the doc (e.g. permissions), at least set local state

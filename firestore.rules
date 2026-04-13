@@ -176,7 +176,9 @@ service cloud.firestore {
              (!('adminKey' in data) || (data.adminKey is string && data.adminKey == 'Vijay101987')) &&
              (!('isLegend' in data) || data.isLegend is bool) &&
              (!('welcomeSent' in data) || data.welcomeSent is bool) &&
-             (!('createdAt' in data) || data.createdAt is string);
+             (!('createdAt' in data) || data.createdAt is string) &&
+             (!('ip' in data) || data.ip is string) &&
+             (!('deviceInfo' in data) || data.deviceInfo is map);
     }
 
     function isValidSettings(data) {
@@ -295,6 +297,19 @@ service cloud.firestore {
              data.recipientCount is number;
     }
 
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['userId', 'action', 'timestamp']) &&
+             data.userId is string &&
+             data.action is string &&
+             (data.timestamp is timestamp || data.timestamp == request.time) &&
+             (!('userName' in data) || data.userName is string) &&
+             (!('userEmail' in data) || data.userEmail is string) &&
+             (!('path' in data) || data.path is string) &&
+             (!('ip' in data) || data.ip is string) &&
+             (!('resolution' in data) || data.resolution is string) &&
+             (!('userAgent' in data) || data.userAgent is string);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -406,6 +421,11 @@ service cloud.firestore {
     match /bulkMessages/{msgId} {
       allow read: if isAdmin();
       allow create: if isAdmin() && isValidBulkMessage(request.resource.data);
+    }
+
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidActivityLog(request.resource.data);
     }
   }
 }

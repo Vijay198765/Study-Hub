@@ -50,12 +50,27 @@ export interface User {
   name?: string;
   photoURL?: string;
   createdAt: any;
+  ip?: string;
   deviceInfo?: {
     userAgent: string;
     platform: string;
     language: string;
     screenResolution: string;
+    ip?: string;
   };
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  action: string;
+  path?: string;
+  ip?: string;
+  resolution?: string;
+  userAgent?: string;
+  timestamp: any;
 }
 
 export interface UserProfile extends User {}
