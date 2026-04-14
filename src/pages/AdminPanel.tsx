@@ -1791,7 +1791,9 @@ export default function AdminPanel() {
                   <button 
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
-                      const csvData = activityLogs.map(log => {
+                      const csvData = activityLogs
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com')
+                        .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
                           dateObj.toLocaleDateString(),
@@ -1860,6 +1862,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com')
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||

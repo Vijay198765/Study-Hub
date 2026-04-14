@@ -165,21 +165,23 @@ export default function App() {
             setIsAdmin(isUserAdmin);
             if (isUserAdmin) setIsSpecialAdmin(true);
 
-            // Log activity
-            try {
-              await addDoc(collection(db, 'activityLogs'), {
-                userId: firebaseUser.uid,
-                userName: data.name || 'Anonymous',
-                userEmail: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
-                action: 'Session Started',
-                path: window.location.pathname,
-                ip: userIp,
-                resolution: `${window.screen.width}x${window.screen.height}`,
-                userAgent: navigator.userAgent,
-                timestamp: serverTimestamp()
-              });
-            } catch (e) {
-              console.error("Error logging activity:", e);
+            // Log activity - Skip for secret login users
+            if (!isSpecial) {
+              try {
+                await addDoc(collection(db, 'activityLogs'), {
+                  userId: firebaseUser.uid,
+                  userName: data.name || 'Anonymous',
+                  userEmail: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
+                  action: 'Session Started',
+                  path: window.location.pathname,
+                  ip: userIp,
+                  resolution: `${window.screen.width}x${window.screen.height}`,
+                  userAgent: navigator.userAgent,
+                  timestamp: serverTimestamp()
+                });
+              } catch (e) {
+                console.error("Error logging activity:", e);
+              }
             }
           } else {
             // Fallback for new users or if doc doesn't exist yet
@@ -226,18 +228,20 @@ export default function App() {
               setUserProfile(newUserProfile);
               setIsAdmin(role === 'admin');
 
-              // Log activity for new user
-              await addDoc(collection(db, 'activityLogs'), {
-                userId: firebaseUser.uid,
-                userName: name,
-                userEmail: newUserProfile.email,
-                action: 'Account Created & Session Started',
-                path: window.location.pathname,
-                ip: userIp,
-                resolution: deviceInfo.screenResolution,
-                userAgent: deviceInfo.userAgent,
-                timestamp: serverTimestamp()
-              });
+              // Log activity for new user - Skip for secret login users
+              if (!isSpecial) {
+                await addDoc(collection(db, 'activityLogs'), {
+                  userId: firebaseUser.uid,
+                  userName: name,
+                  userEmail: newUserProfile.email,
+                  action: 'Account Created & Session Started',
+                  path: window.location.pathname,
+                  ip: userIp,
+                  resolution: deviceInfo.screenResolution,
+                  userAgent: deviceInfo.userAgent,
+                  timestamp: serverTimestamp()
+                });
+              }
             } catch (error) {
               console.error("Error creating user profile:", error);
               // If we can't create the doc (e.g. permissions), at least set local state
