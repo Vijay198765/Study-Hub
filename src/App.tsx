@@ -9,7 +9,6 @@ import SubjectDetail from './pages/SubjectDetail';
 import ChapterDetail from './pages/ChapterDetail';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
-import StudyTips from './pages/StudyTips';
 import Games from './pages/Games';
 import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
@@ -23,6 +22,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
+import { subscribeToPush } from './lib/pushNotifications';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -282,6 +282,38 @@ export default function App() {
     }
   }, [user, loading, minLoadingComplete]);
 
+  // Time Tracking Logic
+  useEffect(() => {
+    if (!user || loading) return;
+
+    const trackTime = async () => {
+      if (document.visibilityState === 'visible') {
+        const userRef = doc(db, 'users', user.uid);
+        try {
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            const currentTotal = docSnap.data().totalTimeSpent || 0;
+            await updateDoc(userRef, {
+              totalTimeSpent: currentTotal + 1,
+              lastActive: serverTimestamp()
+            });
+          }
+        } catch (e) {
+          console.error("Error tracking time:", e);
+        }
+      }
+    };
+
+    const interval = setInterval(trackTime, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, [user, loading]);
+
+  useEffect(() => {
+    if (user && !loading) {
+      subscribeToPush();
+    }
+  }, [user, loading]);
+
   return (
     <ThemeProvider>
       <AnimatePresence mode="wait">
@@ -304,7 +336,6 @@ export default function App() {
                     <Route path="/class/:classId" element={<ClassDetail />} />
                     <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
                     <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
-                    <Route path="/tips" element={<StudyTips />} />
                     <Route path="/games" element={<Games />} />
                     <Route path="/live-club" element={<LiveComments />} />
                     <Route path="/tests" element={<Tests />} />

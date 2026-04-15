@@ -5,6 +5,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Class, Subject, Chapter } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 import { ClassCardSkeleton } from '../components/Skeleton';
+import Leaderboard from '../components/Leaderboard';
+
+import { auth, db } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Home() {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -12,8 +17,27 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [displayText, setDisplayText] = useState('');
   const [recentChapters, setRecentChapters] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>('');
   const location = useLocation();
   const fullText = "The Future of Learning is Here.";
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          setUserName(userDoc.data().name);
+        } else {
+          setUserName(firebaseUser.displayName || 'Student');
+        }
+      } else {
+        setUserName('');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const [allData, setAllData] = useState<{
     classes: Class[];
@@ -151,14 +175,23 @@ export default function Home() {
   return (
     <div className="min-h-screen pt-16 pb-12">
       {/* Hero Section */}
-      <section className="bg-transparent pt-4 pb-12 px-4 mb-12">
+      <section className="bg-transparent pt-2 pb-8 px-4 mb-4">
         <div className="max-w-7xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-8"
+            className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-4"
           >
             🚀 Welcome to Study-hub by Vijay Ninama
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-white/80 text-2xl font-display font-bold mb-8"
+          >
+            {user ? `Hello ${userName || 'Student'}!` : 'Hello Guest!'}
           </motion.div>
           
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-10 tracking-tight leading-tight min-h-[1.2em]">
@@ -173,7 +206,7 @@ export default function Home() {
           </p>
 
           {/* Search Bar */}
-          <div className="max-w-xl mx-auto relative group search-container">
+          <div className="max-w-xl mx-auto relative group search-container -mt-8">
             <div className="relative flex items-center bg-dark-card border border-white/10 rounded-2xl px-6 py-2 shadow-[0_0_25px_rgba(0,242,255,0.2)] group-hover:shadow-[0_0_45px_rgba(0,242,255,0.35)] transition-all">
               <Search className="text-white/40 w-5 h-5 mr-4" />
               <input
@@ -272,13 +305,13 @@ export default function Home() {
       <div className="px-4">
         {/* Recently Viewed */}
         {recentChapters.length > 0 && (
-        <section className="max-w-7xl mx-auto mb-16">
-          <div className="flex items-center gap-3 mb-6">
-            <History className="text-neon-purple" />
-            <h2 className="text-2xl font-display font-bold">Continue Studying</h2>
+        <section className="max-w-7xl mx-auto mb-8 -mt-8">
+          <div className="flex items-center gap-3 mb-4">
+            <History className="text-neon-purple" size={20} />
+            <h2 className="text-xl font-display font-bold">Continue Studying</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recentChapters.map((chapter, idx) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentChapters.slice(0, 2).map((chapter, idx) => (
               <motion.div
                 key={chapter.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -301,9 +334,9 @@ export default function Home() {
       )}
 
       {/* Class Grid */}
-      <section id="classes-section" className="max-w-7xl mx-auto scroll-mt-24 mb-32">
-        <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl font-display font-bold flex items-center gap-3">
+      <section id="classes-section" className="max-w-7xl mx-auto scroll-mt-24 mb-20">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-display font-bold flex items-center gap-3">
             <GraduationCap className="text-neon-blue" />
             Explore Classes
           </h2>
@@ -350,6 +383,8 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      <Leaderboard />
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">

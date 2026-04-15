@@ -121,7 +121,6 @@ export default function Footer() {
           <ul className="space-y-2 text-white/50">
             <li><a href="/" className="hover:text-neon-blue transition-colors">Home</a></li>
             <li><a href="/classes" className="hover:text-neon-blue transition-colors">Classes</a></li>
-            <li><a href="/tips" className="hover:text-neon-blue transition-colors">Study Tips</a></li>
             <li><a href="/login" className="hover:text-neon-blue transition-colors">Admin Login</a></li>
           </ul>
         </div>

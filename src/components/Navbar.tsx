@@ -69,7 +69,6 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
     { name: 'Tests', path: '/tests', icon: ClipboardList },
-    { name: 'Study Tips', path: '/tips', icon: Lightbulb },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
     ...(isAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),

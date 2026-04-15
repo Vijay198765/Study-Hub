@@ -85,5 +85,20 @@
   .floating-nav-item.active::after {
     @apply content-[''] absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-neon-blue rounded-full opacity-0;
   }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 242, 255, 0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 242, 255, 0.4);
+  }
 }
 

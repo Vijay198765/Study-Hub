@@ -50,6 +50,9 @@ export interface User {
   name?: string;
   photoURL?: string;
   createdAt: any;
+  isLegend?: boolean;
+  totalTimeSpent?: number; // in minutes
+  lastActive?: any;
   ip?: string;
   deviceInfo?: {
     userAgent: string;
@@ -58,6 +61,7 @@ export interface User {
     screenResolution: string;
     ip?: string;
   };
+  pushSubscriptions?: string[];
 }
 
 export interface ActivityLog {
@@ -130,5 +134,7 @@ export interface SiteConfig {
   ratingQuestion?: string;
   welcomeEmailTemplate: string;
   welcomeEmailSubject: string;
+  announcement?: string;
+  isAnnouncementActive?: boolean;
   lastUpdated: any;
 }
