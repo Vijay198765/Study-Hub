@@ -15,6 +15,8 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasRated, setHasRated] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
+  const [ratingQuestion, setRatingQuestion] = useState('Rate Your Experience');
+  const [ratingSubtext, setRatingSubtext] = useState('How would you rate Study-hub out of 10?');
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -22,9 +24,16 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
 
       // Check if rating is enabled in config
       const configSnap = await getDoc(doc(db, 'config', 'site'));
-      if (configSnap.exists() && configSnap.data().isRatingEnabled === false) {
-        setIsEnabled(false);
-        return;
+      if (configSnap.exists()) {
+        const data = configSnap.data();
+        if (data.isRatingEnabled === false) {
+          setIsEnabled(false);
+          return;
+        }
+        if (data.ratingQuestion) {
+          setRatingQuestion(data.ratingQuestion);
+          setRatingSubtext('Share your feedback with us!');
+        }
       }
 
       // Check if user has already rated
@@ -125,8 +134,8 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
               </motion.div>
             </div>
 
-            <h2 className="text-xl font-display font-bold text-white mb-1">Rate Your Experience</h2>
-            <p className="text-white/40 text-xs mb-6">How would you rate Study-hub out of 10?</p>
+            <h2 className="text-xl font-display font-bold text-white mb-1">{ratingQuestion}</h2>
+            <p className="text-white/40 text-xs mb-6">{ratingSubtext}</p>
 
             <div className="space-y-6">
               <div className="space-y-3">

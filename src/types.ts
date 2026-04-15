@@ -127,6 +127,7 @@ export interface Rating {
 export interface SiteConfig {
   id: string;
   isRatingEnabled: boolean;
+  ratingQuestion?: string;
   welcomeEmailTemplate: string;
   welcomeEmailSubject: string;
   lastUpdated: any;

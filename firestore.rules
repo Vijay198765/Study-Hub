@@ -272,6 +272,7 @@ service cloud.firestore {
 
     function isValidConfig(data) {
       return (!('isRatingEnabled' in data) || data.isRatingEnabled is bool) &&
+             (!('ratingQuestion' in data) || (data.ratingQuestion is string && data.ratingQuestion.size() < 500)) &&
              (!('welcomeEmailSubject' in data) || data.welcomeEmailSubject is string) &&
              (!('welcomeEmailTemplate' in data) || data.welcomeEmailTemplate is string) &&
              (!('welcomeEmailSender' in data) || data.welcomeEmailSender is string) &&

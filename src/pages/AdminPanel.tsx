@@ -98,6 +98,20 @@ export default function AdminPanel() {
 
   const [isBackingUp, setIsBackingUp] = useState(false);
 
+  const saveSiteConfig = async (newConfig: any) => {
+    try {
+      await setDoc(doc(db, 'config', 'site'), {
+        ...siteConfig,
+        ...newConfig,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+      setToast({ message: 'Settings saved!', type: 'success' });
+    } catch (err) {
+      console.error("Error saving config:", err);
+      setToast({ message: 'Failed to save settings.', type: 'error' });
+    }
+  };
+
   const downloadBackup = async () => {
     setIsBackingUp(true);
     try {
@@ -2174,6 +2188,60 @@ export default function AdminPanel() {
 
           {activeTab === 'ratings' && (
             <div className="space-y-6">
+              {/* Rating Settings */}
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-white">Rating Modal Settings</h3>
+                      <p className="text-xs text-white/40">Control how and what you ask your students.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Status</span>
+                    <button 
+                      onClick={() => saveSiteConfig({ isRatingEnabled: !siteConfig?.isRatingEnabled })}
+                      className={`relative w-12 h-6 rounded-full transition-all duration-300 ${siteConfig?.isRatingEnabled ? 'bg-yellow-400' : 'bg-white/10'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-black transition-all duration-300 ${siteConfig?.isRatingEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Question</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="e.g., Rate Your Experience"
+                        className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all"
+                        value={siteConfig?.ratingQuestion || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, ratingQuestion: e.target.value })}
+                      />
+                      <button 
+                        onClick={() => saveSiteConfig({ ratingQuestion: siteConfig.ratingQuestion })}
+                        className="p-3 bg-yellow-400 text-black rounded-xl hover:scale-105 transition-all"
+                        title="Save Question"
+                      >
+                        <Save size={20} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-white/20 ml-1 italic">This is the main heading students see in the rating modal.</p>
+                  </div>
+                  
+                  <div className="flex items-end pb-1">
+                    <div className="p-4 bg-yellow-400/5 border border-yellow-400/10 rounded-xl w-full">
+                      <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest font-bold mb-1">Preview</p>
+                      <p className="text-sm text-white font-medium">"{siteConfig?.ratingQuestion || 'Rate Your Experience'}"</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="relative flex-grow max-w-md w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />

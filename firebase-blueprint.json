@@ -180,6 +180,18 @@
         "darkBorder": { "type": "string" }
       },
       "required": ["id"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Site configuration",
+      "type": "object",
+      "properties": {
+        "isRatingEnabled": { "type": "boolean" },
+        "ratingQuestion": { "type": "string" },
+        "welcomeEmailSubject": { "type": "string" },
+        "welcomeEmailTemplate": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -230,6 +242,10 @@
     "/activityLogs/{logId}": {
       "schema": "ActivityLog",
       "description": "User activity logs"
+    },
+    "/config/{docId}": {
+      "schema": "Config",
+      "description": "Site configuration"
     }
   }
 }
