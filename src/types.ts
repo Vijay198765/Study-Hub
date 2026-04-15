@@ -61,7 +61,6 @@ export interface User {
     screenResolution: string;
     ip?: string;
   };
-  pushSubscriptions?: string[];
 }
 
 export interface ActivityLog {

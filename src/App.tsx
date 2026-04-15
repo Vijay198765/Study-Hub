@@ -22,7 +22,6 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
-import { subscribeToPush } from './lib/pushNotifications';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -306,12 +305,6 @@ export default function App() {
 
     const interval = setInterval(trackTime, 60000); // Every minute
     return () => clearInterval(interval);
-  }, [user, loading]);
-
-  useEffect(() => {
-    if (user && !loading) {
-      subscribeToPush();
-    }
   }, [user, loading]);
 
   return (

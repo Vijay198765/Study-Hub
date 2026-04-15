@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock,
-  Star, Shield, Globe, Megaphone
+  Star, Shield, Globe
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -97,61 +97,6 @@ export default function AdminPanel() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const [isBackingUp, setIsBackingUp] = useState(false);
-
-  const [pushTitle, setPushTitle] = useState('');
-  const [pushBody, setPushBody] = useState('');
-  const [isSendingPush, setIsSendingPush] = useState(false);
-
-  const sendPushNotification = async () => {
-    if (!pushTitle.trim() || !pushBody.trim()) {
-      setToast({ message: 'Please enter both title and body', type: 'error' });
-      return;
-    }
-
-    setIsSendingPush(true);
-    try {
-      // Get all users with push subscriptions
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const allSubscriptions: string[] = [];
-      
-      usersSnap.forEach(doc => {
-        const data = doc.data();
-        if (data.pushSubscriptions && Array.isArray(data.pushSubscriptions)) {
-          allSubscriptions.push(...data.pushSubscriptions);
-        }
-      });
-
-      if (allSubscriptions.length === 0) {
-        setToast({ message: 'No users are subscribed to notifications yet.', type: 'info' });
-        return;
-      }
-
-      const response = await fetch('/api/send-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subscriptions: allSubscriptions,
-          title: pushTitle,
-          body: pushBody,
-          url: window.location.origin
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setToast({ message: `Notification sent to ${allSubscriptions.length} subscriptions!`, type: 'success' });
-        setPushTitle('');
-        setPushBody('');
-      } else {
-        throw new Error(result.error || 'Failed to send notifications');
-      }
-    } catch (error) {
-      console.error('Error sending push:', error);
-      setToast({ message: 'Failed to send notifications', type: 'error' });
-    } finally {
-      setIsSendingPush(false);
-    }
-  };
 
   const saveSiteConfig = async (newConfig: any) => {
     try {
@@ -2252,60 +2197,6 @@ export default function AdminPanel() {
 
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              {/* Push Notification Settings */}
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
-                      <Megaphone size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-white">Push Notifications</h3>
-                      <p className="text-xs text-white/40">Send a notification directly to users' phones.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Notification Title</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g., New Study Material!"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue transition-all"
-                      value={pushTitle}
-                      onChange={(e) => setPushTitle(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Message Body</label>
-                    <textarea 
-                      placeholder="e.g., Check out the new Class 10 Science notes."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue transition-all min-h-[100px]"
-                      value={pushBody}
-                      onChange={(e) => setPushBody(e.target.value)}
-                    />
-                  </div>
-                  <button 
-                    onClick={sendPushNotification}
-                    disabled={isSendingPush || !pushTitle.trim() || !pushBody.trim()}
-                    className="w-full py-4 bg-neon-blue text-black font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:scale-100"
-                  >
-                    {isSendingPush ? (
-                      <>
-                        <RefreshCcw className="animate-spin" size={20} />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Megaphone size={20} />
-                        Send Notification to All Users
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
               {/* Rating Settings */}
               <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
                 <div className="flex items-center justify-between">
