@@ -70,7 +70,7 @@ export default function App() {
           setShowRatingModal(false);
         }
       }
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'config/site'));
 
     // Check for special admin status immediately
     const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';

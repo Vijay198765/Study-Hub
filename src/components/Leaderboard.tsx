@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Medal, Crown, Clock } from 'lucide-react';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { UserProfile } from '../types';
 
@@ -24,7 +24,7 @@ export default function Leaderboard() {
       // Show all users who have a name (to avoid showing incomplete profiles)
       setTopUsers(users.filter(u => u.name));
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'users'));
 
     return () => unsub();
   }, []);

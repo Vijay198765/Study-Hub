@@ -128,10 +128,9 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (
+          (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" && request.auth.token.get('email_verified', false) == true) ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          (request.auth.token != null && 
-           request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com")
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
         );
     }
 
@@ -298,6 +297,15 @@ service cloud.firestore {
              data.recipientCount is number;
     }
 
+    function isValidNotification(data) {
+      return data.keys().hasAll(['title', 'message', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 5000 &&
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (!('type' in data) || data.type is string) &&
+             (!('link' in data) || (data.link is string && data.link.size() < 1000));
+    }
+
     function isValidActivityLog(data) {
       return data.keys().hasAll(['userId', 'action', 'timestamp']) &&
              data.userId is string &&
@@ -427,6 +435,13 @@ service cloud.firestore {
     match /activityLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isAuthenticated() && isValidActivityLog(request.resource.data);
+    }
+
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow list: if true;
+      allow get: if true;
+      allow write: if isAdmin();
     }
   }
 }

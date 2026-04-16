@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, X, BellOff, ArrowRight } from 'lucide-react';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Notification as AppNotification } from '../types';
 
@@ -55,6 +55,8 @@ export default function NotificationPrompt() {
           setTimeout(() => setShowToast(false), 10000);
         }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'notifications');
     });
 
     return () => {
