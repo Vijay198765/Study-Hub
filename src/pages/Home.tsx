@@ -11,7 +11,7 @@ import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-export default function Home() {
+export default function Home({ siteConfig }: { siteConfig?: any }) {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +20,7 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>('');
   const location = useLocation();
-  const fullText = "The Future of Learning is Here.";
+  const fullText = siteConfig?.siteSubtitle || "The Future of Learning is Here.";
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

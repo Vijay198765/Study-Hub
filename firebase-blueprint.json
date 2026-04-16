@@ -190,6 +190,15 @@
         "ratingQuestion": { "type": "string" },
         "welcomeEmailSubject": { "type": "string" },
         "welcomeEmailTemplate": { "type": "string" },
+        "siteName": { "type": "string" },
+        "adminName": { "type": "string" },
+        "siteSubtitle": { "type": "string" },
+        "maintenanceMode": { "type": "boolean" },
+        "bgMusicEnabled": { "type": "boolean" },
+        "adminUnlockKey": { "type": "string" },
+        "supportWhatsApp": { "type": "string" },
+        "supportTelegram": { "type": "string" },
+        "supportEmail": { "type": "string" },
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
     }

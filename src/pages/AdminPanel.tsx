@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'settings' | 'notifications';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -647,7 +647,7 @@ export default function AdminPanel() {
     const handleUnlock = () => {
       if (isLockedOut) return;
       
-      if (unlockKey === '101987') {
+      if (unlockKey === (siteConfig?.adminUnlockKey || '101987')) {
         setIsUnlocked(true);
         setUnlockAttempts(0);
         setLockoutUntil(null);
@@ -844,11 +844,11 @@ export default function AdminPanel() {
                   Groups
                 </button>
                 <button 
-                  onClick={() => setActiveTab('settings')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                  onClick={() => setActiveTab('site')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'site' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
                 >
                   <Globe size={16} className="inline-block mr-1.5" />
-                  Settings
+                  Site Control
                 </button>
                 <button 
                   onClick={() => setActiveTab('ratings')}
@@ -2226,21 +2226,163 @@ export default function AdminPanel() {
             </div>
           )}
 
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
-                    <Layout size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-white">General Configuration</h3>
-                    <p className="text-xs text-white/40">Manage your application's global behavior.</p>
+          {activeTab === 'site' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-white">Site Control</h2>
+                  <p className="text-sm text-white/40">Manage global website settings and security.</p>
+                </div>
+                <Globe size={32} className="text-neon-blue" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Site Identity */}
+                <div className="space-y-6 p-6 bg-white/5 border border-white/10 rounded-2xl">
+                  <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    <Layout size={20} className="text-neon-blue" />
+                    Site Identity
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Site Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Study-hub"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={siteConfig?.siteName || ''}
+                        onChange={(e) => saveSiteConfig({ siteName: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Admin Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Vijay Ninama"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={siteConfig?.adminName || ''}
+                        onChange={(e) => saveSiteConfig({ adminName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Hero Tagline</label>
+                      <textarea 
+                        rows={2}
+                        placeholder="The Future of Learning is Here."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all resize-none"
+                        value={siteConfig?.siteSubtitle || ''}
+                        onChange={(e) => saveSiteConfig({ siteSubtitle: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
-                {/* Other settings can go here */}
-                <div className="text-center py-10 text-white/20 italic text-sm">
-                  Global settings consolidated. Rating controls are now in the Ratings tab.
+
+                {/* App Features & Support */}
+                <div className="space-y-6 p-6 bg-white/5 border border-white/10 rounded-2xl">
+                  <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    <Zap size={20} className="text-yellow-400" />
+                    App Controls & Status
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                          <AlertCircle size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">Maintenance Mode</p>
+                          <p className="text-[10px] text-white/40">Block student access while editing</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
+                        className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                          <Palette size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">Background Music</p>
+                          <p className="text-[10px] text-white/40">Enable global BGM for all users</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => saveSiteConfig({ bgMusicEnabled: siteConfig?.bgMusicEnabled !== false })}
+                        className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled !== false ? 'right-1' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest flex items-center gap-2">
+                          <Lock size={14} /> Admin Security Key
+                        </label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            placeholder="Current: 101987"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white font-mono focus:border-neon-blue outline-none transition-all"
+                            value={siteConfig?.adminUnlockKey || ''}
+                            onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
+                          />
+                        </div>
+                        <p className="text-[10px] text-white/20 italic">Key required to unlock this dashboard. Default: 101987</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social & Contact */}
+                <div className="space-y-6 p-6 bg-white/5 border border-white/10 rounded-2xl lg:col-span-2">
+                  <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    <MessageSquare size={20} className="text-emerald-400" />
+                    Contact & Social Links
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">WhatsApp Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. +91 9876543210"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500 outline-none transition-all"
+                        value={siteConfig?.supportWhatsApp || ''}
+                        onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Telegram Link</label>
+                      <input 
+                        type="text" 
+                        placeholder="https://t.me/yourgroup"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={siteConfig?.supportTelegram || ''}
+                        onChange={(e) => saveSiteConfig({ supportTelegram: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Support Email</label>
+                      <input 
+                        type="email" 
+                        placeholder="support@example.com"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                        value={siteConfig?.supportEmail || ''}
+                        onChange={(e) => saveSiteConfig({ supportEmail: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

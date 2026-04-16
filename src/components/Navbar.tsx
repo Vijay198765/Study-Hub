@@ -12,9 +12,10 @@ import { toast } from 'sonner';
 interface NavbarProps {
   isAdmin: boolean;
   user: any;
+  siteConfig?: any;
 }
 
-export default function Navbar({ isAdmin, user }: NavbarProps) {
+export default function Navbar({ isAdmin, user, siteConfig }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -86,10 +87,10 @@ export default function Navbar({ isAdmin, user }: NavbarProps) {
           </div>
           <div className="flex flex-col">
             <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
-              Study-hub
+              {siteConfig?.siteName || 'Study-hub'}
             </span>
             <span className="text-[8px] text-neon-blue font-bold uppercase tracking-[0.2em] mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-              by Vijay Ninama
+              by {siteConfig?.adminName || 'Vijay Ninama'}
             </span>
           </div>
         </Link>

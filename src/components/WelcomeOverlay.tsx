@@ -7,9 +7,10 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface WelcomeOverlayProps {
   onComplete: () => void;
+  siteConfig?: any;
 }
 
-export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onComplete, siteConfig }: WelcomeOverlayProps) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -83,7 +84,7 @@ export default function WelcomeOverlay({ onComplete }: WelcomeOverlayProps) {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink"></div>
         
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-display font-bold text-white mb-2">Welcome to Study Hub</h2>
+          <h2 className="text-3xl font-display font-bold text-white mb-2">Welcome to {siteConfig?.siteName || 'Study Hub'}</h2>
           <p className="text-white/60">Enter your name to personalize your experience or login to save your progress.</p>
         </div>
 

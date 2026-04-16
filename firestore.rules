@@ -275,6 +275,15 @@ service cloud.firestore {
              (!('welcomeEmailSubject' in data) || data.welcomeEmailSubject is string) &&
              (!('welcomeEmailTemplate' in data) || data.welcomeEmailTemplate is string) &&
              (!('welcomeEmailSender' in data) || data.welcomeEmailSender is string) &&
+             (!('siteName' in data) || (data.siteName is string && data.siteName.size() < 100)) &&
+             (!('adminName' in data) || (data.adminName is string && data.adminName.size() < 100)) &&
+             (!('siteSubtitle' in data) || (data.siteSubtitle is string && data.siteSubtitle.size() < 500)) &&
+             (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
+             (!('bgMusicEnabled' in data) || data.bgMusicEnabled is bool) &&
+             (!('adminUnlockKey' in data) || (data.adminUnlockKey is string && data.adminUnlockKey.size() < 50)) &&
+             (!('supportWhatsApp' in data) || (data.supportWhatsApp is string && data.supportWhatsApp.size() < 50)) &&
+             (!('supportTelegram' in data) || (data.supportTelegram is string && data.supportTelegram.size() < 200)) &&
+             (!('supportEmail' in data) || (data.supportEmail is string && data.supportEmail.size() < 200)) &&
              (!('lastUpdated' in data) || (data.lastUpdated is timestamp || data.lastUpdated == request.time));
     }
 

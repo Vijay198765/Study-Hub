@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -343,34 +344,61 @@ export default function App() {
         ) : (
           <ErrorBoundary key="app">
             {firebaseError && <FirebaseSetupGuide errorType={firebaseError} projectId={firebaseConfig.projectId} />}
-            {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} />}
+            {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} siteConfig={siteConfig} />}
             <div className="flex flex-col min-h-screen relative overflow-hidden">
               <Watermark />
               
-              <Navbar isAdmin={isAdmin} user={userProfile} />
+              <Navbar isAdmin={isAdmin} user={userProfile} siteConfig={siteConfig} />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
-                  <Routes location={location}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/classes" element={<Home />} />
-                    <Route path="/class/:classId" element={<ClassDetail />} />
-                    <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
-                    <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
-                    <Route path="/games" element={<Games />} />
-                    <Route path="/live-club" element={<LiveComments />} />
-                    <Route path="/tests" element={<Tests />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route 
-                      path="/admin" 
-                      element={
-                        <ProtectedRoute isAdmin={isAdmin}>
-                          <AdminPanel />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
+                  {siteConfig?.maintenanceMode && !isAdmin ? (
+                    <motion.div 
+                      key="maintenance"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center"
+                    >
+                      <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6 animate-pulse">
+                        <AlertCircle size={40} />
+                      </div>
+                      <h1 className="text-4xl font-display font-bold text-white mb-4 uppercase tracking-tight italic">Under Maintenance</h1>
+                      <p className="text-white/60 max-w-md mx-auto leading-relaxed">
+                        We are currently updating the platform to bring you a better experience. 
+                        Please check back later!
+                      </p>
+                      <div className="mt-10 flex flex-col items-center gap-4">
+                        <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">Stay Tuned</p>
+                        <div className="flex gap-2">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="w-2 h-2 rounded-full bg-red-500 animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <Routes location={location}>
+                      <Route path="/" element={<Home siteConfig={siteConfig} />} />
+                      <Route path="/classes" element={<Home siteConfig={siteConfig} />} />
+                      <Route path="/class/:classId" element={<ClassDetail />} />
+                      <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
+                      <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/live-club" element={<LiveComments />} />
+                      <Route path="/tests" element={<Tests />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route 
+                        path="/admin" 
+                        element={
+                          <ProtectedRoute isAdmin={isAdmin}>
+                            <AdminPanel />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  )}
                 </AnimatePresence>
               </main>
 
