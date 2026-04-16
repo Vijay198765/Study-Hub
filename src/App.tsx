@@ -132,12 +132,18 @@ export default function App() {
             const data = docSnap.data();
             console.log("App: User profile loaded:", data);
             
-            // Update IP if it's different or missing
-            if (data.ip !== userIp) {
+            // Update IP, photoURL, or name if they are different or missing
+            const updates: any = {};
+            if (data.ip !== userIp) updates.ip = userIp;
+            if (firebaseUser.photoURL && data.photoURL !== firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
+            if (firebaseUser.displayName && !data.name) updates.name = firebaseUser.displayName;
+            if (data.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+
+            if (Object.keys(updates).length > 0) {
               try {
-                await updateDoc(userRef, { ip: userIp });
+                await updateDoc(userRef, updates);
               } catch (e) {
-                console.error("Error updating IP:", e);
+                console.error("Error updating user profile fields:", e);
               }
             }
 
@@ -214,10 +220,12 @@ export default function App() {
               uid: firebaseUser.uid,
               email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
               name: name,
+              photoURL: firebaseUser.photoURL || '',
               role: role,
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
               ip: userIp,
+              totalTimeSpent: 0,
               deviceInfo,
               ...extraData
             };

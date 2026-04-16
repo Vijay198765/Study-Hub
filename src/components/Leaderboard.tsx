@@ -21,8 +21,8 @@ export default function Leaderboard() {
         uid: doc.id,
         ...doc.data()
       })) as UserProfile[];
-      // Filter out users with 0 or undefined time
-      setTopUsers(users.filter(u => u.totalTimeSpent && u.totalTimeSpent > 0));
+      // Show all users who have a name (to avoid showing incomplete profiles)
+      setTopUsers(users.filter(u => u.name));
       setLoading(false);
     });
 
