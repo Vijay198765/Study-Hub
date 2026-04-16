@@ -43,6 +43,7 @@ export default function App() {
   const [minLoadingComplete, setMinLoadingComplete] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [siteConfig, setSiteConfig] = useState<any>(null);
   const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
 
   // Test connection on boot
@@ -58,6 +59,19 @@ export default function App() {
     };
     checkConnection();
     
+    // Listen to global site config
+    const configRef = doc(db, 'config', 'site');
+    const unsubConfig = onSnapshot(configRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSiteConfig(data);
+        // Immediately close rating modal if it's disabled globally
+        if (data.isRatingEnabled === false) {
+          setShowRatingModal(false);
+        }
+      }
+    });
+
     // Check for special admin status immediately
     const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
     const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
@@ -282,13 +296,18 @@ export default function App() {
 
   // Show rating modal logic
   useEffect(() => {
-    if (user && !loading && minLoadingComplete) {
+    if (user && !loading && minLoadingComplete && siteConfig?.isRatingEnabled) {
       const timer = setTimeout(() => {
-        setShowRatingModal(true);
-      }, 5000); // Show after 5 seconds of being on home/logged in
+        // Double check configuration before showing
+        if (siteConfig?.isRatingEnabled && !localStorage.getItem(`rated_${user.uid}`)) {
+          setShowRatingModal(true);
+        }
+      }, 5000); // Show after 5 seconds
       return () => clearTimeout(timer);
+    } else if (siteConfig?.isRatingEnabled === false) {
+      setShowRatingModal(false);
     }
-  }, [user, loading, minLoadingComplete]);
+  }, [user, loading, minLoadingComplete, siteConfig?.isRatingEnabled]);
 
   // Time Tracking Logic
   useEffect(() => {

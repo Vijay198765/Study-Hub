@@ -2228,88 +2228,19 @@ export default function AdminPanel() {
 
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              {/* Rating Settings */}
-              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
-                      <Zap size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-white">Rating Modal Settings</h3>
-                      <p className="text-xs text-white/40">Control how and what you ask your students.</p>
-                    </div>
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue">
+                    <Layout size={20} />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Status</span>
-                    <button 
-                      onClick={() => saveSiteConfig({ isRatingEnabled: !siteConfig?.isRatingEnabled })}
-                      className={`relative w-12 h-6 rounded-full transition-all duration-300 ${siteConfig?.isRatingEnabled ? 'bg-yellow-400' : 'bg-white/10'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-black transition-all duration-300 ${siteConfig?.isRatingEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
+                  <div>
+                    <h3 className="text-lg font-medium text-white">General Configuration</h3>
+                    <p className="text-xs text-white/40">Manage your application's global behavior.</p>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Question</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Rate Your Experience"
-                          className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all"
-                          value={siteConfig?.ratingQuestion || ''}
-                          onChange={(e) => setSiteConfig({ ...siteConfig, ratingQuestion: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Options (Comma separated)</label>
-                      <textarea 
-                        placeholder="e.g., Excellent, Good, Average, Poor"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all min-h-[100px]"
-                        value={siteConfig?.ratingOptions?.join(', ') || ''}
-                        onChange={(e) => setSiteConfig({ ...siteConfig, ratingOptions: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
-                      />
-                      <p className="text-[10px] text-white/20 ml-1 italic">If empty, it will default to a 1-10 star rating.</p>
-                    </div>
-
-                    <button 
-                      onClick={() => saveSiteConfig({ 
-                        ratingQuestion: siteConfig.ratingQuestion,
-                        ratingOptions: siteConfig.ratingOptions 
-                      })}
-                      className="btn-neon w-full py-3 flex items-center justify-center gap-2"
-                    >
-                      <Save size={18} />
-                      Save Rating Settings
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="p-6 bg-yellow-400/5 border border-yellow-400/10 rounded-2xl h-full">
-                      <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest font-bold mb-4">Preview Modal Content</p>
-                      <div className="space-y-4">
-                        <h4 className="text-xl font-display font-bold text-white">{siteConfig?.ratingQuestion || 'Rate Your Experience'}</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {siteConfig?.ratingOptions && siteConfig.ratingOptions.length > 0 ? (
-                            siteConfig.ratingOptions.map((opt: string, i: number) => (
-                              <div key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60">
-                                {opt}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="flex gap-1">
-                              {[...Array(5)].map((_, i) => <Star key={i} size={20} className="text-yellow-400/20" />)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                {/* Other settings can go here */}
+                <div className="text-center py-10 text-white/20 italic text-sm">
+                  Global settings consolidated. Rating controls are now in the Ratings tab.
                 </div>
               </div>
             </div>
@@ -2393,7 +2324,110 @@ export default function AdminPanel() {
 
           {activeTab === 'ratings' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Rating Settings Console */}
+              <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+                      <Zap size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-display font-bold text-white">Rating Modal Control</h3>
+                      <p className="text-xs text-white/40 font-medium">Configure how students provide feedback.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 bg-black/20 p-3 rounded-2xl border border-white/5">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">System Status</span>
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${siteConfig?.isRatingEnabled ? 'text-yellow-400' : 'text-white/20'}`}>
+                        {siteConfig?.isRatingEnabled ? 'Active' : 'Disabled'}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => saveSiteConfig({ isRatingEnabled: !siteConfig?.isRatingEnabled })}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-500 shadow-inner ${siteConfig?.isRatingEnabled ? 'bg-yellow-400' : 'bg-white/10'}`}
+                    >
+                      <div className={`absolute top-1 w-5 h-5 rounded-full bg-black shadow-lg transition-all duration-500 transform ${siteConfig?.isRatingEnabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {siteConfig?.isRatingEnabled && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-6 border-t border-white/5 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="space-y-5">
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white/40 ml-1">Rating Question</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g., Rate Your Experience"
+                              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all font-medium"
+                              value={siteConfig?.ratingQuestion || ''}
+                              onChange={(e) => setSiteConfig({ ...siteConfig, ratingQuestion: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-white/40 ml-1">Custom Options (Comma separated)</label>
+                            <textarea 
+                              placeholder="e.g., Excellent, Good, Average, Poor"
+                              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all min-h-[100px] font-medium resize-none"
+                              value={siteConfig?.ratingOptions?.join(', ') || ''}
+                              onChange={(e) => setSiteConfig({ ...siteConfig, ratingOptions: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
+                            />
+                            <p className="text-[10px] text-white/20 ml-1 italic font-medium">Leave empty to use 1-10 star rating.</p>
+                          </div>
+
+                          <button 
+                            onClick={() => saveSiteConfig({ 
+                              ratingQuestion: siteConfig.ratingQuestion,
+                              ratingOptions: siteConfig.ratingOptions 
+                            })}
+                            className="w-full py-4 rounded-xl bg-yellow-400 text-black font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(250,204,21,0.2)] flex items-center justify-center gap-2"
+                          >
+                            <Save size={18} />
+                            Update Rating Logic
+                          </button>
+                        </div>
+                        
+                        <div className="bg-black/40 border border-white/10 rounded-3xl p-6 relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 p-4">
+                            <Eye size={16} className="text-white/10" />
+                          </div>
+                          <p className="text-[10px] text-yellow-400/40 uppercase tracking-[0.2em] font-black mb-6">User Interface Preview</p>
+                          <div className="space-y-6">
+                            <h4 className="text-2xl font-display font-bold text-white leading-tight">
+                              {siteConfig?.ratingQuestion || 'Rate Your Experience'}
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {siteConfig?.ratingOptions && siteConfig.ratingOptions.length > 0 ? (
+                                siteConfig.ratingOptions.map((opt: string, i: number) => (
+                                  <div key={i} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold text-white/60">
+                                    {opt}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="flex gap-2">
+                                  {[...Array(5)].map((_, i) => <Star key={i} size={28} className="text-yellow-400/20" />)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-white/10">
                 <div className="relative flex-grow max-w-md w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input 
