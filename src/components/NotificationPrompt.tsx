@@ -6,9 +6,7 @@ import { collection, query, orderBy, limit, onSnapshot, serverTimestamp } from '
 import { Notification as AppNotification } from '../types';
 
 export default function NotificationPrompt() {
-  const [permission, setPermission] = useState<NotificationPermission>(
-    typeof window !== 'undefined' ? Notification.permission : 'default'
-  );
+  const [permission, setPermission] = useState<NotificationPermission>('default');
   const [showBar, setShowBar] = useState(false);
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showToast, setShowToast] = useState(false);
@@ -16,10 +14,15 @@ export default function NotificationPrompt() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check if we should show the bar
-    if (Notification.permission === 'default') {
-      setShowBar(true);
-    }
+    const timer = setTimeout(() => {
+      const currentPermission = window.Notification ? window.Notification.permission : 'denied';
+      setPermission(currentPermission);
+
+      // Check if we should show the bar
+      if (window.Notification && currentPermission === 'default') {
+        setShowBar(true);
+      }
+    }, 2000);
 
     // Listen for new notifications
     const q = query(
@@ -41,7 +44,7 @@ export default function NotificationPrompt() {
           setShowToast(true);
           
           // Also try browser notification
-          if (Notification.permission === 'granted') {
+          if (window.Notification && window.Notification.permission === 'granted') {
             new window.Notification(notif.title, {
               body: notif.message,
               icon: '/favicon.ico'
@@ -54,16 +57,23 @@ export default function NotificationPrompt() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   const requestPermission = async () => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.Notification) return;
     
     try {
-      const result = await Notification.requestPermission();
+      const result = await window.Notification.requestPermission();
       setPermission(result);
       if (result === 'granted') {
+        setShowBar(false);
+      } else {
+        // If denied or dismissed, still hide the bar for this session 
+        // to avoid annoying the user if they specifically said no
         setShowBar(false);
       }
     } catch (err) {
@@ -77,12 +87,12 @@ export default function NotificationPrompt() {
       <AnimatePresence>
         {showBar && (
           <motion.div
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            exit={{ y: -100 }}
-            className="fixed top-20 left-0 right-0 z-[60] px-4"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-0 right-0 z-[200] px-4"
           >
-            <div className="max-w-4xl mx-auto bg-neon-blue text-black p-3 rounded-2xl shadow-[0_0_30px_rgba(0,229,255,0.3)] flex items-center justify-between gap-4">
+            <div className="max-w-xl mx-auto bg-neon-blue text-black p-4 rounded-2xl shadow-[0_0_50px_rgba(0,229,255,0.4)] flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center">
                   <Bell size={20} />
