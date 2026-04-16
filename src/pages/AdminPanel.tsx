@@ -79,9 +79,14 @@ export default function AdminPanel() {
   const [siteComments, setSiteComments] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [siteConfig, setSiteConfig] = useState<any>(null);
+
+  const shouldShowTab = (tabId: string) => {
+    if (!isLimitedAdmin) return true;
+    const allowedTabs = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
+    return allowedTabs.includes(tabId);
+  };
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -90,7 +95,7 @@ export default function AdminPanel() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'notification', id: string, name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
@@ -238,10 +243,6 @@ export default function AdminPanel() {
       setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'ratings'));
 
-    const unsubNotifications = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
-
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
@@ -282,7 +283,6 @@ export default function AdminPanel() {
       unsubComments();
       unsubGroups();
       unsubRatings();
-      unsubNotifications();
       unsubLogs();
       unsubConfig();
     };
@@ -350,7 +350,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'notification', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string) => {
     setDeleteConfirm({ type, id, name });
   };
 
@@ -365,7 +365,6 @@ export default function AdminPanel() {
     else if (type === 'test') await removeTest(id);
     else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
     else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
-    else if (type === 'notification') await deleteDoc(doc(db, 'notifications', id));
     
     setDeleteConfirm(null);
   };
@@ -424,7 +423,7 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group' | 'notification') => {
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group') => {
     const id = Date.now().toString();
     const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
@@ -462,16 +461,6 @@ export default function AdminPanel() {
         name: 'New Group',
         description: 'A new discussion group',
         password: '',
-        createdAt: serverTimestamp(),
-        createdBy: auth.currentUser?.uid || 'admin'
-      };
-    } else if (type === 'notification') {
-      newEntity = {
-        id: Date.now().toString(),
-        title: 'New Notification',
-        message: 'Enter your message here...',
-        type: 'info',
-        url: '',
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.uid || 'admin'
       };
@@ -808,36 +797,37 @@ export default function AdminPanel() {
           </div>
         </div>
         <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
-                {(isLimitedAdmin ? (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']) : true) && (
-                  <button 
-                    onClick={() => setActiveTab('chapters')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
-                  >
-                    <FileText size={16} className="inline-block mr-1.5" />
-                    Chapters
-                  </button>
-                )}
-
-            {!isLimitedAdmin && (
-              <>
-                <button 
-                  onClick={() => setActiveTab('classes')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'classes' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Layers size={16} className="inline-block mr-1.5" />
-                  Classes
-                </button>
-                <button 
-                  onClick={() => setActiveTab('subjects')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'subjects' ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <BookOpen size={16} className="inline-block mr-1.5" />
-                  Subjects
-                </button>
-              </>
+            {shouldShowTab('chapters') && (
+              <button 
+                onClick={() => setActiveTab('chapters')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <FileText size={16} className="inline-block mr-1.5" />
+                Chapters
+              </button>
             )}
 
-            {(isLimitedAdmin ? (siteConfig?.limitedAdminTabs?.includes('chapterTests')) : true) && (
+            {shouldShowTab('classes') && (
+              <button 
+                onClick={() => setActiveTab('classes')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'classes' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Layers size={16} className="inline-block mr-1.5" />
+                Classes
+              </button>
+            )}
+
+            {shouldShowTab('subjects') && (
+              <button 
+                onClick={() => setActiveTab('subjects')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'subjects' ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <BookOpen size={16} className="inline-block mr-1.5" />
+                Subjects
+              </button>
+            )}
+
+            {shouldShowTab('chapterTests') && (
               <button 
                 onClick={() => setActiveTab('chapterTests')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapterTests' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
@@ -847,50 +837,68 @@ export default function AdminPanel() {
               </button>
             )}
 
+            {shouldShowTab('users') && (
+              <button 
+                onClick={() => setActiveTab('users')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-500 text-white shadow-[0_0_15_rgba(16,185,129,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Users size={16} className="inline-block mr-1.5" />
+                Users
+              </button>
+            )}
+
+            {shouldShowTab('groups') && (
+              <button 
+                onClick={() => setActiveTab('groups')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'groups' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Globe size={16} className="inline-block mr-1.5" />
+                Groups
+              </button>
+            )}
+
+            {shouldShowTab('site') && (
+              <button 
+                onClick={() => setActiveTab('site')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'site' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Globe size={16} className="inline-block mr-1.5" />
+                Site Control
+              </button>
+            )}
+
+            {shouldShowTab('ratings') && (
+              <button 
+                onClick={() => setActiveTab('ratings')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'ratings' ? 'bg-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Star size={16} className="inline-block mr-1.5" />
+                Ratings
+              </button>
+            )}
+
+            {shouldShowTab('comments') && (
+              <button 
+                onClick={() => setActiveTab('comments')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'comments' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <MessageSquare size={16} className="inline-block mr-1.5" />
+                Comments
+              </button>
+            )}
+
+            {shouldShowTab('tests') && (
+              <button 
+                onClick={() => setActiveTab('tests')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'tests' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <ClipboardList size={16} className="inline-block mr-1.5" />
+                Tests
+              </button>
+            )}
+
             {!isLimitedAdmin && (
               <>
-                <button 
-                  onClick={() => setActiveTab('users')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-500 text-white shadow-[0_0_15_rgba(16,185,129,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Users size={16} className="inline-block mr-1.5" />
-                  Users
-                </button>
-                <button 
-                  onClick={() => setActiveTab('groups')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'groups' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Globe size={16} className="inline-block mr-1.5" />
-                  Groups
-                </button>
-                <button 
-                  onClick={() => setActiveTab('site')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'site' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Globe size={16} className="inline-block mr-1.5" />
-                  Site Control
-                </button>
-                <button 
-                  onClick={() => setActiveTab('ratings')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'ratings' ? 'bg-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Star size={16} className="inline-block mr-1.5" />
-                  Ratings
-                </button>
-                <button 
-                  onClick={() => setActiveTab('comments')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'comments' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <MessageSquare size={16} className="inline-block mr-1.5" />
-                  Comments
-                </button>
-                <button 
-                  onClick={() => setActiveTab('tests')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'tests' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <ClipboardList size={16} className="inline-block mr-1.5" />
-                  Tests
-                </button>
                 <button 
                   onClick={backupData}
                   disabled={isBackingUp}
@@ -904,42 +912,47 @@ export default function AdminPanel() {
                   Restore
                   <input type="file" accept=".json" onChange={restoreData} className="hidden" />
                 </label>
-                <button 
-                  onClick={() => setActiveTab('results')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'results' ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Trophy size={16} className="inline-block mr-1.5" />
-                  Results
-                </button>
-                <button 
-                  onClick={() => setActiveTab('stats')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
-                >
-                  <BarChart3 size={16} className="inline-block mr-1.5" />
-                  Stats
-                </button>
-                <button 
-                  onClick={() => setActiveTab('logs')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'logs' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <ClipboardList size={16} className="inline-block mr-1.5" />
-                  Logs
-                </button>
-                <button 
-                  onClick={() => setActiveTab('notifications')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Bell size={16} className="inline-block mr-1.5" />
-                  Notifications
-                </button>
-                <button 
-                  onClick={() => setActiveTab('theme')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'theme' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <Palette size={16} className="inline-block mr-1.5" />
-                  Theme
-                </button>
               </>
+            )}
+
+            {shouldShowTab('results') && (
+              <button 
+                onClick={() => setActiveTab('results')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'results' ? 'bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Trophy size={16} className="inline-block mr-1.5" />
+                Results
+              </button>
+            )}
+
+            {shouldShowTab('stats') && (
+              <button 
+                onClick={() => setActiveTab('stats')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+              >
+                <BarChart3 size={16} className="inline-block mr-1.5" />
+                Stats
+              </button>
+            )}
+
+            {shouldShowTab('logs') && (
+              <button 
+                onClick={() => setActiveTab('logs')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'logs' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <ClipboardList size={16} className="inline-block mr-1.5" />
+                Logs
+              </button>
+            )}
+
+            {shouldShowTab('theme') && (
+              <button 
+                onClick={() => setActiveTab('theme')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'theme' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Palette size={16} className="inline-block mr-1.5" />
+                Theme
+              </button>
             )}
             <div className="w-4 shrink-0" />
           </div>
@@ -2508,82 +2521,6 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-display font-bold text-white">Notifications</h2>
-                  <p className="text-sm text-white/40">Send announcements to all users.</p>
-                </div>
-                <button 
-                  onClick={() => addNew('notification')}
-                  className="btn-neon px-6 py-2.5 flex items-center gap-2"
-                >
-                  <Plus size={18} />
-                  Send New Notification
-                </button>
-              </div>
-
-              <div className="grid gap-4">
-                {notifications.map((notif) => (
-                  <motion.div 
-                    key={notif.id}
-                    layout
-                    className="p-5 bg-white/5 border border-white/10 rounded-2xl hover:border-neon-blue/50 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          notif.type === 'success' ? 'bg-green-500/10 text-green-500' :
-                          notif.type === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
-                          notif.type === 'error' ? 'bg-red-500/10 text-red-500' :
-                          'bg-neon-blue/10 text-neon-blue'
-                        }`}>
-                          <Bell size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-white group-hover:text-neon-blue transition-colors">{notif.title}</h3>
-                          <p className="text-sm text-white/60 mt-1">{notif.message}</p>
-                          {notif.url && (
-                            <a href={notif.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-neon-blue mt-3 hover:underline">
-                              <ExternalLink size={12} />
-                              {notif.url}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(notif, 'notification')}
-                          className="p-2 text-white/20 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete('notification', notif.id, notif.title)}
-                          className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <span className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
-                        Sent on {notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleString() : 'Just now'}
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-                {notifications.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-64 text-white/20 border-2 border-dashed border-white/5 rounded-3xl">
-                    <Bell size={48} className="mb-4 opacity-20" />
-                    <p className="font-medium">No notifications sent yet</p>
-                  </div>
-                )}
               </div>
             </div>
           )}

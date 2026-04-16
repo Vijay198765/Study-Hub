@@ -17,6 +17,7 @@ export default function Footer({ siteConfig }: FooterProps) {
 
   const siteName = siteConfig?.siteName || 'Study-hub';
   const adminName = siteConfig?.adminName || 'Vijay Ninama';
+  const coOwnerName = 'Tilak Sahu';
   const supportEmail = siteConfig?.supportEmail || 'vijayninama683@gmail.com';
   const supportWhatsApp = siteConfig?.supportWhatsApp;
   const supportTelegram = siteConfig?.supportTelegram;
@@ -122,7 +123,10 @@ export default function Footer({ siteConfig }: FooterProps) {
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">{siteName}</h3>
-          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-1">Founder: {adminName}</p>
+          <div className="flex flex-col mb-1">
+            <p className="text-xs text-neon-blue font-bold uppercase tracking-widest">Founder: {adminName}</p>
+            <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Co-owner: {coOwnerName}</p>
+          </div>
           <p className="text-xs text-white/20 uppercase tracking-widest mb-4">Leading the Future of Learning</p>
           <p className="text-white/50 max-w-md mb-6">
             Empowering students with futuristic learning tools and high-quality study materials. 

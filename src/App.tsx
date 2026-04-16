@@ -23,7 +23,6 @@ import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverT
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
-import NotificationPrompt from './components/NotificationPrompt';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
@@ -407,7 +406,6 @@ export default function App() {
 
               <Footer siteConfig={siteConfig} />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
-              <NotificationPrompt />
               <WhatsAppFloat />
             </div>
           </ErrorBoundary>
