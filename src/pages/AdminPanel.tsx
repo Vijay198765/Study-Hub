@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock,
-  Star, Shield, Globe
+  Star, Shield, Globe, Bell
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -28,13 +28,13 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'settings';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'settings' | 'notifications';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -82,6 +82,7 @@ export default function AdminPanel() {
   const [siteComments, setSiteComments] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [siteConfig, setSiteConfig] = useState<any>(null);
   
@@ -92,7 +93,7 @@ export default function AdminPanel() {
   const [editingEntity, setEditingEntity] = useState<any>(null);
   const [editTab, setEditTab] = useState<EditTab>('basic');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'notification', id: string, name: string } | null>(null);
   const [uploadingResource, setUploadingResource] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
@@ -240,6 +241,10 @@ export default function AdminPanel() {
       setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'ratings'));
 
+    const unsubNotifications = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
+
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
@@ -280,6 +285,7 @@ export default function AdminPanel() {
       unsubComments();
       unsubGroups();
       unsubRatings();
+      unsubNotifications();
       unsubLogs();
       unsubConfig();
     };
@@ -347,7 +353,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'notification', id: string, name: string) => {
     setDeleteConfirm({ type, id, name });
   };
 
@@ -362,6 +368,7 @@ export default function AdminPanel() {
     else if (type === 'test') await removeTest(id);
     else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
     else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
+    else if (type === 'notification') await deleteDoc(doc(db, 'notifications', id));
     
     setDeleteConfirm(null);
   };
@@ -382,6 +389,13 @@ export default function AdminPanel() {
       else if (type === 'subject') await saveSubject(dataToSave as Subject);
       else if (type === 'chapter') await saveChapter(dataToSave as Chapter);
       else if (type === 'test') await saveTest(dataToSave as Test);
+      else if (type === 'notification') {
+        const notifRef = doc(db, 'notifications', dataToSave.id);
+        await setDoc(notifRef, {
+          ...dataToSave,
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      }
       else if (type === 'group') {
         const groupRef = doc(db, 'groups', dataToSave.id);
         // Clean undefined fields
@@ -413,7 +427,7 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group') => {
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group' | 'notification') => {
     const id = Date.now().toString();
     const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
@@ -451,6 +465,16 @@ export default function AdminPanel() {
         name: 'New Group',
         description: 'A new discussion group',
         password: '',
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || 'admin'
+      };
+    } else if (type === 'notification') {
+      newEntity = {
+        id: Date.now().toString(),
+        title: 'New Notification',
+        message: 'Enter your message here...',
+        type: 'info',
+        url: '',
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.uid || 'admin'
       };
@@ -880,6 +904,13 @@ export default function AdminPanel() {
                 >
                   <ClipboardList size={16} className="inline-block mr-1.5" />
                   Logs
+                </button>
+                <button 
+                  onClick={() => setActiveTab('notifications')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.5)]' : 'text-white/60 hover:text-white'}`}
+                >
+                  <Bell size={16} className="inline-block mr-1.5" />
+                  Notifications
                 </button>
                 <button 
                   onClick={() => setActiveTab('theme')}
@@ -2221,34 +2252,141 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Question</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="e.g., Rate Your Experience"
-                        className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all"
-                        value={siteConfig?.ratingQuestion || ''}
-                        onChange={(e) => setSiteConfig({ ...siteConfig, ratingQuestion: e.target.value })}
-                      />
-                      <button 
-                        onClick={() => saveSiteConfig({ ratingQuestion: siteConfig.ratingQuestion })}
-                        className="p-3 bg-yellow-400 text-black rounded-xl hover:scale-105 transition-all"
-                        title="Save Question"
-                      >
-                        <Save size={20} />
-                      </button>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Question</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="e.g., Rate Your Experience"
+                          className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all"
+                          value={siteConfig?.ratingQuestion || ''}
+                          onChange={(e) => setSiteConfig({ ...siteConfig, ratingQuestion: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <p className="text-[10px] text-white/20 ml-1 italic">This is the main heading students see in the rating modal.</p>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Rating Options (Comma separated)</label>
+                      <textarea 
+                        placeholder="e.g., Excellent, Good, Average, Poor"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-yellow-400 transition-all min-h-[100px]"
+                        value={siteConfig?.ratingOptions?.join(', ') || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, ratingOptions: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
+                      />
+                      <p className="text-[10px] text-white/20 ml-1 italic">If empty, it will default to a 1-10 star rating.</p>
+                    </div>
+
+                    <button 
+                      onClick={() => saveSiteConfig({ 
+                        ratingQuestion: siteConfig.ratingQuestion,
+                        ratingOptions: siteConfig.ratingOptions 
+                      })}
+                      className="btn-neon w-full py-3 flex items-center justify-center gap-2"
+                    >
+                      <Save size={18} />
+                      Save Rating Settings
+                    </button>
                   </div>
                   
-                  <div className="flex items-end pb-1">
-                    <div className="p-4 bg-yellow-400/5 border border-yellow-400/10 rounded-xl w-full">
-                      <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest font-bold mb-1">Preview</p>
-                      <p className="text-sm text-white font-medium">"{siteConfig?.ratingQuestion || 'Rate Your Experience'}"</p>
+                  <div className="space-y-4">
+                    <div className="p-6 bg-yellow-400/5 border border-yellow-400/10 rounded-2xl h-full">
+                      <p className="text-[10px] text-yellow-400/60 uppercase tracking-widest font-bold mb-4">Preview Modal Content</p>
+                      <div className="space-y-4">
+                        <h4 className="text-xl font-display font-bold text-white">{siteConfig?.ratingQuestion || 'Rate Your Experience'}</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {siteConfig?.ratingOptions && siteConfig.ratingOptions.length > 0 ? (
+                            siteConfig.ratingOptions.map((opt: string, i: number) => (
+                              <div key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60">
+                                {opt}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex gap-1">
+                              {[...Array(5)].map((_, i) => <Star key={i} size={20} className="text-yellow-400/20" />)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-white">Notifications</h2>
+                  <p className="text-sm text-white/40">Send announcements to all users.</p>
+                </div>
+                <button 
+                  onClick={() => addNew('notification')}
+                  className="btn-neon px-6 py-2.5 flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  Send New Notification
+                </button>
+              </div>
+
+              <div className="grid gap-4">
+                {notifications.map((notif) => (
+                  <motion.div 
+                    key={notif.id}
+                    layout
+                    className="p-5 bg-white/5 border border-white/10 rounded-2xl hover:border-neon-blue/50 transition-all group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          notif.type === 'success' ? 'bg-green-500/10 text-green-500' :
+                          notif.type === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
+                          notif.type === 'error' ? 'bg-red-500/10 text-red-500' :
+                          'bg-neon-blue/10 text-neon-blue'
+                        }`}>
+                          <Bell size={24} />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-white group-hover:text-neon-blue transition-colors">{notif.title}</h3>
+                          <p className="text-sm text-white/60 mt-1">{notif.message}</p>
+                          {notif.url && (
+                            <a href={notif.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-neon-blue mt-3 hover:underline">
+                              <ExternalLink size={12} />
+                              {notif.url}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleEdit(notif, 'notification')}
+                          className="p-2 text-white/20 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete('notification', notif.id, notif.title)}
+                          className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <span className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
+                        Sent on {notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleString() : 'Just now'}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+                {notifications.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64 text-white/20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <Bell size={48} className="mb-4 opacity-20" />
+                    <p className="font-medium">No notifications sent yet</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2423,7 +2561,52 @@ export default function AdminPanel() {
               )}
 
               <div className="flex-grow overflow-y-auto p-6 custom-scrollbar">
-                {editTab === 'basic' && (
+                {editingEntity.type === 'notification' ? (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/60">Title</label>
+                      <input 
+                        type="text" 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={editingEntity.title}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, title: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/60">Message</label>
+                      <textarea 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all min-h-[120px]"
+                        value={editingEntity.message}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, message: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Type</label>
+                        <select 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.type_notif || editingEntity.type}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, type_notif: e.target.value })}
+                        >
+                          <option value="info">Info</option>
+                          <option value="success">Success</option>
+                          <option value="warning">Warning</option>
+                          <option value="error">Error</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Action URL (Optional)</label>
+                        <input 
+                          type="text" 
+                          placeholder="https://..."
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.url || ''}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : editTab === 'basic' && (
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-white/60">Name / Title</label>

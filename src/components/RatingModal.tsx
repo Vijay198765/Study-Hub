@@ -17,6 +17,8 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
   const [isEnabled, setIsEnabled] = useState(true);
   const [ratingQuestion, setRatingQuestion] = useState('Rate Your Experience');
   const [ratingSubtext, setRatingSubtext] = useState('How would you rate Study-hub out of 10?');
+  const [ratingOptions, setRatingOptions] = useState<string[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -33,6 +35,10 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
         if (data.ratingQuestion) {
           setRatingQuestion(data.ratingQuestion);
           setRatingSubtext('Share your feedback with us!');
+        }
+        if (data.ratingOptions && data.ratingOptions.length > 0) {
+          setRatingOptions(data.ratingOptions);
+          setRatingSubtext('Choose an option below:');
         }
       }
 
@@ -60,7 +66,8 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
         studentUid: auth.currentUser.uid,
         studentName: auth.currentUser.displayName || 'Anonymous',
         studentEmail: auth.currentUser.email || 'No Email',
-        score,
+        score: selectedOption ? 0 : score,
+        selectedOption: selectedOption || null,
         comment,
         createdAt: serverTimestamp()
       };
@@ -138,23 +145,41 @@ export default function RatingModal({ isOpen, onClose }: RatingModalProps) {
             <p className="text-white/40 text-xs mb-6">{ratingSubtext}</p>
 
             <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/20">
-                  <span>Sad</span>
-                  <span className="text-neon-blue">{score}/10</span>
-                  <span>Happy</span>
+              {ratingOptions.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {ratingOptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedOption(opt)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                        selectedOption === opt 
+                          ? 'bg-neon-blue border-neon-blue text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]' 
+                          : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
                 </div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="10" 
-                  step="1"
-                  value={score}
-                  onChange={(e) => setScore(parseInt(e.target.value))}
-                  className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-blue"
-                />
-                <p className="text-base font-bold text-white uppercase tracking-tighter">{getLabel(score)}</p>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/20">
+                    <span>Sad</span>
+                    <span className="text-neon-blue">{score}/10</span>
+                    <span>Happy</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="10" 
+                    step="1"
+                    value={score}
+                    onChange={(e) => setScore(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-blue"
+                  />
+                  <p className="text-base font-bold text-white uppercase tracking-tighter">{getLabel(score)}</p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <textarea 

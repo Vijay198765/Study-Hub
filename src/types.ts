@@ -131,9 +131,21 @@ export interface SiteConfig {
   id: string;
   isRatingEnabled: boolean;
   ratingQuestion?: string;
+  ratingOptions?: string[]; // Custom options for rating
   welcomeEmailTemplate: string;
   welcomeEmailSubject: string;
   announcement?: string;
   isAnnouncementActive?: boolean;
   lastUpdated: any;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  url?: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  createdAt: any;
+  createdBy: string;
+  expiresAt?: any;
 }
