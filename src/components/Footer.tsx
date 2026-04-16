@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Heart, X } from 'lucide-react';
+import { Mail, Heart, X, MessageSquare, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -7,13 +7,32 @@ import { signInAnonymously } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-export default function Footer() {
+interface FooterProps {
+  siteConfig?: any;
+}
+
+export default function Footer({ siteConfig }: FooterProps) {
   const [showSecretLogin, setShowSecretLogin] = useState(false);
   const [secretKey, setSecretKey] = useState('');
 
+  const siteName = siteConfig?.siteName || 'Study-hub';
+  const adminName = siteConfig?.adminName || 'Vijay Ninama';
+  const supportEmail = siteConfig?.supportEmail || 'vijayninama683@gmail.com';
+  const supportWhatsApp = siteConfig?.supportWhatsApp;
+  const supportTelegram = siteConfig?.supportTelegram;
+
   const handleSecretLogin = async () => {
+    const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
+    const dynamicSecretKey = siteConfig?.secretLoginKey || 'Vijay1987';
+
+    if (!isSecretEnabled) {
+      toast.error('Secret login is currently disabled by admin.');
+      setShowSecretLogin(false);
+      return;
+    }
+
     console.log("Secret login attempt with key:", secretKey);
-    if (secretKey === 'Vijay101987') {
+    if (secretKey === dynamicSecretKey) {
       try {
         console.log("Secret key matches! Setting flags and signing in anonymously...");
         localStorage.setItem('isSpecialLogin', 'true');
@@ -33,7 +52,7 @@ export default function Footer() {
             email: 'anonymous@studyhub.com',
             name: 'Special Student',
             role: 'student',
-            adminKey: 'Vijay101987',
+            adminKey: dynamicSecretKey,
             isLegend: true,
             updatedAt: serverTimestamp(),
             secretLoginLogged: true
@@ -102,12 +121,12 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-2">
-          <h3 className="text-2xl font-display font-bold text-white mb-1">Study-hub</h3>
-          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-1">Owner: Vijay Ninama</p>
-          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-4">Co-owner: Tilak Sahu</p>
+          <h3 className="text-2xl font-display font-bold text-white mb-1">{siteName}</h3>
+          <p className="text-xs text-neon-blue font-bold uppercase tracking-widest mb-1">Founder: {adminName}</p>
+          <p className="text-xs text-white/20 uppercase tracking-widest mb-4">Leading the Future of Learning</p>
           <p className="text-white/50 max-w-md mb-6">
             Empowering students with futuristic learning tools and high-quality study materials. 
-            Join our mission to revolutionize education.
+            Join our mission to revolutionize education worldwide.
           </p>
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 max-w-md">
             <p className="text-[10px] text-white/40 leading-relaxed italic">
@@ -126,10 +145,39 @@ export default function Footer() {
         </div>
         
         <div>
-          <h4 className="text-white font-bold mb-4">Contact</h4>
-          <ul className="space-y-2 text-white/50">
-            <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> vijayninama683@gmail.com</li>
-            <li className="text-xs mt-4">Made with <Heart className="w-3 h-3 inline text-neon-pink" /> for students worldwide.</li>
+          <h4 className="text-white font-bold mb-4">Connect & Support</h4>
+          <ul className="space-y-3 text-white/50">
+            <li className="flex items-center gap-2 group">
+              <Mail className="w-4 h-4 text-neon-pink group-hover:scale-110 transition-transform" /> 
+              <span className="text-sm truncate max-w-[200px]">{supportEmail}</span>
+            </li>
+            {supportWhatsApp && (
+               <li>
+                <a 
+                  href={`https://wa.me/${supportWhatsApp.replace(/\D/g, '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-emerald-400 font-medium transition-colors group"
+                >
+                  <MessageSquare className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  WhatsApp Support
+                </a>
+              </li>
+            )}
+            {supportTelegram && (
+               <li>
+                <a 
+                  href={supportTelegram.startsWith('http') ? supportTelegram : `https://t.me/${supportTelegram.replace('@', '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-neon-blue font-medium transition-colors group"
+                >
+                  <Send className="w-4 h-4 text-neon-blue group-hover:scale-110 transition-transform" />
+                  Telegram Group
+                </a>
+              </li>
+            )}
+            <li className="text-[10px] mt-4 pt-4 border-t border-white/5">Made with <Heart className="w-3 h-3 inline text-neon-pink animate-pulse" /> for students.</li>
           </ul>
         </div>
       </div>
@@ -141,7 +189,7 @@ export default function Footer() {
           title="Secret Login"
         >
           ©
-        </span> {new Date().getFullYear()} Study-hub by Vijay Ninama. All rights reserved.
+        </span> {new Date().getFullYear()} {siteName} by {adminName}. All rights reserved.
       </div>
     </footer>
   );

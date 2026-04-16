@@ -172,7 +172,7 @@ service cloud.firestore {
              data.role in ['admin', 'student'] &&
              (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
-             (!('adminKey' in data) || (data.adminKey is string && data.adminKey == 'Vijay101987')) &&
+             (!('adminKey' in data) || data.adminKey is string) &&
              (!('isLegend' in data) || data.isLegend is bool) &&
              (!('welcomeSent' in data) || data.welcomeSent is bool) &&
              (!('createdAt' in data) || data.createdAt is string) &&
@@ -280,6 +280,10 @@ service cloud.firestore {
              (!('siteSubtitle' in data) || (data.siteSubtitle is string && data.siteSubtitle.size() < 500)) &&
              (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
              (!('bgMusicEnabled' in data) || data.bgMusicEnabled is bool) &&
+             (!('bgMusicUrl' in data) || (data.bgMusicUrl is string && data.bgMusicUrl.size() < 1000)) &&
+             (!('secretLoginEnabled' in data) || data.secretLoginEnabled is bool) &&
+             (!('secretLoginKey' in data) || (data.secretLoginKey is string && data.secretLoginKey.size() < 100)) &&
+             (!('limitedAdminTabs' in data) || data.limitedAdminTabs is list) &&
              (!('adminUnlockKey' in data) || (data.adminUnlockKey is string && data.adminUnlockKey.size() < 50)) &&
              (!('supportWhatsApp' in data) || (data.supportWhatsApp is string && data.supportWhatsApp.size() < 50)) &&
              (!('supportTelegram' in data) || (data.supportTelegram is string && data.supportTelegram.size() < 200)) &&

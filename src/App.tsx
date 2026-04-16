@@ -15,6 +15,7 @@ import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
+import MusicPlayer from './components/MusicPlayer';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -168,7 +169,7 @@ export default function App() {
               try {
                 await updateDoc(userRef, { 
                   role: 'admin',
-                  adminKey: 'Vijay101987',
+                  adminKey: 'Vijay1987',
                   name: localStorage.getItem('studentName') || 'Vijay Admin',
                   isLegend: true
                 });
@@ -215,7 +216,8 @@ export default function App() {
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {
-              extraData = { adminKey: 'Vijay101987', isLegend: true };
+              const dynamicAdminKey = siteConfig?.secretLoginKey || 'Vijay1987';
+              extraData = { adminKey: dynamicAdminKey, isLegend: true };
               if (isDefaultAdmin) {
                 setIsAdmin(true);
               }
@@ -349,6 +351,7 @@ export default function App() {
               <Watermark />
               
               <Navbar isAdmin={isAdmin} user={userProfile} siteConfig={siteConfig} />
+              <MusicPlayer url={siteConfig?.bgMusicUrl} enabled={siteConfig?.bgMusicEnabled} />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -402,7 +405,7 @@ export default function App() {
                 </AnimatePresence>
               </main>
 
-              <Footer />
+              <Footer siteConfig={siteConfig} />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
               <NotificationPrompt />
               <WhatsAppFloat />

@@ -44,14 +44,11 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isLimitedAdmin, setIsLimitedAdmin] = useState(false);
   const [unlockKey, setUnlockKey] = useState('');
   const [unlockError, setUnlockError] = useState(false);
   const [unlockAttempts, setUnlockAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
-  
-  const userEmail = auth.currentUser?.email?.toLowerCase();
-  const isLimitedAdmin = false; 
-
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (auth.currentUser) {
@@ -647,10 +644,26 @@ export default function AdminPanel() {
     const handleUnlock = () => {
       if (isLockedOut) return;
       
-      if (unlockKey === (siteConfig?.adminUnlockKey || '101987')) {
+      const adminEmail = auth.currentUser?.email?.toLowerCase();
+      const isSuperAdmin = adminEmail === 'vijayninama683@gmail.com';
+      
+      const mainKey = siteConfig?.adminUnlockKey || '101987';
+      const limitedKey = siteConfig?.secretLoginKey || 'Vijay1987';
+      const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
+
+      if (unlockKey === mainKey) {
         setIsUnlocked(true);
+        setIsLimitedAdmin(false);
         setUnlockAttempts(0);
         setLockoutUntil(null);
+        setToast({ message: isSuperAdmin ? 'Welcome back, Super Admin!' : 'Admin access granted!', type: 'success' });
+      } else if (isSecretEnabled && unlockKey === limitedKey) {
+        setIsUnlocked(true);
+        // Even with limited key, the super admin gets full permissions
+        setIsLimitedAdmin(!isSuperAdmin);
+        setUnlockAttempts(0);
+        setLockoutUntil(null);
+        setToast({ message: isSuperAdmin ? 'Full access granted (Super Admin Bypass)' : 'Limited Admin Access Granted', type: 'info' });
       } else {
         const newAttempts = unlockAttempts + 1;
         setUnlockAttempts(newAttempts);
@@ -795,6 +808,16 @@ export default function AdminPanel() {
           </div>
         </div>
         <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
+                {(isLimitedAdmin ? (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']) : true) && (
+                  <button 
+                    onClick={() => setActiveTab('chapters')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+                  >
+                    <FileText size={16} className="inline-block mr-1.5" />
+                    Chapters
+                  </button>
+                )}
+
             {!isLimitedAdmin && (
               <>
                 <button 
@@ -811,22 +834,19 @@ export default function AdminPanel() {
                   <BookOpen size={16} className="inline-block mr-1.5" />
                   Subjects
                 </button>
-                <button 
-                  onClick={() => setActiveTab('chapters')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapters' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
-                >
-                  <FileText size={16} className="inline-block mr-1.5" />
-                  Chapters
-                </button>
               </>
             )}
-            <button 
-              onClick={() => setActiveTab('chapterTests')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapterTests' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
-            >
-              <Trophy size={16} className="inline-block mr-1.5" />
-              Chapter MCQs
-            </button>
+
+            {(isLimitedAdmin ? (siteConfig?.limitedAdminTabs?.includes('chapterTests')) : true) && (
+              <button 
+                onClick={() => setActiveTab('chapterTests')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'chapterTests' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Trophy size={16} className="inline-block mr-1.5" />
+                Chapter MCQs
+              </button>
+            )}
+
             {!isLimitedAdmin && (
               <>
                 <button 
@@ -2306,22 +2326,42 @@ export default function AdminPanel() {
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
-                          <Palette size={20} />
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                            <Zap size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Background Music</p>
+                            <p className="text-[10px] text-white/40">Enable global BGM for all users</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-white">Background Music</p>
-                          <p className="text-[10px] text-white/40">Enable global BGM for all users</p>
-                        </div>
+                        <button 
+                          onClick={() => saveSiteConfig({ bgMusicEnabled: !siteConfig?.bgMusicEnabled })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled ? 'right-1' : 'left-1'}`} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => saveSiteConfig({ bgMusicEnabled: siteConfig?.bgMusicEnabled !== false })}
-                        className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled !== false ? 'right-1' : 'left-1'}`} />
-                      </button>
+
+                      {siteConfig?.bgMusicEnabled && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="space-y-2 p-4 bg-white/[0.02] border border-white/5 rounded-xl ml-4"
+                        >
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Source URL (Direct Audio Link)</label>
+                          <input 
+                            type="text" 
+                            placeholder="https://example.com/audio.mp3"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white focus:border-neon-blue outline-none transition-all"
+                            value={siteConfig?.bgMusicUrl || ''}
+                            onChange={(e) => saveSiteConfig({ bgMusicUrl: e.target.value })}
+                          />
+                          <p className="text-[9px] text-white/20 italic">Use direct links to .mp3, .wav, etc.</p>
+                        </motion.div>
+                      )}
                     </div>
 
                     <div className="space-y-4">
@@ -2339,6 +2379,90 @@ export default function AdminPanel() {
                           />
                         </div>
                         <p className="text-[10px] text-white/20 italic">Key required to unlock this dashboard. Default: 101987</p>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/5 space-y-6">
+                        <div className="flex items-center justify-between p-4 bg-neon-pink/5 border border-neon-pink/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-pink/20 text-neon-pink">
+                              <Shield size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Secret Login Support</p>
+                              <p className="text-[10px] text-white/40">Enable custom secret login functionality</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ secretLoginEnabled: !siteConfig?.secretLoginEnabled })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.secretLoginEnabled !== false ? 'bg-neon-pink' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.secretLoginEnabled !== false ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        {siteConfig?.secretLoginEnabled !== false && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-4 bg-white/[0.02] p-4 rounded-xl border border-white/5"
+                          >
+                            <div className="space-y-2">
+                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Secret Access Key</label>
+                              <input 
+                                type="text"
+                                placeholder="e.g. SecretPassword123"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all font-mono"
+                                value={siteConfig?.secretLoginKey || ''}
+                                onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-3">
+                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Permissions (Limited Admin Tabs)</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  { id: 'chapters', label: 'Chapters' },
+                                  { id: 'chapterTests', label: 'Chapter MCQs' },
+                                  { id: 'classes', label: 'Classes' },
+                                  { id: 'subjects', label: 'Subjects' },
+                                  { id: 'users', label: 'Users' },
+                                  { id: 'groups', label: 'Groups' },
+                                  { id: 'ratings', label: 'Ratings' },
+                                  { id: 'comments', label: 'Comments' },
+                                  { id: 'tests', label: 'Tests' },
+                                  { id: 'results', label: 'Results' },
+                                  { id: 'stats', label: 'Stats' },
+                                  { id: 'logs', label: 'Logs' },
+                                  { id: 'notifications', label: 'Notifications' },
+                                  { id: 'theme', label: 'Theme' }
+                                ].map(tab => (
+                                  <label key={tab.id} className="flex items-center gap-2 cursor-pointer group">
+                                    <input 
+                                      type="checkbox"
+                                      className="hidden"
+                                      checked={siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)}
+                                      onChange={() => {
+                                        const current = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
+                                        const next = current.includes(tab.id) 
+                                          ? current.filter((t: string) => t !== tab.id)
+                                          : [...current, tab.id];
+                                        saveSiteConfig({ limitedAdminTabs: next });
+                                      }}
+                                    />
+                                    <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${
+                                      (siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id))
+                                      ? 'bg-neon-pink border-neon-pink' 
+                                      : 'border-white/20 group-hover:border-white/40'
+                                    }`}>
+                                      {(siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)) && <CheckCircle2 size={10} />}
+                                    </div>
+                                    <span className="text-xs text-white/40 group-hover:text-white transition-colors">{tab.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
                     </div>
                   </div>
