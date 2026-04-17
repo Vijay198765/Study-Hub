@@ -74,7 +74,8 @@ export function handleFirestoreError(error: any, operationType: OperationType, p
   };
   
   console.error(`Firestore Error [${operationType}] on [${path}]:`, errInfo);
-  throw new Error(JSON.stringify(errInfo));
+  // Do not throw here to avoid crashing the internal Firestore loop or the React app
+  // The caller should ideally handle errors if they want UI feedback
 }
 
 export async function testConnection() {

@@ -62,6 +62,8 @@ export default function AdminPanel() {
   }, [isUnlocked, isLimitedAdmin, siteConfig, activeTab]);
 
   useEffect(() => {
+    let unsubUser: (() => void) | null = null;
+    
     const checkAdminStatus = async () => {
       if (auth.currentUser) {
         const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
@@ -69,15 +71,25 @@ export default function AdminPanel() {
         setIsSpecialAdmin(isSpecial && isAdminLogin);
 
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        // Better: just check the current user doc
-        onSnapshot(userRef, (snap) => {
+        unsubUser = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             setIsAdmin(snap.data().role === 'admin');
           }
+        }, (err) => {
+          console.error("Admin check failed:", err);
+          setIsAdmin(false);
         });
+      } else {
+        setIsAdmin(false);
+        setIsSpecialAdmin(false);
       }
     };
+    
     checkAdminStatus();
+    
+    return () => {
+      if (unsubUser) unsubUser();
+    };
   }, []);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);

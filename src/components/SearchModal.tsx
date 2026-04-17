@@ -24,36 +24,68 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     chapters: Chapter[];
   }>({ classes: [], subjects: [], chapters: [] });
 
+  const unsubscribesRef = React.useRef<Map<string, () => void>>(new Map());
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // Clean up all when modal closes
+      unsubscribesRef.current.forEach(unsub => unsub());
+      unsubscribesRef.current.clear();
+      return;
+    }
 
     // Fetch all data for searching
-    // This is a simplified version, in a real app you'd search server-side
     const unsubClasses = getClasses((classes) => {
       setAllData(prev => ({ ...prev, classes }));
       
-      classes.forEach(cls => {
-        getSubjectsByClass(cls.id, (subjects) => {
-          setAllData(prev => {
-            const existingIds = new Set(prev.subjects.map(s => s.id));
-            const newSubjects = subjects.filter(s => !existingIds.has(s.id));
-            return { ...prev, subjects: [...prev.subjects, ...newSubjects] };
-          });
+      const currentClassIds = new Set(classes.map(c => c.id));
+      // Cleanup removed classes
+      unsubscribesRef.current.forEach((unsub, key) => {
+        if (key.startsWith('sub_') && !currentClassIds.has(key.replace('sub_', ''))) {
+          unsub();
+          unsubscribesRef.current.delete(key);
+        }
+      });
 
-          subjects.forEach(sub => {
-            getChaptersBySubject(sub.id, (chapters) => {
-              setAllData(prev => {
-                const existingIds = new Set(prev.chapters.map(c => c.id));
-                const newChapters = chapters.filter(c => !existingIds.has(c.id));
-                return { ...prev, chapters: [...prev.chapters, ...newChapters] };
-              });
+      classes.forEach(cls => {
+        if (!unsubscribesRef.current.has(`sub_${cls.id}`)) {
+          const unsubSubjects = getSubjectsByClass(cls.id, (subjects) => {
+            setAllData(prev => {
+              const otherSubjects = prev.subjects.filter(s => s.classId !== cls.id);
+              return { ...prev, subjects: [...otherSubjects, ...subjects] };
+            });
+
+            const currentSubIds = new Set(subjects.map(s => s.id));
+            unsubscribesRef.current.forEach((unsub, key) => {
+              if (key.startsWith(`ch_${cls.id}_`) && !currentSubIds.has(key.replace(`ch_${cls.id}_`, ''))) {
+                unsub();
+                unsubscribesRef.current.delete(key);
+              }
+            });
+
+            subjects.forEach(sub => {
+              const chKey = `ch_${cls.id}_${sub.id}`;
+              if (!unsubscribesRef.current.has(chKey)) {
+                const unsubChapters = getChaptersBySubject(sub.id, (chapters) => {
+                  setAllData(prev => {
+                    const otherChapters = prev.chapters.filter(c => c.subjectId !== sub.id);
+                    return { ...prev, chapters: [...otherChapters, ...chapters] };
+                  });
+                });
+                unsubscribesRef.current.set(chKey, unsubChapters);
+              }
             });
           });
-        });
+          unsubscribesRef.current.set(`sub_${cls.id}`, unsubSubjects);
+        }
       });
     });
 
-    return () => unsubClasses();
+    return () => {
+      unsubClasses();
+      unsubscribesRef.current.forEach(unsub => unsub());
+      unsubscribesRef.current.clear();
+    };
   }, [isOpen]);
 
   useEffect(() => {

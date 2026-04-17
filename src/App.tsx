@@ -47,7 +47,7 @@ export default function App() {
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
 
-  // Test connection on boot
+  // Test connection and listen to config
   useEffect(() => {
     const checkConnection = async () => {
       try {
@@ -79,6 +79,8 @@ export default function App() {
     if (isSpecial && isAdminLogin) {
       setIsSpecialAdmin(true);
     }
+
+    return () => unsubConfig();
   }, []);
 
   // Listen for auth errors globally

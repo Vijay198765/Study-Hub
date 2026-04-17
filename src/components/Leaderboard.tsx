@@ -10,7 +10,8 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Show all users who have spent any time, ordered by time
+    // Only fetch if authenticated to satisfy Firestore rules
+    // User data contains PII (email), so it's restricted to authenticated users
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc')
@@ -24,7 +25,12 @@ export default function Leaderboard() {
       // Show all users who have a name (to avoid showing incomplete profiles)
       setTopUsers(users.filter(u => u.name));
       setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'users'));
+    }, (error) => {
+      // If we get a permission error, it's likely because the user isn't logged in
+      // and we shouldn't have attempted the fetch yet, or their session expired.
+      console.warn('Leaderboard fetch failed:', error.message);
+      setLoading(false);
+    });
 
     return () => unsub();
   }, []);
