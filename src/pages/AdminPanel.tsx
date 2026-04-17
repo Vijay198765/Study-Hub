@@ -45,6 +45,7 @@ export default function AdminPanel() {
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLimitedAdmin, setIsLimitedAdmin] = useState(false);
+  const [sessionAllowedTabs, setSessionAllowedTabs] = useState<string[]>([]);
   const [unlockKey, setUnlockKey] = useState('');
   const [unlockError, setUnlockError] = useState(false);
   const [unlockAttempts, setUnlockAttempts] = useState(0);
@@ -54,12 +55,15 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (isUnlocked && isLimitedAdmin && siteConfig) {
-      const allowedTabs = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
-      if (!allowedTabs.includes(activeTab)) {
+      const allowedTabs = sessionAllowedTabs.length > 0 
+        ? sessionAllowedTabs 
+        : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests', 'subjects']);
+      
+      if (allowedTabs.length > 0 && !allowedTabs.includes(activeTab)) {
         setActiveTab(allowedTabs[0] as AdminTab);
       }
     }
-  }, [isUnlocked, isLimitedAdmin, siteConfig, activeTab]);
+  }, [isUnlocked, isLimitedAdmin, siteConfig, activeTab, sessionAllowedTabs]);
 
   useEffect(() => {
     let unsubUser: (() => void) | null = null;
@@ -107,7 +111,9 @@ export default function AdminPanel() {
   
   const shouldShowTab = (tabId: string) => {
     if (!isLimitedAdmin) return true;
-    const allowedTabs = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
+    const allowedTabs = sessionAllowedTabs.length > 0 
+      ? sessionAllowedTabs 
+      : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']);
     return allowedTabs.includes(tabId);
   };
   
@@ -663,16 +669,29 @@ export default function AdminPanel() {
       const limitedKey = siteConfig?.secretLoginKey || 'Vijay1987';
       const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
 
+      // Check for secret profiles
+      const profile = siteConfig?.secretProfiles?.find((p: any) => p.key === unlockKey);
+
       if (unlockKey === mainKey) {
         setIsUnlocked(true);
         setIsLimitedAdmin(false);
+        setSessionAllowedTabs([]); // Full access
         setUnlockAttempts(0);
         setLockoutUntil(null);
         setToast({ message: isSuperAdmin ? 'Welcome back, Super Admin!' : 'Admin access granted!', type: 'success' });
-      } else if (isSecretEnabled && unlockKey === limitedKey) {
+      } else if (isSecretEnabled && (unlockKey === limitedKey || profile)) {
         setIsUnlocked(true);
         // Even with limited key, the super admin gets full permissions
-        setIsLimitedAdmin(!isSuperAdmin);
+        const limited = !isSuperAdmin;
+        setIsLimitedAdmin(limited);
+        
+        if (limited) {
+          const allowed = profile ? profile.allowedTabs : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']);
+          setSessionAllowedTabs(allowed);
+        } else {
+          setSessionAllowedTabs([]);
+        }
+
         setUnlockAttempts(0);
         setLockoutUntil(null);
         setToast({ message: isSuperAdmin ? 'Full access granted (Super Admin Bypass)' : 'Limited Admin Access Granted', type: 'info' });
@@ -975,6 +994,16 @@ export default function AdminPanel() {
               >
                 <Palette size={16} className="inline-block mr-1.5" />
                 Theme
+              </button>
+            )}
+
+            {shouldShowTab('notifications') && (
+              <button 
+                onClick={() => setActiveTab('notifications')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Bell size={16} className="inline-block mr-1.5" />
+                News
               </button>
             )}
             <div className="w-4 shrink-0" />
@@ -2395,7 +2424,15 @@ export default function AdminPanel() {
                             value={siteConfig?.bgMusicUrl || ''}
                             onChange={(e) => saveSiteConfig({ bgMusicUrl: e.target.value })}
                           />
-                          <p className="text-[9px] text-white/20 italic">Use direct links to .mp3, .wav, etc.</p>
+                          <div className="mt-2 p-3 bg-neon-blue/5 border border-neon-blue/10 rounded-lg">
+                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                              <Info size={10} /> Where to get music links?
+                            </p>
+                            <p className="text-[9px] text-white/30 leading-relaxed">
+                              Visit sites like <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">Pixabay Music</a>. 
+                              Right-click the "Download" button and copy the link to get a direct .mp3 URL. 
+                            </p>
+                          </div>
                         </motion.div>
                       )}
                     </div>
@@ -2424,8 +2461,8 @@ export default function AdminPanel() {
                               <Shield size={20} />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white">Secret Login Support</p>
-                              <p className="text-[10px] text-white/40">Enable custom secret login functionality</p>
+                               <p className="text-sm font-bold text-white">Multi-Secret Access System</p>
+                               <p className="text-[10px] text-white/40">Manage multiple access codes with custom permissions</p>
                             </div>
                           </div>
                           <button 
@@ -2440,10 +2477,121 @@ export default function AdminPanel() {
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            className="space-y-4 bg-white/[0.02] p-4 rounded-xl border border-white/5"
+                            className="space-y-6 bg-white/[0.02] p-6 rounded-2xl border border-white/5"
                           >
-                            <div className="space-y-2">
-                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Secret Access Key</label>
+                            {/* Manage Secret Profiles */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-white/60">Access Profiles</h4>
+                                <button 
+                                  onClick={() => {
+                                    const next = [...(siteConfig?.secretProfiles || [])];
+                                    next.push({ id: Date.now().toString(), label: 'New Code', key: 'Vijay' + Math.floor(Math.random() * 9000 + 1000), allowedTabs: ['chapters', 'chapterTests'] });
+                                    saveSiteConfig({ secretProfiles: next });
+                                  }}
+                                  className="text-[10px] font-bold uppercase tracking-widest text-neon-blue hover:text-white transition-colors flex items-center gap-1"
+                                >
+                                  <Plus size={12} /> Add New Profile
+                                </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                {(siteConfig?.secretProfiles || []).map((profile: any, pIdx: number) => (
+                                  <div key={profile.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex-1 grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] uppercase font-bold text-white/20">Label</label>
+                                          <input 
+                                            type="text"
+                                            value={profile.label}
+                                            onChange={(e) => {
+                                              const next = [...siteConfig.secretProfiles];
+                                              next[pIdx].label = e.target.value;
+                                              saveSiteConfig({ secretProfiles: next });
+                                            }}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white focus:border-neon-pink outline-none"
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] uppercase font-bold text-white/20">Secret Key</label>
+                                          <input 
+                                            type="text"
+                                            value={profile.key}
+                                            onChange={(e) => {
+                                              const next = [...siteConfig.secretProfiles];
+                                              next[pIdx].key = e.target.value;
+                                              saveSiteConfig({ secretProfiles: next });
+                                            }}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white font-mono focus:border-neon-pink outline-none"
+                                          />
+                                        </div>
+                                      </div>
+                                      <button 
+                                        onClick={() => {
+                                          const next = siteConfig.secretProfiles.filter((_: any, i: number) => i !== pIdx);
+                                          saveSiteConfig({ secretProfiles: next });
+                                        }}
+                                        className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] uppercase font-bold text-white/20">Permissions</label>
+                                      <div className="flex flex-wrap gap-2">
+                                        {[
+                                          { id: 'chapters', label: 'Chapters' },
+                                          { id: 'chapterTests', label: 'Chapter MCQs' },
+                                          { id: 'classes', label: 'Classes' },
+                                          { id: 'subjects', label: 'Subjects' },
+                                          { id: 'users', label: 'Users' },
+                                          { id: 'groups', label: 'Groups' },
+                                          { id: 'ratings', label: 'Ratings' },
+                                          { id: 'comments', label: 'Comments' },
+                                          { id: 'tests', label: 'Tests' },
+                                          { id: 'results', label: 'Results' },
+                                          { id: 'stats', label: 'Stats' },
+                                          { id: 'logs', label: 'Logs' },
+                                          { id: 'site', label: 'Site settings' },
+                                          { id: 'notifications', label: 'News' },
+                                          { id: 'theme', label: 'Theme' }
+                                        ].map(tab => (
+                                          <button
+                                            key={tab.id}
+                                            onClick={() => {
+                                              const next = [...siteConfig.secretProfiles];
+                                              const currentTabs = profile.allowedTabs || [];
+                                              next[pIdx].allowedTabs = currentTabs.includes(tab.id)
+                                                ? currentTabs.filter((t: string) => t !== tab.id)
+                                                : [...currentTabs, tab.id];
+                                              saveSiteConfig({ secretProfiles: next });
+                                            }}
+                                            className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                                              (profile.allowedTabs || []).includes(tab.id)
+                                              ? 'bg-neon-pink text-white shadow-[0_0_10px_rgba(255,0,229,0.3)]'
+                                              : 'bg-white/5 text-white/30 hover:bg-white/10'
+                                            }`}
+                                          >
+                                            {tab.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+
+                                {(siteConfig?.secretProfiles || []).length === 0 && (
+                                  <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                                    <p className="text-white/20 text-xs italic">No secondary codes created yet.</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 pt-4 border-t border-white/5">
+                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Legacy Global Secret Key (Backward Compatibility)</label>
                               <input 
                                 type="text"
                                 placeholder="e.g. SecretPassword123"
@@ -2454,7 +2602,7 @@ export default function AdminPanel() {
                             </div>
 
                             <div className="space-y-3">
-                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Permissions (Limited Admin Tabs)</label>
+                              <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Legacy Permissions (For Legacy Key)</label>
                               <div className="grid grid-cols-2 gap-2">
                                 {[
                                   { id: 'chapters', label: 'Chapters' },
