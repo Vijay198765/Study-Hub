@@ -51,6 +51,7 @@ export interface User {
   photoURL?: string;
   createdAt: any;
   isLegend?: boolean;
+  secretLoginLogged?: boolean;
   totalTimeSpent?: number; // in minutes
   lastActive?: any;
   ip?: string;

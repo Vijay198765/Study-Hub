@@ -120,32 +120,19 @@ export default function Footer({ siteConfig }: FooterProps) {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">{siteName}</h3>
           <div className="flex flex-col mb-1">
             <p className="text-xs text-neon-blue font-bold uppercase tracking-widest">Founder: {adminName}</p>
-            <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Co-owner: {coOwnerName}</p>
+            <p className="text-xs text-neon-blue font-bold uppercase tracking-widest">Co-owner: {coOwnerName}</p>
           </div>
           <p className="text-xs text-white/20 uppercase tracking-widest mb-4">Leading the Future of Learning</p>
-          <p className="text-white/50 max-w-md mb-6">
-            Empowering students with futuristic learning tools and high-quality study materials. 
-            Join our mission to revolutionize education worldwide.
-          </p>
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 max-w-md">
             <p className="text-[10px] text-white/40 leading-relaxed italic">
               <span className="text-neon-blue font-bold not-italic">Disclaimer:</span> All study materials and content provided on this platform are collected from publicly available sources. Original rights and credits belong to their respective authors and authorities. If you have any concerns regarding the content, please contact us.
             </p>
           </div>
-        </div>
-        
-        <div>
-          <h4 className="text-white font-bold mb-4">Quick Links</h4>
-          <ul className="space-y-2 text-white/50">
-            <li><a href="/" className="hover:text-neon-blue transition-colors">Home</a></li>
-            <li><a href="/classes" className="hover:text-neon-blue transition-colors">Classes</a></li>
-            <li><a href="/login" className="hover:text-neon-blue transition-colors">Admin Login</a></li>
-          </ul>
         </div>
         
         <div>

@@ -23,7 +23,8 @@ export default function Leaderboard() {
         ...doc.data()
       })) as UserProfile[];
       // Show all users who have a name (to avoid showing incomplete profiles)
-      setTopUsers(users.filter(u => u.name));
+      // AND exclude special/secret accounts from the leaderboard
+      setTopUsers(users.filter(u => u.name && !u.secretLoginLogged));
       setLoading(false);
     }, (error) => {
       // If we get a permission error, it's likely because the user isn't logged in

@@ -1931,7 +1931,7 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com')
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userName !== 'Special Student' && !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
@@ -2001,7 +2001,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com')
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && l.userName !== 'Special Student')
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
