@@ -24,7 +24,8 @@ export default function Footer({ siteConfig }: FooterProps) {
 
   const handleSecretLogin = async () => {
     const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
-    const dynamicSecretKey = siteConfig?.secretLoginKey || 'Vijay1987';
+    const legacySecretKey = siteConfig?.secretLoginKey || 'Vijay1987';
+    const secretProfiles = siteConfig?.secretProfiles || [];
 
     if (!isSecretEnabled) {
       toast.error('Secret login is currently disabled by admin.');
@@ -32,28 +33,37 @@ export default function Footer({ siteConfig }: FooterProps) {
       return;
     }
 
-    console.log("Secret login attempt with key:", secretKey);
-    if (secretKey === dynamicSecretKey) {
+    // Check if key matches legacy or any profile
+    const matchedProfile = secretProfiles.find((p: any) => p.key === secretKey);
+    const isLegacyMatch = secretKey === legacySecretKey;
+
+    if (matchedProfile || isLegacyMatch) {
       try {
         console.log("Secret key matches! Setting flags and signing in anonymously...");
         localStorage.setItem('isSpecialLogin', 'true');
-        localStorage.setItem('studentName', 'Special Student');
-        localStorage.setItem('isAdminLogin', 'false');
+        localStorage.setItem('studentName', matchedProfile ? matchedProfile.label : 'Special Student');
+        localStorage.setItem('isAdminLogin', 'true'); // Changed to true to enable dashboard visibility
         localStorage.setItem('hasSkippedLogin', 'false');
+        
+        // Store session-specific permissions
+        if (matchedProfile) {
+          localStorage.setItem('sessionAllowedTabs', JSON.stringify(matchedProfile.allowedTabs || []));
+        } else {
+          // Legacy permissions
+          localStorage.setItem('sessionAllowedTabs', JSON.stringify(siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']));
+        }
         
         const userCredential = await signInAnonymously(auth);
         const user = userCredential.user;
 
         if (user) {
-          // Create/Update user document to grant special privileges in Firestore
-          // Strictly student role for security
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             uid: user.uid,
             email: 'anonymous@studyhub.com',
-            name: 'Special Student',
+            name: matchedProfile ? matchedProfile.label : 'Special Student',
             role: 'student',
-            adminKey: dynamicSecretKey,
+            adminKey: secretKey,
             isLegend: true,
             updatedAt: serverTimestamp(),
             secretLoginLogged: true

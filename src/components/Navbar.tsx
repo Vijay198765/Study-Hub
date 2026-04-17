@@ -11,11 +11,12 @@ import { toast } from 'sonner';
 
 interface NavbarProps {
   isAdmin: boolean;
+  isSpecialAdmin?: boolean;
   user: any;
   siteConfig?: any;
 }
 
-export default function Navbar({ isAdmin, user, siteConfig }: NavbarProps) {
+export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -82,7 +83,7 @@ export default function Navbar({ isAdmin, user, siteConfig }: NavbarProps) {
     { name: 'Tests', path: '/tests', icon: ClipboardList },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
-    ...(isAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
+    ...(isAdmin || isSpecialAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];
 
   return (

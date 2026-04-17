@@ -53,6 +53,8 @@ export default function AdminPanel() {
 
   const [siteConfig, setSiteConfig] = useState<any>(null);
 
+  const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+
   useEffect(() => {
     if (isUnlocked && isLimitedAdmin && siteConfig) {
       const allowedTabs = sessionAllowedTabs.length > 0 
@@ -77,7 +79,27 @@ export default function AdminPanel() {
         const userRef = doc(db, 'users', auth.currentUser.uid);
         unsubUser = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
-            setIsAdmin(snap.data().role === 'admin');
+            const data = snap.data();
+            setIsAdmin(data.role === 'admin');
+            
+            // Auto-unlock if it's a special secret login session
+            if (isSpecial) {
+              setIsUnlocked(true);
+              const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+              const limited = !isSuper;
+              setIsLimitedAdmin(limited);
+              
+              if (limited) {
+                const stored = localStorage.getItem('sessionAllowedTabs');
+                if (stored) {
+                  try {
+                    setSessionAllowedTabs(JSON.parse(stored));
+                  } catch (e) {
+                    console.error("Error parsing stored tabs:", e);
+                  }
+                }
+              }
+            }
           }
         }, (err) => {
           console.error("Admin check failed:", err);
@@ -247,7 +269,7 @@ export default function AdminPanel() {
 
   // Load initial data
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isSpecialAdmin) return;
     
     console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
     const unsubClasses = getClasses(setClasses);
@@ -315,7 +337,7 @@ export default function AdminPanel() {
       unsubLogs();
       unsubConfig();
     };
-  }, [auth.currentUser?.uid, isAdmin]);
+  }, [auth.currentUser?.uid, isAdmin, isSpecialAdmin]);
 
   // Load subjects when class changes
   useEffect(() => {
@@ -997,15 +1019,6 @@ export default function AdminPanel() {
               </button>
             )}
 
-            {shouldShowTab('notifications') && (
-              <button 
-                onClick={() => setActiveTab('notifications')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
-              >
-                <Bell size={16} className="inline-block mr-1.5" />
-                News
-              </button>
-            )}
             <div className="w-4 shrink-0" />
           </div>
 
@@ -2414,30 +2427,46 @@ export default function AdminPanel() {
                         <motion.div 
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-2 p-4 bg-white/[0.02] border border-white/5 rounded-xl ml-4"
+                          className="space-y-4 p-4 bg-white/[0.02] border border-white/5 rounded-xl ml-4"
                         >
-                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Source URL (Direct Audio Link)</label>
-                          <input 
-                            type="text" 
-                            placeholder="https://example.com/audio.mp3"
-                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white focus:border-neon-blue outline-none transition-all"
-                            value={siteConfig?.bgMusicUrl || ''}
-                            onChange={(e) => saveSiteConfig({ bgMusicUrl: e.target.value })}
-                          />
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Playlist (Direct Audio Links - 5 Options)</label>
+                            {[0, 1, 2, 3, 4].map((idx) => (
+                              <div key={idx} className="relative group">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-white/20 font-bold">{idx + 1}</span>
+                                <input 
+                                  type="text" 
+                                  placeholder={`https://example.com/track${idx + 1}.mp3`}
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-8 pr-3 text-xs text-white focus:border-neon-blue outline-none transition-all"
+                                  value={siteConfig?.bgMusicUrls?.[idx] || (idx === 0 ? siteConfig?.bgMusicUrl || '' : '')}
+                                  onChange={(e) => {
+                                    const nextUrls = [...(siteConfig?.bgMusicUrls || [])];
+                                    // Handle legacy single url migration too
+                                    if (nextUrls.length === 0 && siteConfig?.bgMusicUrl) {
+                                      nextUrls[0] = siteConfig.bgMusicUrl;
+                                    }
+                                    nextUrls[idx] = e.target.value;
+                                    saveSiteConfig({ bgMusicUrls: nextUrls });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
                           <div className="mt-2 p-3 bg-neon-blue/5 border border-neon-blue/10 rounded-lg">
                             <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
-                              <Info size={10} /> Where to get music links?
+                              <Info size={10} /> Pro Tip
                             </p>
                             <p className="text-[9px] text-white/30 leading-relaxed">
-                              Visit sites like <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">Pixabay Music</a>. 
-                              Right-click the "Download" button and copy the link to get a direct .mp3 URL. 
+                              Add multiple links to create a playlist. Tracks will automatically cycle. 
+                              Visit <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">Pixabay</a> for free tracks.
                             </p>
                           </div>
                         </motion.div>
                       )}
                     </div>
 
-                    <div className="space-y-4">
+                    {isSuperAdmin && (
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-white/60 uppercase tracking-widest flex items-center gap-2">
                           <Lock size={14} /> Admin Security Key
@@ -2447,13 +2476,15 @@ export default function AdminPanel() {
                             type="text" 
                             placeholder="Current: 101987"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white font-mono focus:border-neon-blue outline-none transition-all"
-                            value={siteConfig?.adminUnlockKey || ''}
+                            value={siteConfig?.adminUnlockKey || '101987'}
                             onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
                           />
                         </div>
-                        <p className="text-[10px] text-white/20 italic">Key required to unlock this dashboard. Default: 101987</p>
+                        <p className="text-[10px] text-white/20 italic">Master key for full dashboard access. Default: 101987</p>
                       </div>
+                    )}
 
+                    {isSuperAdmin && (
                       <div className="pt-4 border-t border-white/5 space-y-6">
                         <div className="flex items-center justify-between p-4 bg-neon-pink/5 border border-neon-pink/20 rounded-xl">
                           <div className="flex items-center gap-3">
@@ -2617,6 +2648,7 @@ export default function AdminPanel() {
                                   { id: 'results', label: 'Results' },
                                   { id: 'stats', label: 'Stats' },
                                   { id: 'logs', label: 'Logs' },
+                                  { id: 'site', label: 'Site Control' },
                                   { id: 'notifications', label: 'Notifications' },
                                   { id: 'theme', label: 'Theme' }
                                 ].map(tab => (
@@ -2648,7 +2680,7 @@ export default function AdminPanel() {
                           </motion.div>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 

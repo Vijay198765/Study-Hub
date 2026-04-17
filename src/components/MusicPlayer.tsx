@@ -3,17 +3,54 @@ import { Volume2, VolumeX, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface MusicPlayerProps {
-  url: string;
+  urls: string[]; // Updated to support multiple URLs
   enabled: boolean;
 }
 
-export default function MusicPlayer({ url, enabled }: MusicPlayerProps) {
+export default function MusicPlayer({ urls = [], enabled }: MusicPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
+  
+  // Get valid urls
+  const validUrls = (urls || []).filter(url => url && url.startsWith('http'));
+  const currentUrl = validUrls[currentTrackIndex] || '';
 
   useEffect(() => {
-    if (!url || !enabled) {
+    // Basic interaction listener to overcome browser autoplay blocks
+    const handleInteraction = () => {
+      if (!hasInteracted) {
+        setHasInteracted(true);
+        if (enabled && currentUrl) {
+          playAudio();
+        }
+      }
+    };
+
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    window.addEventListener('scroll', handleInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+    };
+  }, [enabled, currentUrl, hasInteracted]);
+
+  const playAudio = () => {
+    if (audioRef.current && enabled && currentUrl) {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(e => {
+        console.warn("BGM Play auto-blocked by browser (waiting for interaction):", e);
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUrl || !enabled) {
       if (audioRef.current) {
         audioRef.current.pause();
         setIsPlaying(false);
@@ -22,19 +59,28 @@ export default function MusicPlayer({ url, enabled }: MusicPlayerProps) {
     }
 
     if (!audioRef.current) {
-      audioRef.current = new Audio(url);
-      audioRef.current.loop = true;
+      audioRef.current = new Audio(currentUrl);
+      audioRef.current.loop = false; // We use onEnded to cycle
       audioRef.current.volume = 0.3;
-    } else if (audioRef.current.src !== url) {
-      audioRef.current.src = url;
+      
+      audioRef.current.onended = () => {
+        if (validUrls.length > 1) {
+          setCurrentTrackIndex((prev) => (prev + 1) % validUrls.length);
+        } else {
+          audioRef.current?.play();
+        }
+      };
+    } else if (audioRef.current.src !== currentUrl) {
+      audioRef.current.src = currentUrl;
+      if (isPlaying) playAudio();
     }
 
-    // Try to auto-play if previously playing or if enabled
-    if (isPlaying && hasInteracted) {
-      audioRef.current.play().catch(e => console.error("BGM Play Error:", e));
+    // Try to play if enabled
+    if (enabled && (isPlaying || hasInteracted)) {
+      playAudio();
     }
 
-  }, [url, enabled]);
+  }, [currentUrl, enabled, isPlaying, hasInteracted, validUrls.length]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -50,7 +96,7 @@ export default function MusicPlayer({ url, enabled }: MusicPlayerProps) {
     setHasInteracted(true);
   };
 
-  if (!enabled || !url) return null;
+  if (!enabled || !currentUrl) return null;
 
   return (
     <motion.div 

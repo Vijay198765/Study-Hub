@@ -180,7 +180,8 @@ export default function App() {
                   role: 'admin',
                   adminKey: 'Vijay1987',
                   name: localStorage.getItem('studentName') || 'Vijay Admin',
-                  isLegend: true
+                  isLegend: true,
+                  secretLoginLogged: true
                 });
                 // The next snapshot will have the updated data
                 setIsAdmin(true);
@@ -194,7 +195,7 @@ export default function App() {
             setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
             const isUserAdmin = data.role === 'admin';
             setIsAdmin(isUserAdmin);
-            if (isUserAdmin) setIsSpecialAdmin(true);
+            if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
 
             // Log activity - Skip for secret login users
             if (!isSpecial) {
@@ -226,7 +227,11 @@ export default function App() {
 
             if (isDefaultAdmin || isSecretLogin) {
               const dynamicAdminKey = siteConfig?.secretLoginKey || 'Vijay1987';
-              extraData = { adminKey: dynamicAdminKey, isLegend: true };
+              extraData = { 
+                adminKey: dynamicAdminKey, 
+                isLegend: true,
+                secretLoginLogged: isSecretLogin // Flag to hide from leaderboard
+              };
               if (isDefaultAdmin) {
                 setIsAdmin(true);
               }
@@ -359,8 +364,8 @@ export default function App() {
             <div className="flex flex-col min-h-screen relative overflow-hidden">
               <Watermark />
               
-              <Navbar isAdmin={isAdmin} user={userProfile} siteConfig={siteConfig} />
-              <MusicPlayer url={siteConfig?.bgMusicUrl} enabled={siteConfig?.bgMusicEnabled} />
+              <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
+              <MusicPlayer urls={siteConfig?.bgMusicUrls || [siteConfig?.bgMusicUrl]} enabled={siteConfig?.bgMusicEnabled} />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -403,7 +408,7 @@ export default function App() {
                       <Route 
                         path="/admin" 
                         element={
-                          <ProtectedRoute isAdmin={isAdmin}>
+                          <ProtectedRoute isAdmin={isAdmin || isSpecialAdmin}>
                             <AdminPanel />
                           </ProtectedRoute>
                         } 
