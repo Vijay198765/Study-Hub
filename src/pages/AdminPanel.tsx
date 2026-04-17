@@ -49,6 +49,18 @@ export default function AdminPanel() {
   const [unlockError, setUnlockError] = useState(false);
   const [unlockAttempts, setUnlockAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+
+  const [siteConfig, setSiteConfig] = useState<any>(null);
+
+  useEffect(() => {
+    if (isUnlocked && isLimitedAdmin && siteConfig) {
+      const allowedTabs = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
+      if (!allowedTabs.includes(activeTab)) {
+        setActiveTab(allowedTabs[0] as AdminTab);
+      }
+    }
+  }, [isUnlocked, isLimitedAdmin, siteConfig, activeTab]);
+
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (auth.currentUser) {
@@ -80,8 +92,7 @@ export default function AdminPanel() {
   const [groups, setGroups] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [siteConfig, setSiteConfig] = useState<any>(null);
-
+  
   const shouldShowTab = (tabId: string) => {
     if (!isLimitedAdmin) return true;
     const allowedTabs = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];

@@ -732,8 +732,18 @@ const SpaceDodge = () => {
   };
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') setPlayerPos(prev => Math.max(5, prev - 5));
+      if (e.key === 'ArrowRight') setPlayerPos(prev => Math.min(95, prev + 5));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleKeyDown);
+      }
+    };
   }, []);
 
   return (

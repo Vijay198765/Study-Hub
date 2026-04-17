@@ -84,12 +84,18 @@ export default function App() {
   // Listen for auth errors globally
   useEffect(() => {
     const handleAuthError = (event: any) => {
-      if (event.detail?.code === 'auth/admin-restricted-operation') {
+      if (event && event.detail?.code === 'auth/admin-restricted-operation') {
         setFirebaseError(prev => prev === 'firestore' ? 'both' : 'auth');
       }
     };
-    window.addEventListener('firebase-auth-error', handleAuthError);
-    return () => window.removeEventListener('firebase-auth-error', handleAuthError);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('firebase-auth-error', handleAuthError);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('firebase-auth-error', handleAuthError);
+      }
+    };
   }, []);
 
   // Minimum loading time for the animation
@@ -102,7 +108,9 @@ export default function App() {
 
   // Scroll to top on route change
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+    }
   }, [location.pathname]);
 
   useEffect(() => {

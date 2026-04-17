@@ -70,13 +70,18 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     });
   }, [searchTerm, allData]);
 
-  // Close on Escape
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleEsc);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleEsc);
+      }
+    };
   }, [onClose]);
 
   return (

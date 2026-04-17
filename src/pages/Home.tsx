@@ -53,13 +53,21 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.search-container')) {
-        setIsSearching(false);
+      if (typeof document !== 'undefined') {
+        const target = e.target as HTMLElement;
+        if (target && !target.closest('.search-container')) {
+          setIsSearching(false);
+        }
       }
     };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('click', handleClickOutside);
+      }
+    };
   }, []);
 
   const unsubscribesRef = useRef<Map<string, () => void>>(new Map());
