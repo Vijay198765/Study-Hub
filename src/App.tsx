@@ -173,7 +173,7 @@ export default function App() {
             let forceUpgrade = false;
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
-              updates.adminKey = 'Vijay1987';
+              updates.adminKey = siteConfig?.secretLoginKey || 'Vijay1987';
               updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
               updates.isLegend = true;
               updates.secretLoginLogged = true;

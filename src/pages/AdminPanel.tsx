@@ -6,8 +6,8 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock,
-  Star, Shield, Globe, Bell
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Music,
+  Star, Shield, Globe, Bell, Settings, Clock
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -2687,85 +2687,107 @@ export default function AdminPanel() {
                   </h3>
                   
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
-                          <AlertCircle size={20} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white">Maintenance Mode</p>
-                          <p className="text-[10px] text-white/40">Block student access while editing</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
-                        className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
-                            <Zap size={20} />
+                          <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 text-white'}`}>
+                            {siteConfig?.maintenanceMode ? <Lock size={20} /> : <Unlock size={20} />}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-white">Background Music</p>
-                            <p className="text-[10px] text-white/40">Enable global BGM for all users</p>
+                            <p className="text-sm font-bold text-white">Maintenance Mode</p>
+                            <p className="text-[10px] text-white/40">Only admins can view the platform</p>
                           </div>
                         </div>
                         <button 
-                          onClick={() => saveSiteConfig({ bgMusicEnabled: !siteConfig?.bgMusicEnabled })}
-                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
                         >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled ? 'right-1' : 'left-1'}`} />
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
                         </button>
                       </div>
 
-                      {siteConfig?.bgMusicEnabled && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-4 p-4 bg-white/[0.02] border border-white/5 rounded-xl ml-4"
-                        >
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Playlist (Direct Audio Links - 10 Options)</label>
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((idx) => (
-                              <div key={idx} className="relative group">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-white/20 font-bold">{idx + 1}</span>
+                      <div className="space-y-4">
+                        {/* Registration Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
+                              <UserPlus size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Student Registration</p>
+                              <p className="text-[10px] text-white/40">Allow new students to join</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ registrationEnabled: siteConfig?.registrationEnabled === false ? true : false })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.registrationEnabled !== false ? 'bg-neon-purple' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.registrationEnabled !== false ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        {/* Leaderboard Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
+                              <Trophy size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Public Leaderboard</p>
+                              <p className="text-[10px] text-white/40">Show top students publicly</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ leaderboardVisible: siteConfig?.leaderboardVisible === false ? true : false })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.leaderboardVisible !== false ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.leaderboardVisible !== false ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                              <Music size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Background Music</p>
+                              <p className="text-[10px] text-white/40">Enable global BGM</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ bgMusicEnabled: !siteConfig?.bgMusicEnabled })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,229,255,0.4)]' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        {siteConfig?.bgMusicEnabled && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl ml-4"
+                          >
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Music URL (Direct MP3 Link)</label>
+                              <div className="relative group">
+                                <Music size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neon-blue/40" />
                                 <input 
                                   type="text" 
-                                  placeholder={`https://example.com/track${idx + 1}.mp3`}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-8 pr-3 text-xs text-white focus:border-neon-blue outline-none transition-all"
-                                  value={siteConfig?.bgMusicUrls?.[idx] || (idx === 0 ? siteConfig?.bgMusicUrl || '' : '')}
-                                  onChange={(e) => {
-                                    const nextUrls = [...(siteConfig?.bgMusicUrls || [])];
-                                    // Handle legacy single url migration too
-                                    if (nextUrls.length === 0 && siteConfig?.bgMusicUrl) {
-                                      nextUrls[0] = siteConfig.bgMusicUrl;
-                                    }
-                                    nextUrls[idx] = e.target.value;
-                                    saveSiteConfig({ bgMusicUrls: nextUrls });
-                                  }}
+                                  placeholder="Paste your .mp3 or .wav link here..."
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs text-white focus:border-neon-blue outline-none transition-all placeholder:text-white/10"
+                                  value={siteConfig?.bgMusicUrl || ''}
+                                  onChange={(e) => saveSiteConfig({ bgMusicUrl: e.target.value })}
                                 />
                               </div>
-                            ))}
-                          </div>
-
-                          <div className="mt-2 p-3 bg-neon-blue/5 border border-neon-blue/10 rounded-lg">
-                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
-                              <Info size={10} /> Pro Tip
-                            </p>
-                            <p className="text-[9px] text-white/30 leading-relaxed">
-                              Add multiple links to create a playlist. Tracks will automatically cycle. 
-                              Visit <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">Pixabay</a> for free tracks.
-                            </p>
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
+                              <p className="text-[10px] text-white/20 italic pl-1 leading-relaxed">
+                                Tip: Use a direct link to an MP3 file (e.g. from Pixabay). Multiple tracks are hidden for simplicity—only this single URL will play.
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
 
                     {isSuperAdmin && (
                       <div className="space-y-2">
@@ -2983,6 +3005,7 @@ export default function AdminPanel() {
                         )}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
 

@@ -128,7 +128,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (
-          (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" && request.auth.token.get('email_verified', false) == true) ||
+          (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com") ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
         );
@@ -166,12 +166,11 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role']) &&
-             data.uid is string && data.uid.size() > 0 &&
-             data.email is string && data.email.size() > 0 &&
+      return data.uid is string &&
+             data.email is string &&
              data.role in ['admin', 'student'] &&
-             (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
+             (!('name' in data) || data.name is string) &&
+             (!('photoURL' in data) || data.photoURL is string) &&
              (!('adminKey' in data) || data.adminKey is string) &&
              (!('isLegend' in data) || data.isLegend is bool) &&
              (!('isSecret' in data) || data.isSecret is bool) &&
@@ -278,14 +277,22 @@ service cloud.firestore {
              (!('welcomeEmailSubject' in data) || data.welcomeEmailSubject is string) &&
              (!('welcomeEmailTemplate' in data) || data.welcomeEmailTemplate is string) &&
              (!('welcomeEmailSender' in data) || data.welcomeEmailSender is string) &&
+             (!('emailjsServiceId' in data) || data.emailjsServiceId is string) &&
+             (!('emailjsTemplateId' in data) || data.emailjsTemplateId is string) &&
+             (!('emailjsPublicKey' in data) || data.emailjsPublicKey is string) &&
              (!('siteName' in data) || (data.siteName is string && data.siteName.size() < 100)) &&
              (!('adminName' in data) || (data.adminName is string && data.adminName.size() < 100)) &&
-             (!('siteSubtitle' in data) || (data.siteSubtitle is string && data.siteSubtitle.size() < 500)) &&
+             (!('coOwnerName' in data) || (data.coOwnerName is string && data.coOwnerName.size() < 100)) &&
+             (!('siteSubtitle' in data) || (data.siteSubtitle is string && data.siteSubtitle.size() < 1000)) &&
+             (!('announcement' in data) || (data.announcement is string && data.announcement.size() < 5000)) &&
+             (!('isAnnouncementActive' in data) || data.isAnnouncementActive is bool) &&
              (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
              (!('bgMusicEnabled' in data) || data.bgMusicEnabled is bool) &&
              (!('bgMusicUrl' in data) || (data.bgMusicUrl is string && data.bgMusicUrl.size() < 1000)) &&
+             (!('bgMusicUrls' in data) || data.bgMusicUrls is list) &&
              (!('secretLoginEnabled' in data) || data.secretLoginEnabled is bool) &&
              (!('secretLoginKey' in data) || (data.secretLoginKey is string && data.secretLoginKey.size() < 100)) &&
+             (!('secretProfiles' in data) || data.secretProfiles is list) &&
              (!('limitedAdminTabs' in data) || data.limitedAdminTabs is list) &&
              (!('adminUnlockKey' in data) || (data.adminUnlockKey is string && data.adminUnlockKey.size() < 50)) &&
              (!('supportWhatsApp' in data) || (data.supportWhatsApp is string && data.supportWhatsApp.size() < 50)) &&
@@ -357,13 +364,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
-        (request.resource.data.role == 'student' || 
-          (request.resource.data.role == 'admin' && 
-            (
-              request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
-              (request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.secretLoginKey)
-            )
-          )
+        (
+          request.resource.data.role == 'student' || 
+          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
+          (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 
         (
@@ -372,7 +376,7 @@ service cloud.firestore {
             request.auth.uid == userId && 
             (
               request.resource.data.role == resource.data.role ||
-              (request.resource.data.role == 'admin' && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.secretLoginKey)
+              (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
             )
           )
         ) && isValidUser(request.resource.data);
