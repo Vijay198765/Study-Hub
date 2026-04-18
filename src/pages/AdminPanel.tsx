@@ -6,8 +6,8 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Music,
-  Star, Shield, Globe, Bell, Settings, Clock
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -2687,107 +2687,248 @@ export default function AdminPanel() {
                   </h3>
                   
                   <div className="space-y-6">
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 text-white'}`}>
-                            {siteConfig?.maintenanceMode ? <Lock size={20} /> : <Unlock size={20} />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">Maintenance Mode</p>
-                            <p className="text-[10px] text-white/40">Only admins can view the platform</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
-                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {/* Registration Toggle */}
-                        <div className="flex items-center justify-between p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-xl">
+                    <div className="space-y-4">
+                      {/* Maintenance Mode */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
-                              <UserPlus size={20} />
+                            <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 text-white'}`}>
+                              {siteConfig?.maintenanceMode ? <Lock size={20} /> : <Unlock size={20} />}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white">Student Registration</p>
-                              <p className="text-[10px] text-white/40">Allow new students to join</p>
+                              <p className="text-sm font-bold text-white">Maintenance Mode</p>
+                              <p className="text-[10px] text-white/40">Only admins can view the platform</p>
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ registrationEnabled: siteConfig?.registrationEnabled === false ? true : false })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.registrationEnabled !== false ? 'bg-neon-purple' : 'bg-white/10'}`}
+                            onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.registrationEnabled !== false ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
-
-                        {/* Leaderboard Toggle */}
-                        <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
-                              <Trophy size={20} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white">Public Leaderboard</p>
-                              <p className="text-[10px] text-white/40">Show top students publicly</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => saveSiteConfig({ leaderboardVisible: siteConfig?.leaderboardVisible === false ? true : false })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.leaderboardVisible !== false ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.leaderboardVisible !== false ? 'right-1' : 'left-1'}`} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
-                              <Music size={20} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white">Background Music</p>
-                              <p className="text-[10px] text-white/40">Enable global BGM</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => saveSiteConfig({ bgMusicEnabled: !siteConfig?.bgMusicEnabled })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.bgMusicEnabled ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,229,255,0.4)]' : 'bg-white/10'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.bgMusicEnabled ? 'right-1' : 'left-1'}`} />
-                          </button>
-                        </div>
-
-                        {siteConfig?.bgMusicEnabled && (
+                        
+                        {siteConfig?.maintenanceMode && (
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            className="space-y-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl ml-4"
+                            className="px-4 pb-4"
                           >
-                            <div className="space-y-3">
-                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Music URL (Direct MP3 Link)</label>
-                              <div className="relative group">
-                                <Music size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neon-blue/40" />
-                                <input 
-                                  type="text" 
-                                  placeholder="Paste your .mp3 or .wav link here..."
-                                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs text-white focus:border-neon-blue outline-none transition-all placeholder:text-white/10"
-                                  value={siteConfig?.bgMusicUrl || ''}
-                                  onChange={(e) => saveSiteConfig({ bgMusicUrl: e.target.value })}
-                                />
-                              </div>
-                              <p className="text-[10px] text-white/20 italic pl-1 leading-relaxed">
-                                Tip: Use a direct link to an MP3 file (e.g. from Pixabay). Multiple tracks are hidden for simplicity—only this single URL will play.
-                              </p>
-                            </div>
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Custom Maintenance Message</label>
+                            <textarea 
+                              value={siteConfig?.maintenanceMessage || ''}
+                              onChange={(e) => saveSiteConfig({ maintenanceMessage: e.target.value })}
+                              placeholder="e.g., We are upgrading our servers..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500 transition-all min-h-[80px]"
+                            />
                           </motion.div>
                         )}
                       </div>
+
+                      {/* Registration Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
+                            <UserPlus size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Student Registration</p>
+                            <p className="text-[10px] text-white/40">Allow new students to join</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => saveSiteConfig({ registrationEnabled: siteConfig?.registrationEnabled === false ? true : false })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.registrationEnabled !== false ? 'bg-neon-purple' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.registrationEnabled !== false ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Leaderboard Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
+                            <Trophy size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Public Leaderboard</p>
+                            <p className="text-[10px] text-white/40">Show top students publicly</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => saveSiteConfig({ leaderboardVisible: siteConfig?.leaderboardVisible === false ? true : false })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.leaderboardVisible !== false ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.leaderboardVisible !== false ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Announcement Bar */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                              <Bell size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Global Announcement Bar</p>
+                              <p className="text-[10px] text-white/40">Show marquee at top of site</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ showAnnouncement: !siteConfig?.showAnnouncement })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showAnnouncement ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,229,255,0.4)]' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showAnnouncement ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+                        
+                        {siteConfig?.showAnnouncement && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="px-4 pb-4"
+                          >
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Announcement Text</label>
+                            <textarea 
+                              value={siteConfig?.announcementText || ''}
+                              onChange={(e) => saveSiteConfig({ announcementText: e.target.value })}
+                              placeholder="Important: Website is now live!"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all min-h-[60px]"
+                            />
+                          </motion.div>
+                        )}
+                      </div>
+
+                      {/* Feature Toggles Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Search Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Search size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Search Bar</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ searchEnabled: siteConfig?.searchEnabled !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.searchEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.searchEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Games Tab Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Zap size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Games Tab</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ gamesEnabled: siteConfig?.gamesEnabled !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.gamesEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.gamesEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Live Club Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><MessageSquare size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Live Club</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ liveClubEnabled: siteConfig?.liveClubEnabled !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.liveClubEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.liveClubEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Auto Approve Users */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Shield size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Auto-Approve</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ autoApproveUsers: siteConfig?.autoApproveUsers === true })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.autoApproveUsers === true ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* System Optimization Controls */}
+                      <div className="pt-4 border-t border-white/5 space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">System Optimization</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Theme Mode</label>
+                            <select 
+                              value={siteConfig?.defaultThemeMode || 'dark'}
+                              onChange={(e) => saveSiteConfig({ defaultThemeMode: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
+                            >
+                              <option value="dark" className="bg-zinc-900">Always Dark</option>
+                              <option value="light" className="bg-zinc-900">Always Light</option>
+                              <option value="auto" className="bg-zinc-900">Auto (System)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">BG Effect</label>
+                            <select 
+                              value={siteConfig?.bgEffect || 'none'}
+                              onChange={(e) => saveSiteConfig({ bgEffect: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
+                            >
+                              <option value="none" className="bg-zinc-900">None</option>
+                              <option value="snow" className="bg-zinc-900">Snow Effect</option>
+                              <option value="confetti" className="bg-zinc-900">Confetti Rain</option>
+                              <option value="stars" className="bg-zinc-900">Star Twinkle</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Time Multiplier</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              min="0.5"
+                              max="2.0"
+                              value={siteConfig?.testTimeMultiplier || 1.0}
+                              onChange={(e) => saveSiteConfig({ testTimeMultiplier: parseFloat(e.target.value) })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Terms URL</label>
+                            <input 
+                              type="text" 
+                              value={siteConfig?.termsUrl || ''}
+                              onChange={(e) => saveSiteConfig({ termsUrl: e.target.value })}
+                              placeholder="https://example.com/terms"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            />
+                           </div>
+                           <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Privacy URL</label>
+                            <input 
+                              type="text" 
+                              value={siteConfig?.privacyUrl || ''}
+                              onChange={(e) => saveSiteConfig({ privacyUrl: e.target.value })}
+                              placeholder="https://example.com/privacy"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
 
                     {isSuperAdmin && (
                       <div className="space-y-2">
@@ -3005,7 +3146,6 @@ export default function AdminPanel() {
                         )}
                       </div>
                     )}
-                    </div>
                   </div>
                 </div>
 

@@ -15,7 +15,6 @@ import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
-import MusicPlayer from './components/MusicPlayer';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -334,7 +333,18 @@ export default function App() {
               <Watermark />
               
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
-              <MusicPlayer urls={siteConfig?.bgMusicUrls || [siteConfig?.bgMusicUrl]} enabled={siteConfig?.bgMusicEnabled} />
+              
+              {siteConfig?.showAnnouncement && siteConfig?.announcementText && (
+                <div className="bg-neon-blue text-black py-2 px-4 text-center text-xs font-bold overflow-hidden">
+                  <motion.div
+                    animate={{ x: [1000, -1000] }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                    className="whitespace-nowrap inline-block"
+                  >
+                    {siteConfig.announcementText}
+                  </motion.div>
+                </div>
+              )}
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -351,8 +361,7 @@ export default function App() {
                       </div>
                       <h1 className="text-4xl font-display font-bold text-white mb-4 uppercase tracking-tight italic">Under Maintenance</h1>
                       <p className="text-white/60 max-w-md mx-auto leading-relaxed">
-                        We are currently updating the platform to bring you a better experience. 
-                        Please check back later!
+                        {siteConfig?.maintenanceMessage || "We are currently updating the platform to bring you a better experience. Please check back later!"}
                       </p>
                       <div className="mt-10 flex flex-col items-center gap-4">
                         <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">Stay Tuned</p>

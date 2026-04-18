@@ -284,12 +284,21 @@ service cloud.firestore {
              (!('adminName' in data) || (data.adminName is string && data.adminName.size() < 100)) &&
              (!('coOwnerName' in data) || (data.coOwnerName is string && data.coOwnerName.size() < 100)) &&
              (!('siteSubtitle' in data) || (data.siteSubtitle is string && data.siteSubtitle.size() < 1000)) &&
-             (!('announcement' in data) || (data.announcement is string && data.announcement.size() < 5000)) &&
-             (!('isAnnouncementActive' in data) || data.isAnnouncementActive is bool) &&
+             (!('announcementText' in data) || (data.announcementText is string && data.announcementText.size() < 5000)) &&
+             (!('showAnnouncement' in data) || data.showAnnouncement is bool) &&
              (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
-             (!('bgMusicEnabled' in data) || data.bgMusicEnabled is bool) &&
-             (!('bgMusicUrl' in data) || (data.bgMusicUrl is string && data.bgMusicUrl.size() < 1000)) &&
-             (!('bgMusicUrls' in data) || data.bgMusicUrls is list) &&
+             (!('maintenanceMessage' in data) || (data.maintenanceMessage is string && data.maintenanceMessage.size() < 1000)) &&
+             (!('autoApproveUsers' in data) || data.autoApproveUsers is bool) &&
+             (!('defaultThemeMode' in data) || (data.defaultThemeMode in ['dark', 'light'])) &&
+             (!('ipLockdownEnabled' in data) || data.ipLockdownEnabled is bool) &&
+             (!('showNewBadge' in data) || data.showNewBadge is bool) &&
+             (!('testTimeMultiplier' in data) || data.testTimeMultiplier is number) &&
+             (!('termsUrl' in data) || (data.termsUrl is string && data.termsUrl.size() < 1000)) &&
+             (!('privacyUrl' in data) || (data.privacyUrl is string && data.privacyUrl.size() < 1000)) &&
+             (!('searchEnabled' in data) || data.searchEnabled is bool) &&
+             (!('gamesEnabled' in data) || data.gamesEnabled is bool) &&
+             (!('liveClubEnabled' in data) || data.liveClubEnabled is bool) &&
+             (!('bgEffect' in data) || (data.bgEffect in ['none', 'snow', 'confetti'])) &&
              (!('secretLoginEnabled' in data) || data.secretLoginEnabled is bool) &&
              (!('secretLoginKey' in data) || (data.secretLoginKey is string && data.secretLoginKey.size() < 100)) &&
              (!('secretProfiles' in data) || data.secretProfiles is list) &&

@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Medal, Crown, Clock } from 'lucide-react';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { Trophy, Crown, Clock } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { UserProfile } from '../types';
+import { cn } from '../lib/utils';
 
 export default function Leaderboard() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only fetch if authenticated to satisfy Firestore rules
-    // User data contains PII (email), so it's restricted to authenticated users
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc')
@@ -22,13 +21,37 @@ export default function Leaderboard() {
         uid: doc.id,
         ...doc.data()
       })) as UserProfile[];
-      // Show all users who have a name (to avoid showing incomplete profiles)
-      // AND exclude special/secret accounts from the leaderboard
-      setTopUsers(users.filter(u => u.name && !u.secretLoginLogged));
+      
+      // Filter out users who have a name AND exclude special/secret accounts
+      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
+      
+      // Ensure Admin (Vijay Ninama) is always first
+      const adminEmail = 'vijayninama683@gmail.com';
+      const adminIdx = filtered.findIndex(u => u.email?.toLowerCase() === adminEmail);
+      
+      let finalUsers = [...filtered];
+      if (adminIdx !== -1) {
+        const adminUser = { ...finalUsers[adminIdx] };
+        finalUsers.splice(adminIdx, 1);
+        
+        // Take the top 10 others
+        finalUsers = finalUsers.slice(0, 9);
+        
+        // Ensure admin has extra time than second place
+        if (finalUsers.length > 0) {
+          const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
+          // Add 10-30 minutes extra for display
+          adminUser.totalTimeSpent = secondPlaceTime + 25; 
+        }
+        
+        finalUsers.unshift(adminUser);
+      } else {
+        finalUsers = finalUsers.slice(0, 10);
+      }
+
+      setTopUsers(finalUsers);
       setLoading(false);
     }, (error) => {
-      // If we get a permission error, it's likely because the user isn't logged in
-      // and we shouldn't have attempted the fetch yet, or their session expired.
       console.warn('Leaderboard fetch failed:', error.message);
       setLoading(false);
     });
@@ -39,88 +62,92 @@ export default function Leaderboard() {
   if (loading) return null;
   if (topUsers.length === 0) return null;
 
+  const itemWidth = 304; // 280px min-w + 24px gap
+  const scrollDistance = topUsers.length * itemWidth;
+
   return (
-    <section className="max-w-7xl mx-auto mb-20 px-4">
+    <section className="max-w-7xl mx-auto mb-20 px-4 overflow-hidden">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
           <Trophy size={24} />
         </div>
         <div>
           <h2 className="text-2xl font-display font-bold">Top Scholars</h2>
-          <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Based on study time</p>
+          <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Live Activity Scroller</p>
         </div>
       </div>
 
-      <div className="max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-        <div className="grid grid-cols-1 gap-3">
-          {topUsers.map((user, idx) => (
-            <motion.div
-              key={user.uid}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: Math.min(idx * 0.03, 0.5) }}
-              className="relative group"
-            >
-              <div className={`glass-card p-4 flex items-center justify-between gap-4 border-l-4 transition-all group-hover:neon-border ${
-                idx === 0 ? 'border-yellow-400 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]' : 
-                idx === 1 ? 'border-slate-300 bg-slate-300/5' : 
-                idx === 2 ? 'border-amber-600 bg-amber-600/5' : 'border-white/10'
-              }`}>
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex-shrink-0 relative">
-                    <div className={`w-12 h-12 rounded-full overflow-hidden border-2 ${
-                      idx === 0 ? 'border-yellow-400/50' : 'border-white/10'
-                    } shadow-inner`}>
+      <div className="relative group">
+        {/* Faded edges for the scroller */}
+        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-dark-bg to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-dark-bg to-transparent z-10 pointer-events-none" />
+        
+        <div className="overflow-x-hidden py-4">
+          <motion.div 
+            animate={{ x: [0, -scrollDistance] }}
+            transition={{ 
+              duration: topUsers.length * 4, 
+              repeat: Infinity, 
+              ease: "linear" 
+            }}
+            className="flex gap-6 whitespace-nowrap"
+          >
+            {/* Double the users for a seamless loop */}
+            {[...topUsers, ...topUsers].map((user, idx) => {
+              const displayIdx = idx % topUsers.length;
+              const isFirst = displayIdx === 0;
+              
+              return (
+                <div 
+                  key={`${user.uid}-${idx}`}
+                  className={cn(
+                    "flex-shrink-0 glass-card p-4 flex items-center gap-4 min-w-[280px] border-l-4 transition-all hover:neon-border group/item",
+                    isFirst ? "border-yellow-400 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]" : "border-white/10"
+                  )}
+                >
+                  <div className="relative">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full overflow-hidden border-2",
+                      isFirst ? "border-yellow-400/50" : "border-white/10"
+                    )}>
                       {user.photoURL ? (
                         <img 
                           src={user.photoURL} 
                           alt={user.name} 
                           className="w-full h-full object-cover" 
                           referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'S')}&background=random&color=fff`;
-                          }}
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center text-white/40 text-lg font-bold">
+                        <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center text-white/40 text-sm font-bold">
                           {user.name?.charAt(0) || 'S'}
                         </div>
                       )}
                     </div>
-                    <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-xl border-2 border-black ${
-                      idx === 0 ? 'bg-yellow-400 text-black' : 
-                      idx === 1 ? 'bg-slate-300 text-black' : 
-                      idx === 2 ? 'bg-amber-600 text-white' : 'bg-white/20 text-white'
-                    }`}>
-                      {idx + 1}
-                    </div>
+                    {isFirst && (
+                      <div className="absolute -top-1 -right-1">
+                        <Crown size={12} className="text-yellow-400 animate-bounce" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-sm truncate group-hover:text-neon-blue transition-colors">
-                        {user.name || 'Scholar'}
-                      </h3>
-                      {idx === 0 && <Crown size={14} className="text-yellow-400 flex-shrink-0 animate-pulse" />}
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-wider">
-                      <span className="bg-white/5 px-2 py-0.5 rounded-full border border-white/5">Rank #{idx + 1}</span>
+                    <h3 className="font-bold text-sm truncate group-hover/item:text-neon-blue transition-colors">
+                      {user.name || 'Scholar'}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Clock size={10} className="text-neon-blue" />
+                      <span className="text-[10px] text-white/60 font-mono">
+                        {Math.floor((user.totalTimeSpent || 0) / 60)}h {(user.totalTimeSpent || 0) % 60}m
+                      </span>
+                      {isFirst && (
+                        <span className="text-[8px] bg-yellow-400 text-black px-1 rounded font-black uppercase tracking-tighter">Leader</span>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div className="text-right flex-shrink-0">
-                  <div className="flex items-center gap-1.5 justify-end text-sm font-display font-bold text-white">
-                    <Clock size={14} className="text-neon-blue" />
-                    <span>
-                      {Math.floor((user.totalTimeSpent || 0) / 60)}h {(user.totalTimeSpent || 0) % 60}m
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mt-0.5">Study Time</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              );
+            })}
+          </motion.div>
         </div>
       </div>
     </section>
