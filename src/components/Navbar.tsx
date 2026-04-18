@@ -101,7 +101,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
               {siteConfig?.siteName || 'Study-hub'}
             </span>
             <span className="text-[8px] text-neon-blue font-bold uppercase tracking-[0.2em] mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-              by {siteConfig?.adminName || 'Vijay Ninama'}
+              by {siteConfig?.adminName || 'Vijay'} {siteConfig?.coOwnerName && `& ${siteConfig.coOwnerName}`}
             </span>
           </div>
         </Link>

@@ -17,7 +17,7 @@ export default function Footer({ siteConfig }: FooterProps) {
 
   const siteName = siteConfig?.siteName || 'Study-hub';
   const adminName = siteConfig?.adminName || 'Vijay Ninama';
-  const coOwnerName = 'Tilak Sahu';
+  const coOwnerName = siteConfig?.coOwnerName || 'Tilak Sahu';
   const supportEmail = siteConfig?.supportEmail || 'vijayninama683@gmail.com';
   const supportWhatsApp = siteConfig?.supportWhatsApp;
   const supportTelegram = siteConfig?.supportTelegram;

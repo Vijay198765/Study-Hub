@@ -24,6 +24,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
+import NotificationPrompt from './components/NotificationPrompt';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -141,7 +142,7 @@ export default function App() {
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
 
       if (firebaseUser) {
-        // Fetch IP address
+        // Fetch IP address - Do it once per session
         let userIp = 'unknown';
         try {
           const response = await fetch('https://api.ipify.org?format=json');
@@ -151,77 +152,50 @@ export default function App() {
           console.error("Failed to fetch IP:", e);
         }
 
-        // Listen to user profile changes
         const userRef = doc(db, 'users', firebaseUser.uid);
-        unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            console.log("App: User profile loaded:", data);
-            
-            // Update IP, photoURL, or name if they are different or missing
-            const updates: any = {};
-            if (data.ip !== userIp) updates.ip = userIp;
-            if (firebaseUser.photoURL && data.photoURL !== firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
-            if (firebaseUser.displayName && !data.name) updates.name = firebaseUser.displayName;
-            if (data.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+        
+        try {
+          // 1. Initial Profile Setup/Upgrade (one-time action)
+          const docSnap = await getDoc(userRef);
+          let profileData: any = null;
 
-            if (Object.keys(updates).length > 0) {
-              try {
-                await updateDoc(userRef, updates);
-              } catch (e) {
-                console.error("Error updating user profile fields:", e);
-              }
-            }
+          if (docSnap.exists()) {
+            profileData = docSnap.data();
+            
+            // Side-effect updates (IP, photo, name, secret upgrade)
+            const updates: any = {};
+            if (profileData.ip !== userIp) updates.ip = userIp;
+            if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
+            if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
+            if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
 
             // Upgrade anonymous user to admin if they have the special login flags
-            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && data.role !== 'admin') {
-              try {
-                await updateDoc(userRef, { 
-                  role: 'admin',
-                  adminKey: 'Vijay1987',
-                  name: localStorage.getItem('studentName') || 'Vijay Admin',
-                  isLegend: true,
-                  secretLoginLogged: true
-                });
-                // The next snapshot will have the updated data
-                setIsAdmin(true);
-                setIsSpecialAdmin(true);
-                return;
-              } catch (error) {
-                console.error("Error upgrading anonymous admin:", error);
-              }
+            let forceUpgrade = false;
+            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
+              updates.role = 'admin';
+              updates.adminKey = 'Vijay1987';
+              updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
+              updates.isLegend = true;
+              updates.secretLoginLogged = true;
+              forceUpgrade = true;
             }
 
-            setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
-            const isUserAdmin = data.role === 'admin';
-            setIsAdmin(isUserAdmin);
-            if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
-
-            // Log activity - Skip for secret login users
-            if (!isSpecial) {
-              try {
-                await addDoc(collection(db, 'activityLogs'), {
-                  userId: firebaseUser.uid,
-                  userName: data.name || 'Anonymous',
-                  userEmail: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
-                  action: 'Session Started',
-                  path: window.location.pathname,
-                  ip: userIp,
-                  resolution: `${window.screen.width}x${window.screen.height}`,
-                  userAgent: navigator.userAgent,
-                  timestamp: serverTimestamp()
-                });
-              } catch (e) {
-                console.error("Error logging activity:", e);
+            if (Object.keys(updates).length > 0) {
+              await updateDoc(userRef, updates);
+              // Merge updates into profileData for immediate state use
+              profileData = { ...profileData, ...updates };
+              if (forceUpgrade) {
+                setIsAdmin(true);
+                setIsSpecialAdmin(true);
               }
             }
           } else {
-            // Fallback for new users or if doc doesn't exist yet
+            // New user doc creation
             const adminEmails = ['vijayninama683@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
-            let role = isDefaultAdmin ? 'admin' : 'student';
+            let role = (isDefaultAdmin || isSecretLogin) ? 'admin' : 'student';
             let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretLogin ? 'Special Student' : 'Student'));
             let extraData: any = {};
 
@@ -230,25 +204,11 @@ export default function App() {
               extraData = { 
                 adminKey: dynamicAdminKey, 
                 isLegend: true,
-                secretLoginLogged: isSecretLogin // Flag to hide from leaderboard
+                secretLoginLogged: isSecretLogin 
               };
-              if (isDefaultAdmin) {
-                setIsAdmin(true);
-              }
-              if (isSecretLogin) {
-                setIsSpecialAdmin(true);
-              }
             }
 
-            const deviceInfo = {
-              userAgent: navigator.userAgent,
-              platform: (navigator as any).platform || 'unknown',
-              language: navigator.language,
-              screenResolution: `${window.screen.width}x${window.screen.height}`,
-              ip: userIp
-            };
-
-            const newUserProfile = {
+            profileData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
               name: name,
@@ -258,41 +218,50 @@ export default function App() {
               isLegend: role === 'admin',
               ip: userIp,
               totalTimeSpent: 0,
-              deviceInfo,
+              isSecret: isSecretLogin,
+              secretLoginLogged: isSecretLogin,
               ...extraData
             };
-
-            try {
-              await setDoc(userRef, newUserProfile);
-              setUserProfile(newUserProfile);
-              setIsAdmin(role === 'admin');
-
-              // Log activity for new user - Skip for secret login users
-              if (!isSpecial) {
-                await addDoc(collection(db, 'activityLogs'), {
-                  userId: firebaseUser.uid,
-                  userName: name,
-                  userEmail: newUserProfile.email,
-                  action: 'Account Created & Session Started',
-                  path: window.location.pathname,
-                  ip: userIp,
-                  resolution: deviceInfo.screenResolution,
-                  userAgent: deviceInfo.userAgent,
-                  timestamp: serverTimestamp()
-                });
-              }
-            } catch (error) {
-              console.error("Error creating user profile:", error);
-              // If we can't create the doc (e.g. permissions), at least set local state
-              setUserProfile(newUserProfile);
-              setIsAdmin(role === 'admin');
-            }
+            await setDoc(userRef, profileData);
           }
+
+          // 2. Set Initial Local State
+          setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
+          const isUserAdmin = profileData.role === 'admin';
+          setIsAdmin(isUserAdmin);
+          if (isUserAdmin || profileData.secretLoginLogged) setIsSpecialAdmin(true);
+
+          // 3. Log activity - Skip for secret logins
+          if (!isSpecial) {
+             addDoc(collection(db, 'activityLogs'), {
+               userId: firebaseUser.uid,
+               userName: profileData.name || 'Anonymous',
+               action: 'Session Started',
+               path: window.location.pathname,
+               ip: userIp,
+               isSecret: isSpecial,
+               timestamp: serverTimestamp()
+             }).catch(e => console.error("Activity logging failed:", e));
+          }
+
+          // 4. Start listening for real-time changes WITHOUT doing updates in the listener
+          unsubscribeProfile = onSnapshot(userRef, (snap) => {
+            if (snap.exists()) {
+              const data = snap.data();
+              setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
+              const isUserAdmin = data.role === 'admin';
+              setIsAdmin(isUserAdmin);
+              if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
+            }
+          }, (error) => {
+            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          });
+
+        } catch (error) {
+          console.error("Critical error in user profile setup:", error);
+        } finally {
           setLoading(false);
-        }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-          setLoading(false);
-        });
+        }
       } else {
         setIsAdmin(false);
         setIsSpecialAdmin(false);
@@ -420,6 +389,7 @@ export default function App() {
               </main>
 
               <Footer siteConfig={siteConfig} />
+              <NotificationPrompt />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
               <WhatsAppFloat />
             </div>

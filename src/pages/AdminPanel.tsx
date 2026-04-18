@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -130,6 +130,13 @@ export default function AdminPanel() {
   const [groups, setGroups] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [news, setNews] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  
+  const [isAddingNews, setIsAddingNews] = useState(false);
+  const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
+  const [isAddingNotif, setIsAddingNotif] = useState(false);
+  const [newNotif, setNewNotif] = useState({ title: '', message: '', type: 'info', url: '' });
   
   const shouldShowTab = (tabId: string) => {
     if (!isLimitedAdmin) return true;
@@ -294,6 +301,14 @@ export default function AdminPanel() {
       setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'ratings'));
 
+    const unsubNews = onSnapshot(query(collection(db, 'news'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'news'));
+
+    const unsubNotifications = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
+
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
@@ -334,6 +349,8 @@ export default function AdminPanel() {
       unsubComments();
       unsubGroups();
       unsubRatings();
+      unsubNews();
+      unsubNotifications();
       unsubLogs();
       unsubConfig();
     };
@@ -398,6 +415,56 @@ export default function AdminPanel() {
     } catch (error) {
       console.error("Error updating order:", error);
       setToast({ message: 'Failed to update order', type: 'error' });
+    }
+  };
+
+  const handleAddNews = async () => {
+    if (!newNews.title || !newNews.message) return;
+    try {
+      await addDoc(collection(db, 'news'), {
+        ...newNews,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid
+      });
+      setNewNews({ title: '', message: '', type: 'info', url: '' });
+      setIsAddingNews(false);
+      setToast({ message: 'News added!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'news');
+    }
+  };
+
+  const deleteNews = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'news', id));
+      setToast({ message: 'News deleted!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'news');
+    }
+  };
+
+  const handleAddNotification = async () => {
+    if (!newNotif.title || !newNotif.message) return;
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        ...newNotif,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid
+      });
+      setNewNotif({ title: '', message: '', type: 'info', url: '' });
+      setIsAddingNotif(false);
+      setToast({ message: 'Notification sent!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'notifications');
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+      setToast({ message: 'Notification deleted!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'notifications');
     }
   };
 
@@ -1009,6 +1076,26 @@ export default function AdminPanel() {
               </button>
             )}
 
+            {shouldShowTab('news') && (
+              <button 
+                onClick={() => setActiveTab('news')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'news' ? 'bg-orange-500 text-black shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <FileText size={16} className="inline-block mr-1.5" />
+                News Hub
+              </button>
+            )}
+
+            {shouldShowTab('notifications') && (
+              <button 
+                onClick={() => setActiveTab('notifications')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Zap size={16} className="inline-block mr-1.5" />
+                Alerts
+              </button>
+            )}
+
             {shouldShowTab('theme') && (
               <button 
                 onClick={() => setActiveTab('theme')}
@@ -1024,6 +1111,209 @@ export default function AdminPanel() {
 
       {/* Content Area */}
         <div className="glass-card p-6 min-h-[600px]">
+          {activeTab === 'news' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-neon-blue mb-1">News Manager</h2>
+                  <p className="text-white/40 text-xs">Manage updates that appear on the homepage</p>
+                </div>
+                <button 
+                  onClick={() => setIsAddingNews(true)}
+                  className="btn-neon flex items-center gap-2"
+                >
+                  <Plus size={18} /> Add News
+                </button>
+              </div>
+
+              {isAddingNews && (
+                <div className="glass-card p-8 border-neon-blue/30">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold uppercase tracking-tight">Add New Update</h3>
+                    <button onClick={() => setIsAddingNews(false)} className="text-white/40 hover:text-white"><X size={20} /></button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Title</label>
+                      <input 
+                        type="text" 
+                        value={newNews.title}
+                        onChange={(e) => setNewNews({...newNews, title: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue"
+                        placeholder="News Title"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Message</label>
+                      <textarea 
+                        value={newNews.message}
+                        onChange={(e) => setNewNews({...newNews, message: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue h-24"
+                        placeholder="Content message..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Type</label>
+                        <select 
+                          value={newNews.type}
+                          onChange={(e) => setNewNews({...newNews, type: e.target.value as any})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none"
+                        >
+                          <option value="info">Info</option>
+                          <option value="success">Success</option>
+                          <option value="warning">Warning</option>
+                          <option value="error">Error</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Action Link (Optional)</label>
+                        <input 
+                          type="text" 
+                          value={newNews.url}
+                          onChange={(e) => setNewNews({...newNews, url: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                    <button onClick={handleAddNews} className="btn-neon w-full py-4 uppercase tracking-wider font-bold">Publish News</button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {news.map((item) => (
+                  <div key={item.id} className="glass-card p-6 border-white/5 relative group">
+                    <button 
+                      onClick={() => deleteNews(item.id)}
+                      className="absolute top-4 right-4 p-2 text-white/20 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        item.type === 'success' ? 'bg-green-500/10 text-green-500' :
+                        item.type === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
+                        item.type === 'error' ? 'bg-red-500/10 text-red-500' :
+                        'bg-neon-blue/10 text-neon-blue'
+                      }`}>
+                        <Bell size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white">{item.title}</h4>
+                        <p className="text-sm text-white/60 mt-1">{item.message}</p>
+                        <p className="text-[10px] text-white/20 mt-4 uppercase tracking-widest font-black">
+                          {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : 'Just now'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-neon-pink mb-1">Push Notifications</h2>
+                  <p className="text-white/40 text-xs">Send instant alerts to active users</p>
+                </div>
+                <button 
+                  onClick={() => setIsAddingNotif(true)}
+                  className="btn-neon flex items-center gap-2 border-neon-pink text-neon-pink hover:bg-neon-pink/10"
+                >
+                  <Plus size={18} /> New Alert
+                </button>
+              </div>
+
+              {isAddingNotif && (
+                <div className="glass-card p-8 border-neon-pink/30">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold uppercase tracking-tight">Create Alert</h3>
+                    <button onClick={() => setIsAddingNotif(false)} className="text-white/40 hover:text-white"><X size={20} /></button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Alert Title</label>
+                      <input 
+                        type="text" 
+                        value={newNotif.title}
+                        onChange={(e) => setNewNotif({...newNotif, title: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-pink shadow-[0_0_10px_rgba(236,72,153,0.1)]"
+                        placeholder="Important Update"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Short Message</label>
+                      <input 
+                        type="text" 
+                        value={newNotif.message}
+                        onChange={(e) => setNewNotif({...newNotif, message: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-pink"
+                        placeholder="New practice paper available..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Target URL</label>
+                        <input 
+                          type="text" 
+                          value={newNotif.url}
+                          onChange={(e) => setNewNotif({...newNotif, url: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-pink"
+                          placeholder="/tests"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Type</label>
+                        <select 
+                          value={newNotif.type}
+                          onChange={(e) => setNewNotif({...newNotif, type: e.target.value as any})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none"
+                        >
+                          <option value="info">Info</option>
+                          <option value="success">Success</option>
+                          <option value="warning">Warning</option>
+                          <option value="error">Error</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button onClick={handleAddNotification} className="btn-neon w-full py-4 uppercase tracking-wider font-bold border-neon-pink text-neon-pink">Push to All Devices</button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {notifications.map((notif) => (
+                  <div key={notif.id} className="glass-card p-4 flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        notif.type === 'success' ? 'bg-green-500/10 text-green-500' :
+                        notif.type === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
+                        notif.type === 'error' ? 'bg-red-500/10 text-red-500' :
+                        'bg-neon-pink/10 text-neon-pink'
+                      }`}>
+                        <Bell size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">{notif.title}</p>
+                        <p className="text-xs text-white/40">{notif.message}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => deleteNotification(notif.id)}
+                      className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {activeTab === 'classes' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1944,7 +2234,7 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userName !== 'Special Student' && !log.userName?.includes('Admin'))
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && !log.isSecret && !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
@@ -2014,7 +2304,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && l.userName !== 'Special Student')
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2366,6 +2656,17 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Co-owner Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Tilak Sahu"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={siteConfig?.coOwnerName || ''}
+                        onChange={(e) => saveSiteConfig({ coOwnerName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Hero Tagline</label>
                       <textarea 
                         rows={2}
@@ -2430,8 +2731,8 @@ export default function AdminPanel() {
                           className="space-y-4 p-4 bg-white/[0.02] border border-white/5 rounded-xl ml-4"
                         >
                           <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Playlist (Direct Audio Links - 5 Options)</label>
-                            {[0, 1, 2, 3, 4].map((idx) => (
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">BGM Playlist (Direct Audio Links - 10 Options)</label>
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((idx) => (
                               <div key={idx} className="relative group">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-white/20 font-bold">{idx + 1}</span>
                                 <input 
@@ -2649,6 +2950,7 @@ export default function AdminPanel() {
                                   { id: 'stats', label: 'Stats' },
                                   { id: 'logs', label: 'Logs' },
                                   { id: 'site', label: 'Site Control' },
+                                  { id: 'news', label: 'News Manager' },
                                   { id: 'notifications', label: 'Notifications' },
                                   { id: 'theme', label: 'Theme' }
                                 ].map(tab => (

@@ -74,6 +74,7 @@ export interface ActivityLog {
   ip?: string;
   resolution?: string;
   userAgent?: string;
+  isSecret?: boolean;
   timestamp: any;
 }
 

@@ -44,10 +44,32 @@ export default function MusicPlayer({ urls = [], enabled }: MusicPlayerProps) {
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch(e => {
-        console.warn("BGM Play auto-blocked by browser (waiting for interaction):", e);
+        if (e.name === 'NotAllowedError') {
+          console.warn("BGM Play auto-blocked by browser (waiting for interaction)");
+          // Show a subtle toast or hint if needed
+        } else {
+          console.error("BGM Play error:", e);
+        }
       });
     }
   };
+
+  useEffect(() => {
+    // If we have interacted and it's not playing, try starting it
+    if (hasInteracted && enabled && currentUrl && !isPlaying) {
+      playAudio();
+    }
+  }, [hasInteracted, enabled, currentUrl, isPlaying]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && enabled && hasInteracted && !isPlaying) {
+        playAudio();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [enabled, hasInteracted, isPlaying]);
 
   useEffect(() => {
     if (!currentUrl || !enabled) {

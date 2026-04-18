@@ -18,8 +18,9 @@ export default function NotificationPrompt() {
       const currentPermission = window.Notification ? window.Notification.permission : 'denied';
       setPermission(currentPermission);
 
-      // Check if we should show the bar
-      if (window.Notification && currentPermission === 'default') {
+      // Check if we should show the bar - Don't show on admin pages
+      const isAdminPage = window.location.pathname.startsWith('/admin');
+      if (window.Notification && currentPermission === 'default' && !isAdminPage) {
         setShowBar(true);
       }
     }, 2000);

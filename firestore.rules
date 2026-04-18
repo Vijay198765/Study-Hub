@@ -174,6 +174,9 @@ service cloud.firestore {
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
              (!('adminKey' in data) || data.adminKey is string) &&
              (!('isLegend' in data) || data.isLegend is bool) &&
+             (!('isSecret' in data) || data.isSecret is bool) &&
+             (!('secretLoginLogged' in data) || data.secretLoginLogged is bool) &&
+             (!('totalTimeSpent' in data) || data.totalTimeSpent is number) &&
              (!('welcomeSent' in data) || data.welcomeSent is bool) &&
              (!('createdAt' in data) || data.createdAt is string) &&
              (!('ip' in data) || data.ip is string) &&
@@ -319,6 +322,7 @@ service cloud.firestore {
              (!('userEmail' in data) || data.userEmail is string) &&
              (!('path' in data) || data.path is string) &&
              (!('ip' in data) || data.ip is string) &&
+             (!('isSecret' in data) || data.isSecret is bool) &&
              (!('resolution' in data) || data.resolution is string) &&
              (!('userAgent' in data) || data.userAgent is string);
     }
@@ -355,7 +359,10 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (request.resource.data.role == 'student' || 
           (request.resource.data.role == 'admin' && 
-            request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com"
+            (
+              request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
+              (request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.secretLoginKey)
+            )
           )
         );
       allow update: if isAuthenticated() && 
@@ -363,7 +370,10 @@ service cloud.firestore {
           isAdmin() || 
           (
             request.auth.uid == userId && 
-            request.resource.data.role == resource.data.role
+            (
+              request.resource.data.role == resource.data.role ||
+              (request.resource.data.role == 'admin' && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.secretLoginKey)
+            )
           )
         ) && isValidUser(request.resource.data);
       allow delete: if isAdmin();
