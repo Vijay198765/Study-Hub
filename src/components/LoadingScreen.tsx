@@ -9,6 +9,9 @@ const Robot = () => {
   const leftArm = useRef<THREE.Mesh>(null);
   const rightArm = useRef<THREE.Mesh>(null);
   const head = useRef<THREE.Mesh>(null);
+  const leftEye = useRef<THREE.Mesh>(null);
+  const rightEye = useRef<THREE.Mesh>(null);
+  const scannerRef = useRef<THREE.Mesh>(null);
   
   const bodyGeo = useMemo(() => new THREE.BoxGeometry(0.6, 0.6, 0.4), []);
   const headGeo = useMemo(() => new THREE.BoxGeometry(0.4, 0.35, 0.35), []);
@@ -16,48 +19,67 @@ const Robot = () => {
   const armGeo = useMemo(() => new THREE.BoxGeometry(0.15, 0.4, 0.15), []);
   const legGeo = useMemo(() => new THREE.BoxGeometry(0.15, 0.3, 0.15), []);
   
-  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6", roughness: 0.3, metalness: 0.8 }), []);
-  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#60a5fa", roughness: 0.3, metalness: 0.8 }), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6", roughness: 0.1, metalness: 0.9, emissive: "#000000" }), []);
+  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#60a5fa", roughness: 0.1, metalness: 0.9 }), []);
   const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#00ffff" }), []);
-  const armMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6" }), []);
-  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8" }), []);
+  const armMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6", metalness: 0.8 }), []);
+  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8", metalness: 0.8 }), []);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (group.current) {
-      group.current.rotation.y = Math.sin(t * 0.5) * 0.2;
-      group.current.position.y = Math.sin(t * 2) * 0.15;
+      group.current.rotation.y = Math.sin(t * 0.4) * 0.3;
+      group.current.position.y = 0.5 + Math.sin(t * 1.5) * 0.2;
+      group.current.rotation.z = Math.sin(t * 0.2) * 0.05;
     }
     if (leftArm.current) {
-      leftArm.current.rotation.x = Math.sin(t * 3) * 0.8;
-      leftArm.current.rotation.z = -0.2 + Math.sin(t * 2) * 0.1;
+      leftArm.current.rotation.x = Math.sin(t * 2) * 1.2;
+      leftArm.current.rotation.z = -0.3 + Math.sin(t * 1.5) * 0.2;
     }
     if (rightArm.current) {
-      rightArm.current.rotation.x = Math.cos(t * 3) * 0.8;
-      rightArm.current.rotation.z = 0.2 + Math.sin(t * 2) * 0.1;
+      rightArm.current.rotation.x = Math.cos(t * 2.2) * 1.2;
+      rightArm.current.rotation.z = 0.3 + Math.sin(t * 1.8) * 0.2;
     }
     if (head.current) {
-      head.current.rotation.y = Math.sin(t * 1.5) * 0.4;
-      head.current.rotation.x = Math.sin(t * 2) * 0.1;
+      head.current.rotation.y = Math.sin(t * 1.2) * 0.6;
+      head.current.rotation.x = Math.sin(t * 2.5) * 0.15;
     }
+    if (scannerRef.current) {
+      scannerRef.current.position.y = 0.05 + Math.sin(t * 5) * 0.05;
+      scannerRef.current.scale.x = 1 + Math.sin(t * 10) * 0.2;
+    }
+    if (leftEye.current && rightEye.current) {
+      const eyeScale = 1 + Math.sin(t * 5) * 0.3;
+      leftEye.current.scale.set(eyeScale, eyeScale, eyeScale);
+      rightEye.current.scale.set(eyeScale, eyeScale, eyeScale);
+    }
+    
+    // Pulsate body emissive
+    bodyMat.emissive.setHSL(0.5, 1, 0.1 + Math.sin(t * 2) * 0.05);
   });
 
   return (
     <group ref={group} position={[0, 0.5, 0]}>
+      {/* Halo Ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.4, 0]}>
+        <torusGeometry args={[0.8, 0.01, 16, 100]} />
+        <MeshWobbleMaterial color="#00ffff" speed={1} factor={0.2} transparent opacity={0.3} />
+      </mesh>
+
       <mesh position={[0, 0.4, 0]} geometry={bodyGeo} material={bodyMat} castShadow />
       <mesh ref={head} position={[0, 0.9, 0]} geometry={headGeo} material={headMat} castShadow>
-        <mesh position={[-0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
-        <mesh position={[0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
+        <mesh ref={leftEye} position={[-0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
+        <mesh ref={rightEye} position={[0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
         {/* Scanning Line */}
-        <mesh position={[0, 0.05, 0.19]}>
+        <mesh ref={scannerRef} position={[0, 0.05, 0.19]}>
           <planeGeometry args={[0.25, 0.01]} />
           <meshBasicMaterial color="#00ffff" transparent opacity={0.8} />
         </mesh>
       </mesh>
       <mesh ref={leftArm} position={[-0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
       <mesh ref={rightArm} position={[0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
-      <mesh position={[-0.15, 0, 0]} geometry={legGeo} material={legMat} castShadow />
-      <mesh position={[0.15, 0, 0]} geometry={legGeo} material={legMat} castShadow />
+      <mesh position={[-0.15, 0.1, 0]} geometry={legGeo} material={legMat} castShadow />
+      <mesh position={[0.15, 0.1, 0]} geometry={legGeo} material={legMat} castShadow />
     </group>
   );
 };
@@ -186,11 +208,51 @@ const Rig = () => {
   });
 };
 
+const DataPoints = ({ count = 30 }) => {
+  const points = useMemo(() => {
+    return Array.from({ length: count }).map(() => ({
+      position: [
+        (Math.random() - 0.5) * 4,
+        Math.random() * 3,
+        (Math.random() - 0.5) * 4
+      ] as [number, number, number],
+      speed: 0.1 + Math.random() * 0.2,
+      offset: Math.random() * Math.PI * 2
+    }));
+  }, [count]);
+
+  return (
+    <group>
+      {points.map((p, i) => (
+        <DataPoint key={i} {...p} />
+      ))}
+    </group>
+  );
+};
+
+const DataPoint = ({ position, speed, offset }: { position: [number, number, number], speed: number, offset: number }) => {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (ref.current) {
+      const t = state.clock.elapsedTime;
+      ref.current.position.y = position[1] + Math.sin(t * speed + offset) * 0.2;
+      ref.current.rotation.y += 0.02;
+    }
+  });
+  return (
+    <mesh ref={ref} position={position}>
+      <boxGeometry args={[0.04, 0.04, 0.04]} />
+      <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
+    </mesh>
+  );
+};
+
 const Scene = () => {
   return (
     <>
       <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
       <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
+      <DataPoints />
       <ambientLight intensity={0.8} />
       <pointLight position={[10, 10, 10]} intensity={2} castShadow />
       <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
@@ -274,59 +336,47 @@ export const LoadingScreen = () => {
           />
           <motion.h1
             animate={{ 
-              opacity: [0.8, 1, 0.8],
-              letterSpacing: ["0.2em", "0.3em", "0.2em"],
+              opacity: [0.6, 1, 0.6],
             }}
             transition={{ 
-              duration: 4,
+              duration: 3,
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className="text-neon-blue font-display text-4xl sm:text-5xl md:text-6xl font-black tracking-[0.2em] uppercase italic drop-shadow-[0_0_20px_rgba(0,242,255,0.8)]"
+            className="text-white font-sans text-3xl sm:text-4xl font-extrabold tracking-widest uppercase"
           >
-            IGNITING
+            STUDY HUB
           </motion.h1>
         </div>
 
         <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{ delay: 1, duration: 1.5, ease: "easeInOut" }}
-          className="max-w-[200px] h-px bg-gradient-to-r from-transparent via-neon-blue to-transparent"
+          animate={{ opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="w-32 h-0.5 bg-white/20"
         />
         
-        <div className="w-full max-w-[280px] sm:max-w-[320px] h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5 relative backdrop-blur-sm">
+        <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
           <motion.div 
-            initial={{ x: "-100%" }}
             animate={{ 
               x: ["-100%", "100%"]
             }}
             transition={{ 
-              duration: 2,
+              duration: 3,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "linear"
             }}
-            className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-neon-blue to-transparent shadow-[0_0_15px_#00f2ff]"
+            className="w-full h-full bg-white/20"
           />
         </div>
         
-        <div className="space-y-2">
+        <div className="mt-4">
           <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.4, 0.8, 0.4] }}
-            transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
-            className="text-white/80 text-[10px] sm:text-[12px] uppercase tracking-[0.6em] font-mono leading-relaxed"
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="text-white/40 text-[10px] uppercase font-bold tracking-[0.5em]"
           >
-            SYNERGIZING KNOWLEDGE
+            Loading...
           </motion.p>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2 }}
-            className="text-[8px] text-white/20 uppercase tracking-[0.4em] font-bold"
-          >
-            Verifying Core Systems
-          </motion.div>
         </div>
       </motion.div>
     </motion.div>

@@ -389,8 +389,8 @@ export default function App() {
                 </AnimatePresence>
               </main>
 
-              <Footer siteConfig={siteConfig} />
               <LeaderboardScroller />
+              <Footer siteConfig={siteConfig} />
               <NotificationPrompt />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
               <WhatsAppFloat />

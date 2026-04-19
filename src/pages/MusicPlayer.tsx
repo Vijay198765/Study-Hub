@@ -105,6 +105,22 @@ export default function MusicPlayer() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getDirectLink = (url: string) => {
+    if (!url) return '';
+    // Handle Google Drive links
+    if (url.includes('drive.google.com')) {
+      const match = url.match(/\/d\/(.+?)\/(view|edit)?/);
+      if (match && match[1]) {
+        return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+      }
+      const idMatch = url.match(/[?&]id=(.+?)(&|$)/);
+      if (idMatch && idMatch[1]) {
+        return `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
+      }
+    }
+    return url;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -137,10 +153,12 @@ export default function MusicPlayer() {
       >
         {/* Left Side: Art and Main Info */}
         <div className="flex flex-col items-center lg:items-start gap-8">
-           <Link to="/" className="flex items-center gap-2 text-white/40 hover:text-neon-blue transition-colors mb-4 lg:mb-0 group self-start">
-             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-             <span className="text-sm font-bold uppercase tracking-widest">Exit Player</span>
-           </Link>
+           <div className="flex flex-col sm:flex-row gap-4 mb-4 lg:mb-0">
+             <Link to="/" className="flex items-center gap-2 text-white/40 hover:text-neon-blue transition-colors group">
+               <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+               <span className="text-sm font-bold uppercase tracking-widest">Back to Main Hub</span>
+             </Link>
+           </div>
 
            <div className="relative group perspective-1000">
              <motion.div 
@@ -298,7 +316,15 @@ export default function MusicPlayer() {
               exit={{ x: '100%' }}
               className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-dark-bg border-l border-white/10 z-[60] p-8 overflow-y-auto custom-scrollbar"
             >
-              <h2 className="text-2xl font-display font-bold mb-8 uppercase tracking-tighter italic">Queue</h2>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-display font-bold uppercase tracking-tighter italic">Queue</h2>
+                <button 
+                  onClick={() => setShowPlaylist(false)}
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/40 hover:text-white"
+                >
+                  <SkipForward size={24} className="rotate-180" /> {/* Using skip back or similar as a back icon */}
+                </button>
+              </div>
               <div className="space-y-4">
                 {songs.map((song, idx) => (
                   <button 
@@ -336,7 +362,7 @@ export default function MusicPlayer() {
 
       <audio 
         ref={audioRef}
-        src={currentSong.url}
+        src={getDirectLink(currentSong.url)}
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={handleNext}
