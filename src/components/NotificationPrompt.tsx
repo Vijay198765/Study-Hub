@@ -52,8 +52,16 @@ export default function NotificationPrompt() {
             });
           }
           
-          // Auto hide toast after 10 seconds
-          setTimeout(() => setShowToast(false), 10000);
+          // Check if this notification has been seen before in this session or recently
+          const seenKey = `notif_seen_${notif.id}`;
+          if (!localStorage.getItem(seenKey)) {
+            setLatestNotification(notif);
+            setShowToast(true);
+            localStorage.setItem(seenKey, 'true');
+            
+            // Auto hide toast after 3 seconds as requested
+            setTimeout(() => setShowToast(false), 3000);
+          }
         }
       }
     }, (error) => {
@@ -175,7 +183,7 @@ export default function NotificationPrompt() {
               <motion.div 
                 initial={{ width: "100%" }}
                 animate={{ width: "0%" }}
-                transition={{ duration: 10, ease: "linear" }}
+                transition={{ duration: 3, ease: "linear" }}
                 className="absolute bottom-0 left-0 h-0.5 bg-white/10"
               />
             </div>

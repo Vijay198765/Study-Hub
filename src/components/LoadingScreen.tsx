@@ -232,79 +232,102 @@ export const LoadingScreen = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.8 }}
       className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden"
     >
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
+        initial={{ opacity: 0, scale: 1.1 }}
+        animate={{ opacity: isCanvasReady ? 1 : 0, scale: 1 }}
+        transition={{ duration: 1.5, ease: "easeOut" }}
         className="absolute inset-0"
       >
         <Canvas 
           shadows={{ type: THREE.PCFShadowMap }} 
-          dpr={[1, 2]} 
-          gl={{ antialias: true, alpha: true }}
+          dpr={[1, isMobile ? 1.5 : 2]} 
+          gl={{ antialias: !isMobile, alpha: true }}
           onCreated={() => setIsCanvasReady(true)}
         >
           <PerspectiveCamera 
             makeDefault 
-            position={[0, isMobile ? 3 : 2, isMobile ? 10 : 8]} 
-            fov={isMobile ? 60 : 50} 
+            position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
+            fov={isMobile ? 70 : 50} 
           />
           <Scene />
         </Canvas>
       </motion.div>
       
+      {/* Background Glow */}
+      <div className="absolute inset-0 bg-gradient-to-t from-neon-blue/10 via-transparent to-transparent pointer-events-none" />
+
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 mt-auto mb-16 sm:mb-20 flex flex-col items-center gap-4 px-6 text-center w-full max-w-lg"
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 mt-auto mb-16 sm:mb-20 flex flex-col items-center gap-6 px-6 text-center w-full max-w-lg"
       >
+        <div className="relative group">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 1 }}
+            className="absolute -inset-4 bg-neon-blue/20 blur-2xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity"
+          />
+          <motion.h1
+            animate={{ 
+              opacity: [0.8, 1, 0.8],
+              letterSpacing: ["0.2em", "0.3em", "0.2em"],
+            }}
+            transition={{ 
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="text-neon-blue font-display text-4xl sm:text-5xl md:text-6xl font-black tracking-[0.2em] uppercase italic drop-shadow-[0_0_20px_rgba(0,242,255,0.8)]"
+          >
+            IGNITING
+          </motion.h1>
+        </div>
+
         <motion.div
-          animate={{ 
-            scale: [1, 1.1, 1],
-            opacity: [0.8, 1, 0.8],
-            letterSpacing: ["0.15em", "0.25em", "0.15em"],
-            textShadow: [
-              "0 0 10px #00f2ff, 0 0 20px #00f2ff",
-              "0 0 30px #00f2ff, 0 0 50px #00f2ff",
-              "0 0 10px #00f2ff, 0 0 20px #00f2ff"
-            ]
-          }}
-          transition={{ 
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="text-neon-blue font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] uppercase drop-shadow-[0_0_15px_rgba(0,242,255,0.7)]"
-        >
-          Igniting Knowledge
-        </motion.div>
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ delay: 1, duration: 1.5, ease: "easeInOut" }}
+          className="max-w-[200px] h-px bg-gradient-to-r from-transparent via-neon-blue to-transparent"
+        />
         
-        <div className="w-full max-w-[280px] sm:max-w-[320px] h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5 relative">
+        <div className="w-full max-w-[280px] sm:max-w-[320px] h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5 relative backdrop-blur-sm">
           <motion.div 
             initial={{ x: "-100%" }}
             animate={{ 
               x: ["-100%", "100%"]
             }}
             transition={{ 
-              duration: 2.5,
+              duration: 2,
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-neon-blue to-transparent shadow-[0_0_10px_#00f2ff]"
+            className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-neon-blue to-transparent shadow-[0_0_15px_#00f2ff]"
           />
         </div>
         
-        <motion.p 
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-white/60 text-[10px] sm:text-[12px] uppercase tracking-[0.4em] font-mono leading-relaxed max-w-[250px] sm:max-w-none"
-        >
-          Syncing with the Knowledge Galaxy...
-        </motion.p>
+        <div className="space-y-2">
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
+            className="text-white/80 text-[10px] sm:text-[12px] uppercase tracking-[0.6em] font-mono leading-relaxed"
+          >
+            SYNERGIZING KNOWLEDGE
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2 }}
+            className="text-[8px] text-white/20 uppercase tracking-[0.4em] font-bold"
+          >
+            Verifying Core Systems
+          </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );

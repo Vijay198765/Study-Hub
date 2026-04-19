@@ -395,13 +395,6 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         </div>
       </section>
 
-      {/* Leaderboard Section */}
-      {siteConfig?.leaderboardVisible !== false && (
-        <div className="mt-20">
-          <Leaderboard />
-        </div>
-      )}
-
       {/* Features Section */}
       <section className="max-w-7xl mx-auto mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="glass-card p-8 text-center">

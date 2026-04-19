@@ -1086,16 +1086,6 @@ export default function AdminPanel() {
               </button>
             )}
 
-            {shouldShowTab('news') && (
-              <button 
-                onClick={() => setActiveTab('news')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'news' ? 'bg-orange-500 text-black shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'text-white/60 hover:text-white'}`}
-              >
-                <FileText size={16} className="inline-block mr-1.5" />
-                News Hub
-              </button>
-            )}
-
             {shouldShowTab('notifications') && (
               <button 
                 onClick={() => setActiveTab('notifications')}
@@ -1158,6 +1148,21 @@ export default function AdminPanel() {
                 </button>
               </div>
 
+              <div className="bg-neon-blue/5 border border-neon-blue/10 rounded-2xl p-6">
+                <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                  <Star size={14} className="text-neon-blue" />
+                  How to add music?
+                </h3>
+                <ul className="text-xs text-white/60 space-y-2 list-disc ml-5">
+                  <li>Click <strong>"Add New Song"</strong> button above.</li>
+                  <li>Enter the track <strong>Title</strong> and <strong>Artist</strong>.</li>
+                  <li>Paste a direct link to the audio file in the <strong>URL</strong> field (e.g., from Google Drive, Dropbox, or your own server).</li>
+                  <li>Provide a <strong>Cover Image URL</strong> for the track thumbnail.</li>
+                  <li>Set an <strong>Order</strong> number to control the track sequence in the playlist.</li>
+                  <li>Save the song and it will appear in the secret music library!</li>
+                </ul>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {songs.map((song) => (
                   <motion.div 
@@ -1205,109 +1210,6 @@ export default function AdminPanel() {
                     <p className="text-white/40 font-medium">No songs in your library yet.</p>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'news' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-neon-blue mb-1">News Manager</h2>
-                  <p className="text-white/40 text-xs">Manage updates that appear on the homepage</p>
-                </div>
-                <button 
-                  onClick={() => setIsAddingNews(true)}
-                  className="btn-neon flex items-center gap-2"
-                >
-                  <Plus size={18} /> Add News
-                </button>
-              </div>
-
-              {isAddingNews && (
-                <div className="glass-card p-8 border-neon-blue/30">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold uppercase tracking-tight">Add New Update</h3>
-                    <button onClick={() => setIsAddingNews(false)} className="text-white/40 hover:text-white"><X size={20} /></button>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Title</label>
-                      <input 
-                        type="text" 
-                        value={newNews.title}
-                        onChange={(e) => setNewNews({...newNews, title: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue"
-                        placeholder="News Title"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Message</label>
-                      <textarea 
-                        value={newNews.message}
-                        onChange={(e) => setNewNews({...newNews, message: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue h-24"
-                        placeholder="Content message..."
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Type</label>
-                        <select 
-                          value={newNews.type}
-                          onChange={(e) => setNewNews({...newNews, type: e.target.value as any})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none"
-                        >
-                          <option value="info">Info</option>
-                          <option value="success">Success</option>
-                          <option value="warning">Warning</option>
-                          <option value="error">Error</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest mb-1 block">Action Link (Optional)</label>
-                        <input 
-                          type="text" 
-                          value={newNews.url}
-                          onChange={(e) => setNewNews({...newNews, url: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue"
-                          placeholder="https://..."
-                        />
-                      </div>
-                    </div>
-                    <button onClick={handleAddNews} className="btn-neon w-full py-4 uppercase tracking-wider font-bold">Publish News</button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {news.map((item) => (
-                  <div key={item.id} className="glass-card p-6 border-white/5 relative group">
-                    <button 
-                      onClick={() => deleteNews(item.id)}
-                      className="absolute top-4 right-4 p-2 text-white/20 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        item.type === 'success' ? 'bg-green-500/10 text-green-500' :
-                        item.type === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
-                        item.type === 'error' ? 'bg-red-500/10 text-red-500' :
-                        'bg-neon-blue/10 text-neon-blue'
-                      }`}>
-                        <Bell size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white">{item.title}</h4>
-                        <p className="text-sm text-white/60 mt-1">{item.message}</p>
-                        <p className="text-[10px] text-white/20 mt-4 uppercase tracking-widest font-black">
-                          {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : 'Just now'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -1845,7 +1747,7 @@ export default function AdminPanel() {
                             >
                               Toggle Role
                             </button>
-                            {user.email !== 'vijayninama683@gmail.com' && (
+                            {user.email !== 'vijayninama683@gmail.com' && user.uid !== auth.currentUser?.uid && (
                               <button 
                                 onClick={() => handleDelete('user', user.uid, user.email)}
                                 className="text-red-400/40 hover:text-red-400 transition-all"

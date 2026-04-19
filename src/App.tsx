@@ -26,6 +26,7 @@ import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import NotificationPrompt from './components/NotificationPrompt';
+import LeaderboardScroller from './components/LeaderboardScroller';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -336,8 +337,6 @@ export default function App() {
               
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
               
-              {siteConfig?.showAnnouncement && <NewsTicker />}
-              
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
                   {siteConfig?.maintenanceMode && !isAdmin ? (
@@ -391,6 +390,7 @@ export default function App() {
               </main>
 
               <Footer siteConfig={siteConfig} />
+              <LeaderboardScroller />
               <NotificationPrompt />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
               <WhatsAppFloat />
