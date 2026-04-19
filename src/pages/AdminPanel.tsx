@@ -34,8 +34,8 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news';
-type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'music';
+type EditTab = 'basic' | 'resources' | 'quiz' | 'questions' | 'music';
 
 const DraggableAny = Draggable as any;
 
@@ -132,6 +132,7 @@ export default function AdminPanel() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [songs, setSongs] = useState<any[]>([]);
   
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
@@ -309,6 +310,10 @@ export default function AdminPanel() {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
 
+    const unsubMusic = onSnapshot(query(collection(db, 'music'), orderBy('order', 'asc')), (snapshot) => {
+      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'music'));
+
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
@@ -351,6 +356,7 @@ export default function AdminPanel() {
       unsubRatings();
       unsubNews();
       unsubNotifications();
+      unsubMusic();
       unsubLogs();
       unsubConfig();
     };
@@ -468,8 +474,8 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string) => {
-    setDeleteConfirm({ type, id, name });
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'music', id: string, name: string) => {
+    setDeleteConfirm({ type: type as any, id, name });
   };
 
   const confirmDelete = async () => {
@@ -483,6 +489,7 @@ export default function AdminPanel() {
     else if (type === 'test') await removeTest(id);
     else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
     else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
+    else if (type === 'music') await deleteDoc(doc(db, 'music', id));
     
     setDeleteConfirm(null);
   };
@@ -520,6 +527,9 @@ export default function AdminPanel() {
           ...cleanData,
           updatedAt: serverTimestamp()
         }, { merge: true });
+      } else if (type === 'music') {
+        const musicRef = doc(db, 'music', dataToSave.id);
+        await setDoc(musicRef, dataToSave, { merge: true });
       }
       
       setEditingEntity(null);
@@ -1106,11 +1116,99 @@ export default function AdminPanel() {
               </button>
             )}
 
+            {shouldShowTab('music') && (
+              <button 
+                onClick={() => setActiveTab('music')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'music' ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Music size={16} className="inline-block mr-1.5" />
+                Music
+              </button>
+            )}
+
             <div className="w-4 shrink-0" />
           </div>
 
       {/* Content Area */}
         <div className="glass-card p-6 min-h-[600px]">
+          {activeTab === 'music' && (
+            <div className="space-y-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-white mb-2">Music Library</h2>
+                  <p className="text-sm text-white/40">Manage tracks for the hidden music player.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    const newSong = { 
+                      id: Date.now().toString(), 
+                      title: 'New Track', 
+                      artist: 'Unknown Artist', 
+                      url: '', 
+                      coverUrl: '',
+                      order: songs.length 
+                    };
+                    setEditingEntity({ ...newSong, type: 'music' });
+                    setEditTab('music');
+                  }}
+                  className="btn-neon bg-white text-black px-6 py-3 flex items-center gap-2"
+                >
+                  <Plus size={20} />
+                  Add New Song
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {songs.map((song) => (
+                  <motion.div 
+                    key={song.id}
+                    layout
+                    className="group relative bg-white/5 border border-white/10 rounded-3xl p-6 hover:border-neon-blue/50 transition-all overflow-hidden"
+                  >
+                    <div className="flex items-center gap-4 mb-6 relative z-10">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
+                        {song.coverUrl ? (
+                          <img src={song.coverUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Music className="text-white/20" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white truncate">{song.title}</h3>
+                        <p className="text-[10px] text-white/40 uppercase tracking-widest truncate">{song.artist}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 relative z-10">
+                      <button 
+                        onClick={() => {
+                          setEditingEntity({ ...song, type: 'music' });
+                          setEditTab('music');
+                        }}
+                        className="flex-1 py-2.5 rounded-xl bg-white/5 text-white/60 text-xs font-bold hover:bg-white/10 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2"
+                      >
+                        <Edit2 size={14} />
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete('music', song.id, song.title)}
+                        className="p-2.5 rounded-xl bg-red-400/5 text-red-400 hover:bg-red-400/10 transition-all border border-red-400/10"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+                {songs.length === 0 && (
+                  <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4">
+                    <Music size={48} className="text-white/10" />
+                    <p className="text-white/40 font-medium">No songs in your library yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'news' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
@@ -2809,7 +2907,7 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Search Bar</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ searchEnabled: siteConfig?.searchEnabled !== false })}
+                            onClick={() => saveSiteConfig({ searchEnabled: siteConfig?.searchEnabled === false ? true : false })}
                             className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.searchEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.searchEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
@@ -2819,28 +2917,28 @@ export default function AdminPanel() {
                         {/* Games Tab Enable */}
                         <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="text-white/40"><Zap size={18} /></div>
+                            <div className="text-white/40"><Gamepad2 size={18} /></div>
                             <span className="text-xs font-bold text-white/80">Games Tab</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ gamesEnabled: siteConfig?.gamesEnabled !== false })}
+                            onClick={() => saveSiteConfig({ gamesEnabled: siteConfig?.gamesEnabled === false ? true : false })}
                             className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.gamesEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.gamesEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
-                        {/* Live Club Enable */}
+                        {/* Show Footer Credit */}
                         <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="text-white/40"><MessageSquare size={18} /></div>
-                            <span className="text-xs font-bold text-white/80">Live Club</span>
+                            <div className="text-white/40"><Info size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Footer Credit</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ liveClubEnabled: siteConfig?.liveClubEnabled !== false })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.liveClubEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveSiteConfig({ showFooterCredit: siteConfig?.showFooterCredit !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.showFooterCredit !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.liveClubEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showFooterCredit !== false ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -2856,6 +2954,58 @@ export default function AdminPanel() {
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
+                        </div>
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Music size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Music Player</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ musicEnabled: siteConfig?.musicEnabled !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.musicEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.musicEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Music Page Password */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest flex items-center gap-2">
+                          <Lock size={14} className="text-neon-blue" />
+                          Music Page Password
+                        </label>
+                        <input 
+                          type="text" 
+                          placeholder="Secret key for double-tap access"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all font-mono"
+                          value={siteConfig?.musicPassword || ''}
+                          onChange={(e) => saveSiteConfig({ musicPassword: e.target.value })}
+                        />
+                        <p className="text-[10px] text-white/40 italic">Accessed by double-tapping the founder's footer.</p>
+                      </div>
+
+                      {/* Additional Customization */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Logo URL (Optional)</label>
+                           <input 
+                             type="text" 
+                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                             value={siteConfig?.logoUrl || ''}
+                             onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
+                             placeholder="https://..."
+                           />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Favicon URL (Optional)</label>
+                           <input 
+                             type="text" 
+                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                             value={siteConfig?.faviconUrl || ''}
+                             onChange={(e) => saveSiteConfig({ faviconUrl: e.target.value })}
+                             placeholder="https://..."
+                           />
                         </div>
                       </div>
 
@@ -2926,6 +3076,53 @@ export default function AdminPanel() {
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             />
                            </div>
+                        </div>
+
+                        {/* Social Links Extension */}
+                        <div className="pt-4 border-t border-white/5 space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Social & Community</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Instagram</label>
+                              <input 
+                                type="text" 
+                                value={siteConfig?.socialInstagram || ''}
+                                onChange={(e) => saveSiteConfig({ socialInstagram: e.target.value })}
+                                placeholder="@username"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-pink"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Facebook</label>
+                              <input 
+                                type="text" 
+                                value={siteConfig?.socialFacebook || ''}
+                                onChange={(e) => saveSiteConfig({ socialFacebook: e.target.value })}
+                                placeholder="fb.com/page"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Support WhatsApp</label>
+                              <input 
+                                type="text" 
+                                value={siteConfig?.supportWhatsApp || ''}
+                                onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
+                                placeholder="+91 00000 00000"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Support Telegram</label>
+                              <input 
+                                type="text" 
+                                value={siteConfig?.supportTelegram || ''}
+                                onChange={(e) => saveSiteConfig({ supportTelegram: e.target.value })}
+                                placeholder="@channel"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -4200,6 +4397,52 @@ export default function AdminPanel() {
                         )}
                       </Droppable>
                     </DragDropContext>
+                  </div>
+                )}
+
+                {editTab === 'music' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Song Title</label>
+                        <input 
+                          type="text" 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.title}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, title: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/60">Artist</label>
+                        <input 
+                          type="text" 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.artist}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, artist: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/60">MP3 URL (Direct or Drive Link)</label>
+                      <input 
+                        type="text" 
+                        placeholder="https://..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={editingEntity.url}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
+                      />
+                      <p className="text-[10px] text-white/20 italic">For Google Drive, ensure it's shared with 'Anyone with link'.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/60">Cover Image URL</label>
+                      <input 
+                        type="text" 
+                        placeholder="https://..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={editingEntity.coverUrl}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, coverUrl: e.target.value })}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

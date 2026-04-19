@@ -6,6 +6,7 @@ import { Class, Subject, Chapter } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 import { ClassCardSkeleton } from '../components/Skeleton';
 import Leaderboard from '../components/Leaderboard';
+import LeaderboardScroller from '../components/LeaderboardScroller';
 
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -213,6 +214,11 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             "{quote}"
           </p>
 
+          {/* Leaderboard Scroller */}
+          <div className="mb-12">
+            <LeaderboardScroller />
+          </div>
+
           {/* Search Bar */}
           <div className="max-w-xl mx-auto relative group search-container -mt-8">
             <div className="relative flex items-center bg-dark-card border border-white/10 rounded-2xl px-6 py-2 shadow-[0_0_25px_rgba(0,242,255,0.2)] group-hover:shadow-[0_0_45px_rgba(0,242,255,0.35)] transition-all">
@@ -392,7 +398,7 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         </div>
       </section>
 
-      {siteConfig?.leaderboardVisible !== false && <Leaderboard />}
+      {/* siteConfig?.leaderboardVisible !== false && <Leaderboard /> */}
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">

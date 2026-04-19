@@ -13,6 +13,8 @@ import AdminPanel from './pages/AdminPanel';
 import Games from './pages/Games';
 import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
+import MusicPlayer from './pages/MusicPlayer';
+import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -334,17 +336,7 @@ export default function App() {
               
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
               
-              {siteConfig?.showAnnouncement && siteConfig?.announcementText && (
-                <div className="bg-neon-blue text-black py-2 px-4 text-center text-xs font-bold overflow-hidden">
-                  <motion.div
-                    animate={{ x: [1000, -1000] }}
-                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                    className="whitespace-nowrap inline-block"
-                  >
-                    {siteConfig.announcementText}
-                  </motion.div>
-                </div>
-              )}
+              <NewsTicker />
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -383,6 +375,7 @@ export default function App() {
                       <Route path="/live-club" element={<LiveComments />} />
                       <Route path="/tests" element={<Tests />} />
                       <Route path="/login" element={<Login />} />
+                      <Route path="/secret-player" element={<MusicPlayer />} />
                       <Route 
                         path="/admin" 
                         element={
