@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Music as MusicIcon
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -28,7 +28,7 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, Music, News, SiteConfig, SecretProfile } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -51,7 +51,7 @@ export default function AdminPanel() {
   const [unlockAttempts, setUnlockAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
 
-  const [siteConfig, setSiteConfig] = useState<any>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
 
   const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
 
@@ -132,7 +132,7 @@ export default function AdminPanel() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [songs, setSongs] = useState<any[]>([]);
+  const [songs, setSongs] = useState<Music[]>([]);
   
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
@@ -1121,7 +1121,7 @@ export default function AdminPanel() {
                 onClick={() => setActiveTab('music')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'music' ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-white/60 hover:text-white'}`}
               >
-                <Music size={16} className="inline-block mr-1.5" />
+                <MusicIcon size={16} className="inline-block mr-1.5" />
                 Music
               </button>
             )}
@@ -1170,7 +1170,7 @@ export default function AdminPanel() {
                         {song.coverUrl ? (
                           <img src={song.coverUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <Music className="text-white/20" />
+                          <MusicIcon className="text-white/20" />
                         )}
                       </div>
                       <div className="min-w-0">
@@ -1201,7 +1201,7 @@ export default function AdminPanel() {
                 ))}
                 {songs.length === 0 && (
                   <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4">
-                    <Music size={48} className="text-white/10" />
+                    <MusicIcon size={48} className="text-white/10" />
                     <p className="text-white/40 font-medium">No songs in your library yet.</p>
                   </div>
                 )}
@@ -2957,7 +2957,7 @@ export default function AdminPanel() {
                         </div>
                         <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="text-white/40"><Music size={18} /></div>
+                            <div className="text-white/40"><MusicIcon size={18} /></div>
                             <span className="text-xs font-bold text-white/80">Music Player</span>
                           </div>
                           <button 

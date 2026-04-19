@@ -336,7 +336,7 @@ export default function App() {
               
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
               
-              <NewsTicker />
+              {siteConfig?.showAnnouncement && <NewsTicker />}
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">

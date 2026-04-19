@@ -136,9 +136,73 @@ export interface SiteConfig {
   ratingOptions?: string[]; // Custom options for rating
   welcomeEmailTemplate: string;
   welcomeEmailSubject: string;
-  announcement?: string;
-  isAnnouncementActive?: boolean;
-  lastUpdated: any;
+  siteName?: string;
+  adminName?: string;
+  coOwnerName?: string;
+  siteSubtitle?: string;
+  announcementText?: string;
+  showAnnouncement?: boolean;
+  maintenanceMode?: boolean;
+  maintenanceMessage?: string;
+  autoApproveUsers?: boolean;
+  defaultThemeMode?: 'light' | 'dark' | 'auto';
+  ipLockdownEnabled?: boolean;
+  showNewBadge?: boolean;
+  testTimeMultiplier?: number;
+  termsUrl?: string;
+  privacyUrl?: string;
+  searchEnabled?: boolean;
+  gamesEnabled?: boolean;
+  liveClubEnabled?: boolean;
+  bgEffect?: 'none' | 'snow' | 'confetti' | 'stars';
+  secretLoginEnabled?: boolean;
+  secretLoginKey?: string;
+  secretProfiles?: SecretProfile[];
+  limitedAdminTabs?: string[];
+  adminUnlockKey?: string;
+  supportWhatsApp?: string;
+  supportTelegram?: string;
+  supportEmail?: string;
+  welcomeEmailSender?: string;
+  emailjsServiceId?: string;
+  emailjsTemplateId?: string;
+  emailjsPublicKey?: string;
+  musicEnabled?: boolean;
+  musicPassword?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  socialInstagram?: string;
+  socialFacebook?: string;
+  showFooterCredit?: boolean;
+  leaderboardVisible?: boolean;
+  registrationEnabled?: boolean;
+  lastUpdated?: any;
+}
+
+export interface SecretProfile {
+  id: string;
+  label: string;
+  key: string;
+  allowedTabs: string[];
+}
+
+export interface Music {
+  id: string;
+  title: string;
+  artist?: string;
+  url: string;
+  coverUrl?: string;
+  order: number;
+}
+
+export interface News {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  url?: string;
+  createdAt: any;
+  createdBy: string;
 }
 
 export interface Notification {

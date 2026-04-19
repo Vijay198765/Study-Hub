@@ -214,105 +214,102 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             "{quote}"
           </p>
 
-          {/* Leaderboard Scroller */}
-          <div className="mb-12">
-            <LeaderboardScroller />
-          </div>
-
           {/* Search Bar */}
-          <div className="max-w-xl mx-auto relative group search-container -mt-8">
-            <div className="relative flex items-center bg-dark-card border border-white/10 rounded-2xl px-6 py-2 shadow-[0_0_25px_rgba(0,242,255,0.2)] group-hover:shadow-[0_0_45px_rgba(0,242,255,0.35)] transition-all">
-              <Search className="text-white/40 w-5 h-5 mr-4" />
-              <input
-                type="text"
-                placeholder="Search for classes, subjects, or chapters..."
-                className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/20 text-base"
-                value={searchTerm}
-                onFocus={() => searchTerm.trim() && setIsSearching(true)}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          {siteConfig?.searchEnabled !== false && (
+            <div className="max-w-xl mx-auto relative group search-container">
+              <div className="relative flex items-center bg-dark-card border border-white/10 rounded-2xl px-6 py-2 shadow-[0_0_25px_rgba(0,242,255,0.2)] group-hover:shadow-[0_0_45px_rgba(0,242,255,0.35)] transition-all">
+                <Search className="text-white/40 w-5 h-5 mr-4" />
+                <input
+                  type="text"
+                  placeholder="Search for classes, subjects, or chapters..."
+                  className="bg-transparent border-none outline-none text-white w-full placeholder:text-white/20 text-base"
+                  value={searchTerm}
+                  onFocus={() => searchTerm.trim() && setIsSearching(true)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {/* Search Results Dropdown */}
+              <AnimatePresence>
+                {isSearching && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 right-0 mt-4 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60] max-h-[60vh] overflow-y-auto no-scrollbar"
+                  >
+                    <div className="p-4 space-y-6">
+                      {results.classes.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                            <GraduationCap size={12} /> Classes
+                          </h3>
+                          <div className="grid gap-1">
+                            {results.classes.map(c => (
+                              <Link 
+                                key={c.id} 
+                                to={`/class/${c.id}`} 
+                                className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                              >
+                                <span className="text-sm font-medium">{c.name}</span>
+                                <ArrowRight size={14} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {results.subjects.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                            <BookOpen size={12} /> Subjects
+                          </h3>
+                          <div className="grid gap-1">
+                            {results.subjects.map(s => (
+                              <Link 
+                                key={s.id} 
+                                to={`/class/${s.classId}/subject/${s.id}`} 
+                                className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                              >
+                                <span className="text-sm font-medium">{s.name}</span>
+                                <ArrowRight size={14} className="text-white/20 group-hover:text-neon-purple group-hover:translate-x-1 transition-all" />
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {results.chapters.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
+                            <Star size={12} /> Chapters
+                          </h3>
+                          <div className="grid gap-1">
+                            {results.chapters.map(c => (
+                              <Link 
+                                key={c.id} 
+                                to={`/class/${c.classId}/subject/${c.subjectId}/chapter/${c.id}`} 
+                                className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+                              >
+                                <span className="text-sm font-medium">{c.name}</span>
+                                <ArrowRight size={14} className="text-white/20 group-hover:text-neon-pink group-hover:translate-x-1 transition-all" />
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {results.classes.length === 0 && results.subjects.length === 0 && results.chapters.length === 0 && (
+                        <div className="text-center py-8">
+                          <p className="text-white/40 text-sm italic">No results found for "{searchTerm}"</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-
-            {/* Search Results Dropdown */}
-            <AnimatePresence>
-              {isSearching && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full left-0 right-0 mt-4 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[60] max-h-[60vh] overflow-y-auto no-scrollbar"
-                >
-                  <div className="p-4 space-y-6">
-                    {results.classes.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                          <GraduationCap size={12} /> Classes
-                        </h3>
-                        <div className="grid gap-1">
-                          {results.classes.map(c => (
-                            <Link 
-                              key={c.id} 
-                              to={`/class/${c.id}`} 
-                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                            >
-                              <span className="text-sm font-medium">{c.name}</span>
-                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {results.subjects.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                          <BookOpen size={12} /> Subjects
-                        </h3>
-                        <div className="grid gap-1">
-                          {results.subjects.map(s => (
-                            <Link 
-                              key={s.id} 
-                              to={`/class/${s.classId}/subject/${s.id}`} 
-                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                            >
-                              <span className="text-sm font-medium">{s.name}</span>
-                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-purple group-hover:translate-x-1 transition-all" />
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {results.chapters.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/30 flex items-center gap-2 px-2">
-                          <Star size={12} /> Chapters
-                        </h3>
-                        <div className="grid gap-1">
-                          {results.chapters.map(c => (
-                            <Link 
-                              key={c.id} 
-                              to={`/class/${c.classId}/subject/${c.subjectId}/chapter/${c.id}`} 
-                              className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
-                            >
-                              <span className="text-sm font-medium">{c.name}</span>
-                              <ArrowRight size={14} className="text-white/20 group-hover:text-neon-pink group-hover:translate-x-1 transition-all" />
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {results.classes.length === 0 && results.subjects.length === 0 && results.chapters.length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-white/40 text-sm italic">No results found for "{searchTerm}"</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          )}
         </div>
       </section>
 
@@ -398,7 +395,12 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         </div>
       </section>
 
-      {/* siteConfig?.leaderboardVisible !== false && <Leaderboard /> */}
+      {/* Leaderboard Section */}
+      {siteConfig?.leaderboardVisible !== false && (
+        <div className="mt-20">
+          <Leaderboard />
+        </div>
+      )}
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">

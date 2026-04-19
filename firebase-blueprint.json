@@ -215,8 +215,59 @@
         "supportWhatsApp": { "type": "string" },
         "supportTelegram": { "type": "string" },
         "supportEmail": { "type": "string" },
+        "musicEnabled": { "type": "boolean" },
+        "musicPassword": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" },
+        "socialInstagram": { "type": "string" },
+        "socialFacebook": { "type": "string" },
+        "showFooterCredit": { "type": "boolean" },
+        "leaderboardVisible": { "type": "boolean" },
+        "registrationEnabled": { "type": "boolean" },
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
+    },
+    "Music": {
+      "title": "Music",
+      "description": "A track in the secret music player",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "url": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "title", "url", "order"]
+    },
+    "News": {
+      "title": "News",
+      "description": "Site alerts and announcements",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "message", "type", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "message", "createdAt"]
     }
   },
   "firestore": {
@@ -271,6 +322,18 @@
     "/config/{docId}": {
       "schema": "Config",
       "description": "Site configuration"
+    },
+    "/music/{songId}": {
+      "schema": "Music",
+      "description": "Music tracks"
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "Site news"
+    },
+    "/notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "App notifications"
     }
   }
 }

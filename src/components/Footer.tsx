@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Heart, X, MessageSquare, Send, Music } from 'lucide-react';
+import { Mail, Heart, X, MessageSquare, Send, Music as MusicIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -50,8 +50,14 @@ export default function Footer({ siteConfig }: FooterProps) {
         // Store session-specific permissions
         if (matchedProfile) {
           localStorage.setItem('sessionAllowedTabs', JSON.stringify(matchedProfile.allowedTabs || []));
+        } else if (isLegacyMatch) {
+          // Legacy permissions - give full access if it's the master key
+          localStorage.setItem('sessionAllowedTabs', JSON.stringify([
+            'chapters', 'chapterTests', 'classes', 'subjects', 'users', 'comments', 
+            'tests', 'results', 'stats', 'groups', 'ratings', 'logs', 'site', 
+            'notifications', 'news', 'music'
+          ]));
         } else {
-          // Legacy permissions
           localStorage.setItem('sessionAllowedTabs', JSON.stringify(siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']));
         }
         
@@ -160,7 +166,7 @@ export default function Footer({ siteConfig }: FooterProps) {
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-lg bg-neon-blue/10 text-neon-blue">
-                    <Music size={20} />
+                    <MusicIcon size={20} />
                   </div>
                   <h3 className="text-xl font-bold uppercase tracking-tighter">Music Access</h3>
                 </div>

@@ -2,24 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, Pause, SkipForward, SkipBack, Volume2, 
-  VolumeX, Music, Disc, Loader2, ChevronLeft,
+  VolumeX, Music as MusicIcon, Disc, Loader2, ChevronLeft,
   Heart, Repeat, Shuffle, List
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { cn } from '../lib/utils';
-
-interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;
-  coverUrl?: string;
-}
+import { Music } from '../types';
 
 export default function MusicPlayer() {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<Music[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,7 +38,7 @@ export default function MusicPlayer() {
       const musicData = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Song[];
+      })) as Music[];
       setSongs(musicData);
       setLoading(false);
     });
@@ -54,6 +47,12 @@ export default function MusicPlayer() {
   }, [navigate]);
 
   const currentSong = songs[currentIndex];
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -117,7 +116,7 @@ export default function MusicPlayer() {
   if (songs.length === 0) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 gap-4">
-        <Music className="text-white/20 w-20 h-20" />
+        <MusicIcon className={cn("text-white/20 w-20 h-20", isPlaying && "animate-pulse")} />
         <h1 className="text-2xl font-display font-bold text-white">No Songs Found</h1>
         <p className="text-white/40">Ask the administrator to add some music.</p>
         <Link to="/" className="btn-neon px-8 py-3">Go Home</Link>
@@ -342,7 +341,6 @@ export default function MusicPlayer() {
         onLoadedMetadata={onLoadedMetadata}
         onEnded={handleNext}
         muted={isMuted}
-        volume={volume}
       />
     </div>
   );

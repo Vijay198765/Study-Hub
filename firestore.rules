@@ -289,7 +289,7 @@ service cloud.firestore {
              (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
              (!('maintenanceMessage' in data) || (data.maintenanceMessage is string && data.maintenanceMessage.size() < 1000)) &&
              (!('autoApproveUsers' in data) || data.autoApproveUsers is bool) &&
-             (!('defaultThemeMode' in data) || (data.defaultThemeMode in ['dark', 'light'])) &&
+             (!('defaultThemeMode' in data) || (data.defaultThemeMode in ['dark', 'light', 'auto'])) &&
              (!('ipLockdownEnabled' in data) || data.ipLockdownEnabled is bool) &&
              (!('showNewBadge' in data) || data.showNewBadge is bool) &&
              (!('testTimeMultiplier' in data) || data.testTimeMultiplier is number) &&
@@ -298,7 +298,7 @@ service cloud.firestore {
              (!('searchEnabled' in data) || data.searchEnabled is bool) &&
              (!('gamesEnabled' in data) || data.gamesEnabled is bool) &&
              (!('liveClubEnabled' in data) || data.liveClubEnabled is bool) &&
-             (!('bgEffect' in data) || (data.bgEffect in ['none', 'snow', 'confetti'])) &&
+             (!('bgEffect' in data) || (data.bgEffect in ['none', 'snow', 'confetti', 'stars'])) &&
              (!('secretLoginEnabled' in data) || data.secretLoginEnabled is bool) &&
              (!('secretLoginKey' in data) || (data.secretLoginKey is string && data.secretLoginKey.size() < 100)) &&
              (!('secretProfiles' in data) || data.secretProfiles is list) &&
@@ -307,7 +307,43 @@ service cloud.firestore {
              (!('supportWhatsApp' in data) || (data.supportWhatsApp is string && data.supportWhatsApp.size() < 50)) &&
              (!('supportTelegram' in data) || (data.supportTelegram is string && data.supportTelegram.size() < 200)) &&
              (!('supportEmail' in data) || (data.supportEmail is string && data.supportEmail.size() < 200)) &&
+             (!('musicEnabled' in data) || data.musicEnabled is bool) &&
+             (!('musicPassword' in data) || (data.musicPassword is string && data.musicPassword.size() < 100)) &&
+             (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() < 1000)) &&
+             (!('faviconUrl' in data) || (data.faviconUrl is string && data.faviconUrl.size() < 1000)) &&
+             (!('socialInstagram' in data) || (data.socialInstagram is string && data.socialInstagram.size() < 100)) &&
+             (!('socialFacebook' in data) || (data.socialFacebook is string && data.socialFacebook.size() < 500)) &&
+             (!('showFooterCredit' in data) || data.showFooterCredit is bool) &&
+             (!('leaderboardVisible' in data) || data.leaderboardVisible is bool) &&
+             (!('registrationEnabled' in data) || data.registrationEnabled is bool) &&
              (!('lastUpdated' in data) || (data.lastUpdated is timestamp || data.lastUpdated == request.time));
+    }
+
+    function isValidMusic(data) {
+      return data.keys().hasAll(['id', 'title', 'url', 'order']) &&
+             data.id is string && data.title is string && 
+             data.url is string && data.order is number &&
+             (!('artist' in data) || data.artist is string) &&
+             (!('coverUrl' in data) || data.coverUrl is string);
+    }
+
+    function isValidNews(data) {
+      return data.keys().hasAll(['title', 'message', 'type', 'createdAt']) &&
+             data.title is string && data.message is string &&
+             data.type in ['info', 'success', 'warning', 'error'] &&
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (!('url' in data) || data.url is string) &&
+             (!('createdBy' in data) || data.createdBy is string);
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['title', 'message', 'createdAt']) &&
+             data.title is string && data.message is string &&
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (!('type' in data) || data.type is string) &&
+             (!('url' in data) || data.url is string) &&
+             (!('createdBy' in data) || data.createdBy is string) &&
+             (!('userId' in data) || data.userId is string);
     }
 
     function isValidSentEmail(data) {
@@ -447,6 +483,21 @@ service cloud.firestore {
     match /config/{docId} {
       allow read: if true;
       allow write: if isAdmin() && isValidConfig(request.resource.data);
+    }
+
+    match /music/{songId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidMusic(request.resource.data);
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidNews(request.resource.data);
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && (isAdmin() || !('userId' in resource.data) || resource.data.userId == request.auth.uid);
+      allow write: if isAdmin() && isValidNotification(request.resource.data);
     }
 
     match /sentEmails/{emailId} {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Lock, LogIn, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Lock, LogIn, AlertCircle, Shield, X } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -10,6 +10,8 @@ export default function Login() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -41,6 +43,11 @@ export default function Login() {
   }, [navigate]);
 
   const handleGoogleLogin = async () => {
+    if (!acceptedTerms) {
+      setError('Please accept the Terms & Conditions to continue');
+      return;
+    }
+    
     if (!name.trim()) {
       setError('Please enter your name first');
       return;
@@ -142,7 +149,7 @@ export default function Login() {
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
+              className={`btn-neon w-full py-4 text-lg flex items-center justify-center gap-3 bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10 ${!acceptedTerms ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
@@ -153,6 +160,19 @@ export default function Login() {
                 </>
               )}
             </button>
+
+            <div className="flex items-start gap-2 px-1">
+              <input 
+                type="checkbox" 
+                id="terms" 
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 accent-neon-blue"
+              />
+              <label htmlFor="terms" className="text-[10px] text-white/40 leading-relaxed group cursor-pointer">
+                I agree to the <button onClick={() => setShowTerms(true)} className="text-neon-blue hover:underline font-bold">Terms & Conditions</button> and <button onClick={() => setShowTerms(true)} className="text-neon-blue hover:underline font-bold">Privacy Policy</button>.
+              </label>
+            </div>
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
@@ -185,6 +205,85 @@ export default function Login() {
           </div>
         </div>
       </motion.div>
+
+      {/* Terms Modal */}
+      <AnimatePresence>
+        {showTerms && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTerms(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-dark-card border border-white/10 rounded-3xl p-8 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar"
+            >
+              <button 
+                onClick={() => setShowTerms(false)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+              
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 rounded-2xl bg-neon-blue/10 text-neon-blue">
+                    <Shield size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white">Terms & Conditions</h2>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Last updated: April 2026</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-white/60 text-sm leading-relaxed text-left">
+                  <section>
+                    <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-xs">1. Acceptance of Terms</h3>
+                    <p>By accessing and using Study-hub, you agree to be bound by these terms. If you do not agree to these terms, please do not use our services.</p>
+                  </section>
+                  
+                  <section>
+                    <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-xs">2. Use of Content</h3>
+                    <p>The materials provided on this platform are for educational purposes only. Some materials are collected from publicly available sources, and original credits belong to their respective authors.</p>
+                  </section>
+
+                  <section>
+                    <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-xs">3. Account Responsibility</h3>
+                    <p>You are responsible for maintaining the confidentiality of your account and any activities that occur under your account.</p>
+                  </section>
+
+                  <section>
+                    <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-xs">4. Privacy Policy</h3>
+                    <p>We value your privacy. Your data is used strictly for authentication and tracking your own educational progress. We do not sell your personal information to third parties.</p>
+                  </section>
+                  
+                  <section>
+                    <h3 className="text-white font-bold mb-2 uppercase tracking-wider text-xs">5. Prohibited Conduct</h3>
+                    <p>Users are prohibited from attempting to bypass security measures, scraping data, or using the platform for any illegal activities.</p>
+                  </section>
+                </div>
+
+                <div className="pt-6 border-t border-white/5">
+                  <button 
+                    onClick={() => {
+                      setAcceptedTerms(true);
+                      setShowTerms(false);
+                    }}
+                    className="btn-neon w-full py-4 uppercase tracking-widest font-bold"
+                  >
+                    I Accept & Agree
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
