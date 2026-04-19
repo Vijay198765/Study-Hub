@@ -311,7 +311,7 @@ export default function AdminPanel() {
     }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
 
     const unsubMusic = onSnapshot(query(collection(db, 'music'), orderBy('order', 'asc')), (snapshot) => {
-      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Music)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'music'));
 
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
