@@ -107,17 +107,24 @@ export default function MusicPlayer() {
 
   const getDirectLink = (url: string) => {
     if (!url) return '';
+    
     // Handle Google Drive links
     if (url.includes('drive.google.com')) {
-      const match = url.match(/\/d\/(.+?)\/(view|edit)?/);
-      if (match && match[1]) {
-        return `https://docs.google.com/uc?export=download&id=${match[1]}`;
-      }
-      const idMatch = url.match(/[?&]id=(.+?)(&|$)/);
-      if (idMatch && idMatch[1]) {
-        return `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
-      }
+      // Direct download link logic
+      const id = url.match(/\/d\/(.+?)\//)?.[1] || url.match(/id=(.+?)(&|$)/)?.[1];
+      if (id) return `https://docs.google.com/uc?export=download&id=${id}`;
     }
+    
+    // Handle Dropbox links
+    if (url.includes('dropbox.com')) {
+      return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '');
+    }
+
+    // Handle Discord attachments
+    if (url.includes('cdn.discordapp.com')) {
+      return url; // Usually works directly
+    }
+
     return url;
   };
 

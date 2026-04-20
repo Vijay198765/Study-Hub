@@ -496,7 +496,9 @@ service cloud.firestore {
     }
 
     match /notifications/{notifId} {
-      allow read: if isAuthenticated() && (isAdmin() || !('userId' in resource.data) || resource.data.userId == request.auth.uid);
+      allow read: if isAdmin() || 
+                    (resource.data.get('userId', '') == '' && true) || 
+                    (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
       allow write: if isAdmin() && isValidNotification(request.resource.data);
     }
 

@@ -176,6 +176,7 @@ export interface SiteConfig {
   showFooterCredit?: boolean;
   leaderboardVisible?: boolean;
   registrationEnabled?: boolean;
+  notificationDuration?: number; // In seconds
   lastUpdated?: any;
 }
 

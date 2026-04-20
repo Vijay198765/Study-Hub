@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, X, BellOff, ArrowRight } from 'lucide-react';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, serverTimestamp, doc } from 'firebase/firestore';
 import { Notification as AppNotification } from '../types';
 
 export default function NotificationPrompt() {
@@ -11,6 +11,129 @@ export default function NotificationPrompt() {
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastDuration, setToastDuration] = useState(5000);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Listen for new notifications
+    const siteConfigRef = doc(db, 'config', 'site');
+    let dynamicDuration = 5000;
+
+    const unsubConfig = onSnapshot(siteConfigRef, (doc) => {
+      if (doc.exists()) {
+        const config = doc.data();
+        if (config.notificationDuration) {
+          dynamicDuration = config.notificationDuration * 1000;
+        }
+      }
+    }, (error) => {
+      console.warn("Guest access to site config limited or denied", error);
+    });
+
+    const q = query(
+      collection(db, 'notifications'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const notif = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AppNotification;
+        
+        // Only show if it's "new" (within last 5 minutes as requested)
+        const now = Date.now();
+        // Handle both Firestore timestamp and local timestamp fallbacks
+        const createdAt = notif.createdAt?.toMillis 
+          ? notif.createdAt.toMillis() 
+          : (notif.createdAt && typeof notif.createdAt === 'number' ? notif.createdAt : now);
+        
+        const VALID_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+        
+        if (now - createdAt < VALID_WINDOW_MS) {
+          const seenKey = `notif_seen_${notif.id}`;
+          if (!localStorage.getItem(seenKey)) {
+            setLatestNotification(notif);
+            setShowToast(true);
+            localStorage.setItem(seenKey, 'true');
+            
+            // Notification stays for dynamic duration (from Site Config, default: 5s)
+            setToastDuration(dynamicDuration);
+            setTimeout(() => setShowToast(false), dynamicDuration);
+            
+            if (window.Notification && window.Notification.permission === 'granted') {
+              new window.Notification(notif.title, {
+                body: notif.message,
+                icon: '/favicon.ico'
+              });
+            }
+          }
+        }
+      }
+    }, (error) => {
+      // Suppress log for guests as we expect some restriction
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.LIST, 'notifications');
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubConfig();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Auth-dependent listeners (Admin Alerts)
+    let unsubscribeLogs: (() => void) | null = null;
+    const adminEmail = 'vijayninama683@gmail.com';
+
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      if (unsubscribeLogs) {
+        unsubscribeLogs();
+        unsubscribeLogs = null;
+      }
+
+      if (user?.email?.toLowerCase() === adminEmail) {
+        const logsQ = query(
+          collection(db, 'activityLogs'),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        );
+
+        unsubscribeLogs = onSnapshot(logsQ, (snapshot) => {
+          if (!snapshot.empty) {
+            const log = snapshot.docs[0].data() as any;
+            const now = Date.now();
+            const logTime = log.timestamp?.toMillis ? log.timestamp.toMillis() : now;
+            
+            if (log.action === 'Session Started' && (now - logTime < 60000)) {
+              const visitorName = log.userName || 'Someone';
+              setLatestNotification({
+                id: 'visitor-' + snapshot.docs[0].id,
+                title: 'New Visitor Detected',
+                message: `${visitorName} has just landed on Study HUB!`,
+                type: 'success',
+                createdAt: log.timestamp,
+                createdBy: 'system'
+              });
+              setShowToast(true);
+              setToastDuration(3000);
+              setTimeout(() => setShowToast(false), 3000);
+            }
+          }
+        }, (error) => {
+          console.error("Trace of admin activity logs failed:", error);
+        });
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubscribeLogs) unsubscribeLogs();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -26,95 +149,7 @@ export default function NotificationPrompt() {
       }
     }, 2000);
 
-    // Listen for new notifications
-    const q = query(
-      collection(db, 'notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(1)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const notif = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AppNotification;
-        
-        // Only show if it's "new" (within last 5 minutes)
-        const now = Date.now();
-        const createdAt = notif.createdAt?.toMillis ? notif.createdAt.toMillis() : now;
-        
-        if (now - createdAt < 300000) { // 5 minutes
-          setLatestNotification(notif);
-          setShowToast(true);
-          
-          // Also try browser notification
-          if (window.Notification && window.Notification.permission === 'granted') {
-            new window.Notification(notif.title, {
-              body: notif.message,
-              icon: '/favicon.ico'
-            });
-          }
-          
-          // Check if this notification has been seen before in this session or recently
-          const seenKey = `notif_seen_${notif.id}`;
-          if (!localStorage.getItem(seenKey)) {
-            setLatestNotification(notif);
-            setShowToast(true);
-            localStorage.setItem(seenKey, 'true');
-            
-            // Auto hide toast after 5 seconds as requested
-            setToastDuration(5000);
-            setTimeout(() => setShowToast(false), 5000);
-          }
-        }
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'notifications');
-    });
-
-    // Admin Visitor Alerts
-    let unsubscribeLogs: (() => void) | null = null;
-    const adminEmail = 'vijayninama683@gmail.com';
-    
-    if (auth.currentUser?.email?.toLowerCase() === adminEmail) {
-      const logsQ = query(
-        collection(db, 'activityLogs'),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-      );
-
-      unsubscribeLogs = onSnapshot(logsQ, (snapshot) => {
-        if (!snapshot.empty) {
-          const log = snapshot.docs[0].data() as any;
-          
-          // Only show if it's "new" (within last minute) and it's a "Session Started" action
-          const now = Date.now();
-          const logTime = log.timestamp?.toMillis ? log.timestamp.toMillis() : now;
-          
-          if (log.action === 'Session Started' && (now - logTime < 60000)) {
-            const visitorName = log.userName || 'Someone';
-            // Show as a special notification
-            setLatestNotification({
-              id: 'visitor-' + snapshot.docs[0].id,
-              title: 'New Visitor Detected',
-              message: `${visitorName} has just landed on Study HUB!`,
-              type: 'success',
-              createdAt: log.timestamp,
-              createdBy: 'system'
-            });
-            setShowToast(true);
-            
-            // Auto hide visitor alerts after 3 seconds as requested
-            setToastDuration(3000);
-            setTimeout(() => setShowToast(false), 3000);
-          }
-        }
-      });
-    }
-
-    return () => {
-      clearTimeout(timer);
-      unsubscribe();
-      if (unsubscribeLogs) unsubscribeLogs();
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   const requestPermission = async () => {

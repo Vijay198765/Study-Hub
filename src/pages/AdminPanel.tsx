@@ -452,6 +452,12 @@ export default function AdminPanel() {
   const handleAddNotification = async () => {
     if (!newNotif.title || !newNotif.message) return;
     try {
+      // 1. Clear old notifications (Don't save any old)
+      const querySnapshot = await getDocs(collection(db, 'notifications'));
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // 2. Add as a fresh document (provides a unique ID for the "seen" check)
       await addDoc(collection(db, 'notifications'), {
         ...newNotif,
         createdAt: serverTimestamp(),
@@ -459,7 +465,7 @@ export default function AdminPanel() {
       });
       setNewNotif({ title: '', message: '', type: 'info', url: '' });
       setIsAddingNotif(false);
-      setToast({ message: 'Notification sent!', type: 'success' });
+      setToast({ message: 'Alert pushed to active users!', type: 'success' });
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'notifications');
     }
@@ -1154,12 +1160,11 @@ export default function AdminPanel() {
                   How to add music?
                 </h3>
                 <ul className="text-xs text-white/60 space-y-2 list-disc ml-5">
-                  <li>Click <strong>"Add New Song"</strong> button above.</li>
-                  <li>Enter the track <strong>Title</strong> and <strong>Artist</strong>.</li>
-                  <li>Paste a direct link to the audio file in the <strong>URL</strong> field (e.g., from Google Drive, Dropbox, or your own server).</li>
-                  <li>Provide a <strong>Cover Image URL</strong> for the track thumbnail.</li>
-                  <li>Set an <strong>Order</strong> number to control the track sequence in the playlist.</li>
-                  <li>Save the song and it will appear in the secret music library!</li>
+                  <li><strong>Recommended:</strong> Use <strong>Dropbox</strong>. Replace <code>www.dropbox.com</code> with <code>dl.dropboxusercontent.com</code> in the link.</li>
+                  <li><strong>Google Drive:</strong> Ensure the file is shared as "Anyone with the link". Use our auto-converter or paste the standard share link.</li>
+                  <li><strong>Discord:</strong> Right-click an uploaded audio file in Discord and select "Copy Link". These usually work perfectly.</li>
+                  <li><strong>Cover Image:</strong> Use a square image URL (Picsum seeds work too!).</li>
+                  <li>Save the song and access the player via your secret shortcut.</li>
                 </ul>
               </div>
 
@@ -1221,12 +1226,27 @@ export default function AdminPanel() {
                   <h2 className="text-3xl font-display font-bold text-neon-pink mb-1">Push Notifications</h2>
                   <p className="text-white/40 text-xs">Send instant alerts to active users</p>
                 </div>
-                <button 
-                  onClick={() => setIsAddingNotif(true)}
-                  className="btn-neon flex items-center gap-2 border-neon-pink text-neon-pink hover:bg-neon-pink/10"
-                >
-                  <Plus size={18} /> New Alert
-                </button>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Delete all notification history?')) {
+                        const snap = await getDocs(collection(db, 'notifications'));
+                        await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+                        setToast({ message: 'All notifications cleared!', type: 'success' });
+                      }
+                    }}
+                    className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                    title="Clear All History"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setIsAddingNotif(true)}
+                    className="btn-neon flex items-center gap-2 border-neon-pink text-neon-pink hover:bg-neon-pink/10"
+                  >
+                    <Plus size={18} /> New Alert
+                  </button>
+                </div>
               </div>
 
               {isAddingNotif && (
@@ -2763,7 +2783,33 @@ export default function AdminPanel() {
                         </button>
                       </div>
 
-                      {/* Announcement Bar */}
+                      {/* Alert Duration Control */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                               <Bell size={20} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-white">Alert Duration (Seconds)</p>
+                               <p className="text-[10px] text-white/40">How long alerts stay on screen</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1 border border-white/10">
+                            <input 
+                               type="number"
+                               min="1"
+                               max="60"
+                               className="w-12 bg-transparent text-white text-center font-bold outline-none"
+                               value={siteConfig?.notificationDuration || 5}
+                               onChange={(e) => saveSiteConfig({ notificationDuration: parseInt(e.target.value) || 5 })}
+                            />
+                            <span className="text-[10px] text-white/20 font-bold uppercase">SEC</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Global Announcement Bar */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
                           <div className="flex items-center gap-3">
@@ -2887,7 +2933,7 @@ export default function AdminPanel() {
                         <p className="text-[10px] text-white/40 italic">Accessed by double-tapping the founder's footer.</p>
                       </div>
 
-                      {/* Additional Customization */}
+                      {/* Logo & Favicon Customization */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Logo URL (Optional)</label>
