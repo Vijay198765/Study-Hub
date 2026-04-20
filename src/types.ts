@@ -167,8 +167,6 @@ export interface SiteConfig {
   emailjsServiceId?: string;
   emailjsTemplateId?: string;
   emailjsPublicKey?: string;
-  musicEnabled?: boolean;
-  musicPassword?: string;
   logoUrl?: string;
   faviconUrl?: string;
   socialInstagram?: string;
@@ -179,6 +177,15 @@ export interface SiteConfig {
   notificationDuration?: number; // In seconds
   cloudinaryCloudName?: string;
   cloudinaryUploadPreset?: string;
+  watermarkText?: string;
+  watermarkEnabled?: boolean;
+  bannedIps?: string[];
+  studyTimerEnabled?: boolean;
+  globalLeaderboardEnabled?: boolean;
+  guestModeEnabled?: boolean;
+  customFooterText?: string;
+  announcementColor?: string;
+  verifyUserEmail?: boolean;
   lastUpdated?: any;
 }
 
@@ -186,16 +193,9 @@ export interface SecretProfile {
   id: string;
   label: string;
   key: string;
+  password?: string;
+  enabled?: boolean;
   allowedTabs: string[];
-}
-
-export interface Music {
-  id: string;
-  title: string;
-  artist?: string;
-  url: string;
-  coverUrl?: string;
-  order: number;
 }
 
 export interface News {

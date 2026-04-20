@@ -482,24 +482,28 @@ service cloud.firestore {
 
     match /config/{docId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidConfig(request.resource.data);
+      allow create, update: if isAdmin() && isValidConfig(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /music/{songId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidMusic(request.resource.data);
+      allow create, update: if isAdmin() && isValidMusic(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /news/{newsId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidNews(request.resource.data);
+      allow create, update: if isAdmin() && isValidNews(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /notifications/{notifId} {
       allow read: if isAdmin() || 
                     (resource.data.get('userId', '') == '' && true) || 
                     (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
-      allow write: if isAdmin() && isValidNotification(request.resource.data);
+      allow create, update: if isAdmin() && isValidNotification(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /sentEmails/{emailId} {

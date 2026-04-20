@@ -3,11 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, FileText, Download, Eye, HelpCircle, 
-  CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw,
+  CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw, Clock,
   Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
   ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History, Lock
 } from 'lucide-react';
 import UserName from '../components/UserName';
+import StudyTimer from '../components/StudyTimer';
 
 // Utility for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -29,6 +30,7 @@ export default function ChapterDetail() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'resources' | 'quiz'>('resources');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showTimer, setShowTimer] = useState(false);
   
   // Progress & History State
   const [isCompleted, setIsCompleted] = useState(false);
@@ -44,7 +46,18 @@ export default function ChapterDetail() {
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
   const [showReview, setShowReview] = useState(false);
   const [userRole, setUserRole] = useState<'student' | 'admin'>('student');
+  const [siteConfig, setSiteConfig] = useState<any>(null);
   const isAdmin = userRole === 'admin';
+
+  useEffect(() => {
+    // Listen to global site config
+    const configRef = doc(db, 'config', 'site');
+    const unsubConfig = onSnapshot(configRef, (snap) => {
+      if (snap.exists()) setSiteConfig(snap.data());
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'config/site'));
+
+    return () => unsubConfig();
+  }, []);
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
@@ -362,6 +375,17 @@ export default function ChapterDetail() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-4 mb-2">
                 <h1 className="text-3xl md:text-4xl font-display font-bold break-words">{chapter.name}</h1>
+                 {siteConfig?.studyTimerEnabled && (
+                  <button 
+                    onClick={() => setShowTimer(!showTimer)}
+                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      showTimer ? 'bg-orange-500 text-white animate-pulse' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Clock size={12} />
+                    {showTimer ? 'Timer Active' : 'Pomodoro'}
+                  </button>
+                )}
               </div>
               <p className="text-white/50 break-words">{subject?.name} • {currentClass?.name}</p>
             </div>
@@ -730,6 +754,9 @@ export default function ChapterDetail() {
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+        {showTimer && <StudyTimer onClose={() => setShowTimer(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

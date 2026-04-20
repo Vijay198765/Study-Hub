@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Music as MusicIcon, Cloud
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -28,14 +28,14 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, Music, News, SiteConfig, SecretProfile } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, News, SiteConfig, SecretProfile } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'music';
-type EditTab = 'basic' | 'resources' | 'quiz' | 'questions' | 'music';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news';
+type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
 
@@ -132,7 +132,6 @@ export default function AdminPanel() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [songs, setSongs] = useState<Music[]>([]);
   
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
@@ -148,39 +147,6 @@ export default function AdminPanel() {
   };
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
-  const [musicUploading, setMusicUploading] = useState(false);
-  const [musicUploadProgress, setMusicUploadProgress] = useState(0);
-
-  const handleCloudinaryUpload = () => {
-    if (!siteConfig?.cloudinaryCloudName || !siteConfig?.cloudinaryUploadPreset) {
-      setToast({ 
-        message: "Please setup Cloudinary Cloud Name and Upload Preset in Site Control first!", 
-        type: 'error' 
-      });
-      return;
-    }
-
-    const myWidget = (window as any).cloudinary.createUploadWidget(
-      {
-        cloudName: siteConfig.cloudinaryCloudName,
-        uploadPreset: siteConfig.cloudinaryUploadPreset,
-        multiple: false,
-        resourceType: "auto",
-        clientAllowedFormats: ["mp3", "wav", "m4a"],
-        maxFileSize: 20000000, // 20MB
-      },
-      (error: any, result: any) => {
-        if (!error && result && result.event === "success") {
-          setEditingEntity((prev: any) => ({ ...prev, url: result.info.secure_url }));
-          setToast({ message: "Music uploaded to Cloudinary successfully!", type: 'success' });
-        } else if (error) {
-          console.error("Cloudinary error:", error);
-          setToast({ message: "Cloudinary setup error. Check Cloud Name & Preset.", type: 'error' });
-        }
-      }
-    );
-    myWidget.open();
-  };
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -343,10 +309,6 @@ export default function AdminPanel() {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
 
-    const unsubMusic = onSnapshot(query(collection(db, 'music'), orderBy('order', 'asc')), (snapshot) => {
-      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Music)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'music'));
-
     const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
@@ -389,7 +351,6 @@ export default function AdminPanel() {
       unsubRatings();
       unsubNews();
       unsubNotifications();
-      unsubMusic();
       unsubLogs();
       unsubConfig();
     };
@@ -513,7 +474,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating' | 'music', id: string, name: string) => {
+  const handleDelete = async (type: 'class' | 'subject' | 'chapter' | 'user' | 'test' | 'group' | 'rating', id: string, name: string) => {
     setDeleteConfirm({ type: type as any, id, name });
   };
 
@@ -528,7 +489,6 @@ export default function AdminPanel() {
     else if (type === 'test') await removeTest(id);
     else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
     else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
-    else if (type === 'music') await deleteDoc(doc(db, 'music', id));
     
     setDeleteConfirm(null);
   };
@@ -566,9 +526,6 @@ export default function AdminPanel() {
           ...cleanData,
           updatedAt: serverTimestamp()
         }, { merge: true });
-      } else if (type === 'music') {
-        const musicRef = doc(db, 'music', dataToSave.id);
-        await setDoc(musicRef, dataToSave, { merge: true });
       }
       
       setEditingEntity(null);
@@ -817,14 +774,14 @@ export default function AdminPanel() {
         setUnlockAttempts(0);
         setLockoutUntil(null);
         setToast({ message: isSuperAdmin ? 'Welcome back, Super Admin!' : 'Admin access granted!', type: 'success' });
-      } else if (isSecretEnabled && (unlockKey === limitedKey || profile)) {
+      } else if (isSecretEnabled && profile) {
         setIsUnlocked(true);
         // Even with limited key, the super admin gets full permissions
         const limited = !isSuperAdmin;
         setIsLimitedAdmin(limited);
         
         if (limited) {
-          const allowed = profile ? profile.allowedTabs : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']);
+          const allowed = profile.allowedTabs;
           setSessionAllowedTabs(allowed);
         } else {
           setSessionAllowedTabs([]);
@@ -1145,112 +1102,11 @@ export default function AdminPanel() {
               </button>
             )}
 
-            {shouldShowTab('music') && (
-              <button 
-                onClick={() => setActiveTab('music')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'music' ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-white/60 hover:text-white'}`}
-              >
-                <MusicIcon size={16} className="inline-block mr-1.5" />
-                Music
-              </button>
-            )}
-
             <div className="w-4 shrink-0" />
           </div>
 
       {/* Content Area */}
         <div className="glass-card p-6 min-h-[600px]">
-          {activeTab === 'music' && (
-            <div className="space-y-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-white mb-2">Music Library</h2>
-                  <p className="text-sm text-white/40">Manage tracks for the hidden music player.</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    const newSong = { 
-                      id: Date.now().toString(), 
-                      title: 'New Track', 
-                      artist: 'Unknown Artist', 
-                      url: '', 
-                      coverUrl: '',
-                      order: songs.length 
-                    };
-                    setEditingEntity({ ...newSong, type: 'music' });
-                    setEditTab('music');
-                  }}
-                  className="btn-neon bg-white text-black px-6 py-3 flex items-center gap-2"
-                >
-                  <Plus size={20} />
-                  Add New Song
-                </button>
-              </div>
-
-              <div className="bg-neon-blue/5 border border-neon-blue/10 rounded-2xl p-6">
-                <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-                  <Star size={14} className="text-neon-blue" />
-                  How to add music?
-                </h3>
-                <ol className="text-xs text-white/60 space-y-2 list-decimal ml-5">
-                  <li><strong>Upload Direct (New):</strong> Click "Add New Song" → Use the <strong>"Upload MP3"</strong> button to pick a file from your device. It will be stored safely in our cloud.</li>
-                  <li><strong>Local Files:</strong> Upload files to the <code>public/music/</code> folder via the file explorer, then enter the filename.</li>
-                  <li><strong>Cover Image:</strong> Enter a square image URL for the song art.</li>
-                  <li>Save and refresh the Music Player to see your updates.</li>
-                </ol>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {songs.map((song) => (
-                  <motion.div 
-                    key={song.id}
-                    layout
-                    className="group relative bg-white/5 border border-white/10 rounded-3xl p-6 hover:border-neon-blue/50 transition-all overflow-hidden"
-                  >
-                    <div className="flex items-center gap-4 mb-6 relative z-10">
-                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center shrink-0">
-                        {song.coverUrl ? (
-                          <img src={song.coverUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <MusicIcon className="text-white/20" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-white truncate">{song.title}</h3>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest truncate">{song.artist}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 relative z-10">
-                      <button 
-                        onClick={() => {
-                          setEditingEntity({ ...song, type: 'music' });
-                          setEditTab('music');
-                        }}
-                        className="flex-1 py-2.5 rounded-xl bg-white/5 text-white/60 text-xs font-bold hover:bg-white/10 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2"
-                      >
-                        <Edit2 size={14} />
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete('music', song.id, song.title)}
-                        className="p-2.5 rounded-xl bg-red-400/5 text-red-400 hover:bg-red-400/10 transition-all border border-red-400/10"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-                {songs.length === 0 && (
-                  <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4">
-                    <MusicIcon size={48} className="text-white/10" />
-                    <p className="text-white/40 font-medium">No songs in your library yet.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
@@ -2841,6 +2697,45 @@ export default function AdminPanel() {
                         </div>
                       </div>
 
+                      {/* Global Maintenance Mode */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-red-500/20 text-red-500">
+                              <Shield size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">Maintenance Mode</p>
+                              <p className="text-[10px] text-white/40">Lock site for everyone except admins</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+                        
+                        {siteConfig?.maintenanceMode && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="px-4 pb-4 space-y-3"
+                          >
+                            <div>
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Maintenance Message</label>
+                              <textarea 
+                                value={siteConfig?.maintenanceMessage || ''}
+                                onChange={(e) => saveSiteConfig({ maintenanceMessage: e.target.value })}
+                                placeholder="Website is under maintenance. We will be back soon!"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500 transition-all min-h-[60px]"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+
                       {/* Global Announcement Bar */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
@@ -2865,15 +2760,34 @@ export default function AdminPanel() {
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            className="px-4 pb-4"
+                            className="px-4 pb-4 space-y-4"
                           >
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Announcement Text</label>
-                            <textarea 
-                              value={siteConfig?.announcementText || ''}
-                              onChange={(e) => saveSiteConfig({ announcementText: e.target.value })}
-                              placeholder="Important: Website is now live!"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all min-h-[60px]"
-                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Announcement Text</label>
+                                <textarea 
+                                  value={siteConfig?.announcementText || ''}
+                                  onChange={(e) => saveSiteConfig({ announcementText: e.target.value })}
+                                  placeholder="Important: Website is now live!"
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all min-h-[60px]"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Banner Color (Hex)</label>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="text"
+                                    value={siteConfig?.announcementColor || '#00E5FF'}
+                                    onChange={(e) => saveSiteConfig({ announcementColor: e.target.value })}
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all"
+                                  />
+                                  <div 
+                                    className="w-12 h-12 rounded-xl border border-white/10"
+                                    style={{ backgroundColor: siteConfig?.announcementColor || '#00E5FF' }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
                           </motion.div>
                         )}
                       </div>
@@ -2908,6 +2822,90 @@ export default function AdminPanel() {
                           </button>
                         </div>
 
+                        {/* Study Timer Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Clock size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Study Timer</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ studyTimerEnabled: !siteConfig?.studyTimerEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.studyTimerEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.studyTimerEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Leaderboard Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Trophy size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Global Leaderboard</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ globalLeaderboardEnabled: !siteConfig?.globalLeaderboardEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.globalLeaderboardEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.globalLeaderboardEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Guest Mode Enable */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><UserPlus size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Guest Mode</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ guestModeEnabled: !siteConfig?.guestModeEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.guestModeEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.guestModeEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* Verify User Email */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Shield size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">Verify Email</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ verifyUserEmail: !siteConfig?.verifyUserEmail })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.verifyUserEmail ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.verifyUserEmail ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                         {/* Waterfall Enable */}
+                         <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><FileText size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">PDF Watermark</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ watermarkEnabled: !siteConfig?.watermarkEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.watermarkEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.watermarkEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        {/* WhatsApp Support Toggle */}
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-white/40"><Smartphone size={18} /></div>
+                            <span className="text-xs font-bold text-white/80">WA Support</span>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ supportWhatsApp: siteConfig?.supportWhatsApp ? '' : '910000000000' })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.supportWhatsApp ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.supportWhatsApp ? 'right-0.5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
                         {/* Show Footer Credit */}
                         <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -2935,34 +2933,46 @@ export default function AdminPanel() {
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
-                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="text-white/40"><MusicIcon size={18} /></div>
-                            <span className="text-xs font-bold text-white/80">Music Player</span>
-                          </div>
-                          <button 
-                            onClick={() => saveSiteConfig({ musicEnabled: siteConfig?.musicEnabled !== false })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.musicEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
-                          >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.musicEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
-                          </button>
-                        </div>
                       </div>
 
-                      {/* Music Page Password */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest flex items-center gap-2">
-                          <Lock size={14} className="text-neon-blue" />
-                          Music Page Password
-                        </label>
+                      {/* Custom Watermark & WA Support Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {siteConfig?.watermarkEnabled && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Watermark Text</label>
+                            <input 
+                              type="text" 
+                              value={siteConfig?.watermarkText || 'Study-Hub'}
+                              onChange={(e) => saveSiteConfig({ watermarkText: e.target.value })}
+                              placeholder="Overlay text..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            />
+                          </div>
+                        )}
+                        {siteConfig?.supportWhatsApp && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">WhatsApp Number</label>
+                            <input 
+                              type="text" 
+                              value={siteConfig?.supportWhatsApp || ''}
+                              onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
+                              placeholder="91xxxxxxxxxx"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Custom Footer Credit */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Custom Footer Message</label>
                         <input 
                           type="text" 
-                          placeholder="Secret key for double-tap access"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all font-mono"
-                          value={siteConfig?.musicPassword || ''}
-                          onChange={(e) => saveSiteConfig({ musicPassword: e.target.value })}
+                          value={siteConfig?.customFooterText || ''}
+                          onChange={(e) => saveSiteConfig({ customFooterText: e.target.value })}
+                          placeholder="Proudly made by Tagore Team..."
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                         />
-                        <p className="text-[10px] text-white/40 italic">Accessed by double-tapping the founder's footer.</p>
                       </div>
 
                       {/* Logo & Favicon Customization */}
@@ -3104,6 +3114,72 @@ export default function AdminPanel() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Advanced Integrations */}
+                        <div className="pt-4 border-t border-white/5 space-y-4">
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Advanced Integrations</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-3">
+                              <h5 className="text-[10px] uppercase font-bold text-neon-blue">EmailJS Configuration</h5>
+                              <div className="space-y-2">
+                                <input 
+                                  type="text" 
+                                  placeholder="Service ID"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                                  value={siteConfig?.emailjsServiceId || ''}
+                                  onChange={(e) => saveSiteConfig({ emailjsServiceId: e.target.value })}
+                                />
+                                <input 
+                                  type="text" 
+                                  placeholder="Template ID"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                                  value={siteConfig?.emailjsTemplateId || ''}
+                                  onChange={(e) => saveSiteConfig({ emailjsTemplateId: e.target.value })}
+                                />
+                                <input 
+                                  type="password" 
+                                  placeholder="Public Key"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                                  value={siteConfig?.emailjsPublicKey || ''}
+                                  onChange={(e) => saveSiteConfig({ emailjsPublicKey: e.target.value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <h5 className="text-[10px] uppercase font-bold text-neon-purple">Cloudinary Configuration</h5>
+                              <div className="space-y-2">
+                                <input 
+                                  type="text" 
+                                  placeholder="Cloud Name"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-purple"
+                                  value={siteConfig?.cloudinaryCloudName || ''}
+                                  onChange={(e) => saveSiteConfig({ cloudinaryCloudName: e.target.value })}
+                                />
+                                <input 
+                                  type="text" 
+                                  placeholder="Upload Preset"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-purple"
+                                  value={siteConfig?.cloudinaryUploadPreset || ''}
+                                  onChange={(e) => saveSiteConfig({ cloudinaryUploadPreset: e.target.value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <h5 className="text-[10px] uppercase font-bold text-red-400 font-black">Security & Banning</h5>
+                              <div className="space-y-2">
+                                <label className="text-[10px] text-white/40 uppercase">Banned IP List (Comma separated)</label>
+                                <textarea 
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-red-500 min-h-[60px]"
+                                  placeholder="192.168.1.1, 10.0.0.1"
+                                  value={siteConfig?.bannedIps?.join(', ') || ''}
+                                  onChange={(e) => saveSiteConfig({ bannedIps: e.target.value.split(',').map(ip => ip.trim()).filter(Boolean) })}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -3158,7 +3234,14 @@ export default function AdminPanel() {
                                 <button 
                                   onClick={() => {
                                     const next = [...(siteConfig?.secretProfiles || [])];
-                                    next.push({ id: Date.now().toString(), label: 'New Code', key: 'Vijay' + Math.floor(Math.random() * 9000 + 1000), allowedTabs: ['chapters', 'chapterTests'] });
+                                    next.push({ 
+                                      id: Date.now().toString(), 
+                                      label: 'New Code', 
+                                      key: 'Vijay' + Math.floor(Math.random() * 9000 + 1000), 
+                                      password: '',
+                                      enabled: true,
+                                      allowedTabs: ['chapters', 'chapterTests'] 
+                                    });
                                     saveSiteConfig({ secretProfiles: next });
                                   }}
                                   className="text-[10px] font-bold uppercase tracking-widest text-neon-blue hover:text-white transition-colors flex items-center gap-1"
@@ -3166,93 +3249,119 @@ export default function AdminPanel() {
                                   <Plus size={12} /> Add New Profile
                                 </button>
                               </div>
-
                               <div className="space-y-3">
-                                {(siteConfig?.secretProfiles || []).map((profile: any, pIdx: number) => (
-                                  <div key={profile.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
-                                    <div className="flex items-center justify-between gap-4">
-                                      <div className="flex-1 grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] uppercase font-bold text-white/20">Label</label>
-                                          <input 
-                                            type="text"
-                                            value={profile.label}
-                                            onChange={(e) => {
-                                              const next = [...siteConfig.secretProfiles];
-                                              next[pIdx].label = e.target.value;
-                                              saveSiteConfig({ secretProfiles: next });
-                                            }}
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white focus:border-neon-pink outline-none"
-                                          />
+                                    {(siteConfig?.secretProfiles || []).map((profile: any, pIdx: number) => (
+                                      <div key={profile.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] uppercase font-bold text-white/20">Label</label>
+                                            <input 
+                                              type="text"
+                                              value={profile.label}
+                                              onChange={(e) => {
+                                                const next = [...siteConfig.secretProfiles];
+                                                next[pIdx].label = e.target.value;
+                                                saveSiteConfig({ secretProfiles: next });
+                                              }}
+                                              className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white focus:border-neon-pink outline-none"
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] uppercase font-bold text-white/20">Secret Key (User)</label>
+                                            <input 
+                                              type="text"
+                                              value={profile.key}
+                                              onChange={(e) => {
+                                                const next = [...siteConfig.secretProfiles];
+                                                next[pIdx].key = e.target.value;
+                                                saveSiteConfig({ secretProfiles: next });
+                                              }}
+                                              className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white font-mono focus:border-neon-pink outline-none"
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] uppercase font-bold text-white/20">Password</label>
+                                            <input 
+                                              type="text"
+                                              placeholder="Required to login"
+                                              value={profile.password || ''}
+                                              onChange={(e) => {
+                                                const next = [...siteConfig.secretProfiles];
+                                                next[pIdx].password = e.target.value;
+                                                saveSiteConfig({ secretProfiles: next });
+                                              }}
+                                              className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white focus:border-neon-pink outline-none"
+                                            />
+                                          </div>
+                                          <div className="flex items-center justify-between gap-2 pt-5">
+                                            <div className="flex items-center gap-2">
+                                              <button 
+                                                onClick={() => {
+                                                  const next = [...siteConfig.secretProfiles];
+                                                  next[pIdx].enabled = !next[pIdx].enabled;
+                                                  saveSiteConfig({ secretProfiles: next });
+                                                }}
+                                                className={`w-10 h-5 rounded-full transition-all relative ${profile.enabled !== false ? 'bg-emerald-500' : 'bg-red-500/20'}`}
+                                              >
+                                                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${profile.enabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                                              </button>
+                                              <span className="text-[10px] font-bold text-white/40 uppercase">{profile.enabled !== false ? 'Active' : 'Disabled'}</span>
+                                            </div>
+                                            <button 
+                                              onClick={() => {
+                                                const next = siteConfig.secretProfiles.filter((_: any, i: number) => i !== pIdx);
+                                                saveSiteConfig({ secretProfiles: next });
+                                              }}
+                                              className="p-1.5 text-white/20 hover:text-red-500 transition-colors"
+                                            >
+                                              <Trash2 size={16} />
+                                            </button>
+                                          </div>
                                         </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] uppercase font-bold text-white/20">Secret Key</label>
-                                          <input 
-                                            type="text"
-                                            value={profile.key}
-                                            onChange={(e) => {
-                                              const next = [...siteConfig.secretProfiles];
-                                              next[pIdx].key = e.target.value;
-                                              saveSiteConfig({ secretProfiles: next });
-                                            }}
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white font-mono focus:border-neon-pink outline-none"
-                                          />
-                                        </div>
-                                      </div>
-                                      <button 
-                                        onClick={() => {
-                                          const next = siteConfig.secretProfiles.filter((_: any, i: number) => i !== pIdx);
-                                          saveSiteConfig({ secretProfiles: next });
-                                        }}
-                                        className="p-2 text-white/20 hover:text-red-500 transition-colors"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] uppercase font-bold text-white/20">Permissions</label>
-                                      <div className="flex flex-wrap gap-2">
-                                        {[
-                                          { id: 'chapters', label: 'Chapters' },
-                                          { id: 'chapterTests', label: 'Chapter MCQs' },
-                                          { id: 'classes', label: 'Classes' },
-                                          { id: 'subjects', label: 'Subjects' },
-                                          { id: 'users', label: 'Users' },
-                                          { id: 'groups', label: 'Groups' },
-                                          { id: 'ratings', label: 'Ratings' },
-                                          { id: 'comments', label: 'Comments' },
-                                          { id: 'tests', label: 'Tests' },
-                                          { id: 'results', label: 'Results' },
-                                          { id: 'stats', label: 'Stats' },
-                                          { id: 'logs', label: 'Logs' },
-                                          { id: 'site', label: 'Site settings' },
-                                          { id: 'notifications', label: 'News' },
-                                          { id: 'theme', label: 'Theme' }
-                                        ].map(tab => (
-                                          <button
-                                            key={tab.id}
-                                            onClick={() => {
-                                              const next = [...siteConfig.secretProfiles];
-                                              const currentTabs = profile.allowedTabs || [];
-                                              next[pIdx].allowedTabs = currentTabs.includes(tab.id)
-                                                ? currentTabs.filter((t: string) => t !== tab.id)
-                                                : [...currentTabs, tab.id];
-                                              saveSiteConfig({ secretProfiles: next });
-                                            }}
-                                            className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
-                                              (profile.allowedTabs || []).includes(tab.id)
-                                              ? 'bg-neon-pink text-white shadow-[0_0_10px_rgba(255,0,229,0.3)]'
-                                              : 'bg-white/5 text-white/30 hover:bg-white/10'
-                                            }`}
-                                          >
-                                            {tab.label}
-                                          </button>
-                                        ))}
+                                        <div className="space-y-2 pt-2 border-t border-white/5">
+                                          <label className="text-[10px] uppercase font-bold text-white/20">Permissions</label>
+                                          <div className="flex flex-wrap gap-2">
+                                            {[
+                                              { id: 'chapters', label: 'Chapters' },
+                                              { id: 'chapterTests', label: 'Chapter MCQs' },
+                                              { id: 'classes', label: 'Classes' },
+                                              { id: 'subjects', label: 'Subjects' },
+                                              { id: 'users', label: 'Users' },
+                                              { id: 'groups', label: 'Groups' },
+                                              { id: 'ratings', label: 'Ratings' },
+                                              { id: 'comments', label: 'Comments' },
+                                              { id: 'tests', label: 'Tests' },
+                                              { id: 'results', label: 'Results' },
+                                              { id: 'stats', label: 'Stats' },
+                                              { id: 'logs', label: 'Logs' },
+                                              { id: 'site', label: 'Site settings' },
+                                              { id: 'notifications', label: 'News' },
+                                              { id: 'theme', label: 'Theme' }
+                                            ].map(tab => (
+                                              <button
+                                                key={tab.id}
+                                                onClick={() => {
+                                                  const next = [...siteConfig.secretProfiles];
+                                                  const currentTabs = profile.allowedTabs || [];
+                                                  next[pIdx].allowedTabs = currentTabs.includes(tab.id)
+                                                    ? currentTabs.filter((t: string) => t !== tab.id)
+                                                    : [...currentTabs, tab.id];
+                                                  saveSiteConfig({ secretProfiles: next });
+                                                }}
+                                                className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                                                  (profile.allowedTabs || []).includes(tab.id)
+                                                  ? 'bg-neon-pink text-white shadow-[0_0_10px_rgba(255,0,229,0.3)]'
+                                                  : 'bg-white/5 text-white/30 hover:bg-white/10'
+                                                }`}
+                                              >
+                                                {tab.label}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                  </div>
-                                ))}
+                                    ))}
 
                                 {(siteConfig?.secretProfiles || []).length === 0 && (
                                   <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
@@ -3363,39 +3472,6 @@ export default function AdminPanel() {
                         value={siteConfig?.supportEmail || ''}
                         onChange={(e) => saveSiteConfig({ supportEmail: e.target.value })}
                       />
-                      {/* Cloudinary Config */}
-                      <div className="space-y-6 pt-4 border-t border-white/10">
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                          <CloudRain size={16} className="text-neon-blue" />
-                          Cloudinary Integration (Music Host)
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Cloud Name</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. dxyz123"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                              value={siteConfig?.cloudinaryCloudName || ''}
-                              onChange={(e) => saveSiteConfig({ cloudinaryCloudName: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Upload Preset (Unsigned)</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. music_preset"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                              value={siteConfig?.cloudinaryUploadPreset || ''}
-                              onChange={(e) => saveSiteConfig({ cloudinaryUploadPreset: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-white/20 italic leading-relaxed">
-                          Setup a free account at <strong>Cloudinary.com</strong>. Go to Settings &gt; Upload &gt; Add Upload Preset, set it to "Unsigned", then copy the Preset Name and Cloud Name here.
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -4413,64 +4489,6 @@ export default function AdminPanel() {
                   </div>
                 )}
 
-                {editTab === 'music' && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-white/60">Song Title</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                          value={editingEntity.title}
-                          onChange={(e) => setEditingEntity({ ...editingEntity, title: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-white/60">Artist</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                          value={editingEntity.artist}
-                          onChange={(e) => setEditingEntity({ ...editingEntity, artist: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-white/60">Music File source</label>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="text" 
-                          placeholder="Song filename or URL..."
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                          value={editingEntity.url}
-                          onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
-                        />
-                        <button
-                          onClick={handleCloudinaryUpload}
-                          className="btn-neon border-neon-blue text-neon-blue px-4 py-3 flex items-center gap-2 shrink-0 bg-neon-blue/10"
-                        >
-                          <Upload size={16} />
-                          Upload to Cloudinary
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-white/20 italic">
-                        <span className="text-neon-blue font-bold">Cloudinary Mode:</span> Uploads are fast and reliable. Setup credentials in Site Control tab.
-                      </p>
-                    </div>
-                  </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/60">Cover Image URL</label>
-                      <input 
-                        type="text" 
-                        placeholder="https://..."
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={editingEntity.coverUrl}
-                        onChange={(e) => setEditingEntity({ ...editingEntity, coverUrl: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="p-6 border-t border-white/10 flex items-center justify-between shrink-0">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Heart, X, MessageSquare, Send, Music as MusicIcon } from 'lucide-react';
+import { Mail, Heart, X, MessageSquare, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -13,9 +13,8 @@ interface FooterProps {
 
 export default function Footer({ siteConfig }: FooterProps) {
   const [showSecretLogin, setShowSecretLogin] = useState(false);
-  const [showMusicPrompt, setShowMusicPrompt] = useState(false);
   const [secretKey, setSecretKey] = useState('');
-  const [musicPassword, setMusicPassword] = useState('');
+  const [password, setPassword] = useState('');
 
   const siteName = siteConfig?.siteName || 'Study-hub';
   const adminName = siteConfig?.adminName || 'Vijay Ninama';
@@ -40,6 +39,18 @@ export default function Footer({ siteConfig }: FooterProps) {
     const isLegacyMatch = secretKey === legacySecretKey;
 
     if (matchedProfile || isLegacyMatch) {
+      // Check if profile is enabled
+      if (matchedProfile && matchedProfile.enabled === false) {
+        toast.error('This access profile is disabled.');
+        return;
+      }
+
+      // Check password if profile has one
+      if (matchedProfile && matchedProfile.password && matchedProfile.password !== password) {
+        toast.error('Incorrect password for this profile');
+        return;
+      }
+
       try {
         console.log("Secret key matches! Setting flags and signing in anonymously...");
         localStorage.setItem('isSpecialLogin', 'true');
@@ -55,7 +66,7 @@ export default function Footer({ siteConfig }: FooterProps) {
           localStorage.setItem('sessionAllowedTabs', JSON.stringify([
             'chapters', 'chapterTests', 'classes', 'subjects', 'users', 'comments', 
             'tests', 'results', 'stats', 'groups', 'ratings', 'logs', 'site', 
-            'notifications', 'news', 'music'
+            'notifications', 'news'
           ]));
         } else {
           localStorage.setItem('sessionAllowedTabs', JSON.stringify(siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']));
@@ -99,21 +110,7 @@ export default function Footer({ siteConfig }: FooterProps) {
     }
     setShowSecretLogin(false);
     setSecretKey('');
-  };
-
-  const handleMusicAccess = () => {
-    const correctPassword = siteConfig?.musicPassword || '123456';
-    if (musicPassword === correctPassword) {
-      sessionStorage.setItem('music_access', 'true');
-      toast.success('Access Granted! Redirecting...');
-      setTimeout(() => {
-        window.location.href = '/secret-player';
-      }, 1000);
-    } else {
-      toast.error('Invalid Music Password');
-    }
-    setShowMusicPrompt(false);
-    setMusicPassword('');
+    setPassword('');
   };
 
   return (
@@ -129,66 +126,43 @@ export default function Footer({ siteConfig }: FooterProps) {
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold uppercase tracking-tight">Secret Login</h3>
-                <button onClick={() => setShowSecretLogin(false)} className="text-white/40 hover:text-white">
+                <button onClick={() => {
+                  setShowSecretLogin(false);
+                  setSecretKey('');
+                  setPassword('');
+                }} className="text-white/40 hover:text-white">
                   <X size={20} />
                 </button>
               </div>
-              <input 
-                type="password"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                placeholder="Enter secret key"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue mb-6"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleSecretLogin()}
-              />
+              <div className="space-y-4 mb-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/20">Secret Key</label>
+                  <input 
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder="Enter key"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue font-mono"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/20">Password (Optional)</label>
+                  <input 
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-blue font-mono"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSecretLogin()}
+                  />
+                </div>
+              </div>
               <button 
                 onClick={handleSecretLogin}
-                className="btn-neon w-full py-3 uppercase tracking-widest"
+                className="btn-neon w-full py-3 uppercase tracking-widest font-bold"
               >
-                Login
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showMusicPrompt && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-dark-bg border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl relative overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue to-neon-purple"></div>
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-neon-blue/10 text-neon-blue">
-                    <MusicIcon size={20} />
-                  </div>
-                  <h3 className="text-xl font-bold uppercase tracking-tighter">Music Access</h3>
-                </div>
-                <button onClick={() => setShowMusicPrompt(false)} className="text-white/40 hover:text-white">
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-xs text-white/40 mb-6 font-medium italic">"Only those who know the rhythm can enter."</p>
-              <input 
-                type="password"
-                value={musicPassword}
-                onChange={(e) => setMusicPassword(e.target.value)}
-                placeholder="••••••"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-4 text-white text-center text-2xl tracking-[0.5em] focus:border-neon-blue outline-none mb-6 font-mono"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleMusicAccess()}
-              />
-              <button 
-                onClick={handleMusicAccess}
-                className="btn-neon w-full py-4 uppercase tracking-[0.2em] font-black text-xs"
-              >
-                Enter Library
+                Unlock Access
               </button>
             </motion.div>
           </div>
@@ -199,20 +173,7 @@ export default function Footer({ siteConfig }: FooterProps) {
         <div className="col-span-1 md:col-span-2">
           <h3 className="text-2xl font-display font-bold text-white mb-1">{siteName}</h3>
           <div className="flex flex-col mb-1">
-            <p 
-              className="text-xs text-neon-blue font-bold uppercase tracking-widest cursor-pointer select-none active:text-white transition-colors"
-              onDoubleClick={() => setShowMusicPrompt(true)}
-              onTouchStart={(e) => {
-                // Handle double tap for touch devices
-                const now = Date.now();
-                const DOUBLE_TAP_DELAY = 300;
-                const lastTap = (e.currentTarget as any).lastTap || 0;
-                if (now - lastTap < DOUBLE_TAP_DELAY) {
-                  setShowMusicPrompt(true);
-                }
-                (e.currentTarget as any).lastTap = now;
-              }}
-            >
+            <p className="text-xs text-neon-blue font-bold uppercase tracking-widest Founder: {adminName}">
               Founder: {adminName}
             </p>
             <p className="text-xs text-neon-blue font-bold uppercase tracking-widest">Co-owner: {coOwnerName}</p>
@@ -258,7 +219,9 @@ export default function Footer({ siteConfig }: FooterProps) {
                 </a>
               </li>
             )}
-            <li className="text-[10px] mt-4 pt-4 border-t border-white/5">Made with <Heart className="w-3 h-3 inline text-neon-pink animate-pulse" /> for students.</li>
+            <li className="text-[10px] mt-4 pt-4 border-t border-white/5 uppercase tracking-widest font-black">
+              {siteConfig?.customFooterText || 'Leading the Future of Learning'}
+            </li>
           </ul>
         </div>
       </div>

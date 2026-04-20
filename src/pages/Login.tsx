@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, LogIn, AlertCircle, Shield, X } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export default function Login() {
   const [name, setName] = useState('');
@@ -12,7 +12,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [siteConfig, setSiteConfig] = useState<any>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'site'), (snap) => {
+      if (snap.exists()) setSiteConfig(snap.data());
+    });
+    return () => unsub();
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -174,17 +182,21 @@ export default function Login() {
               </label>
             </div>
 
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-dark-card px-2 text-white/20">Or</span></div>
-            </div>
+            {siteConfig?.guestModeEnabled !== false && (
+              <>
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-dark-card px-2 text-white/20">Or</span></div>
+                </div>
 
-            <button 
-              onClick={handleGuestMode}
-              className="w-full py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-all"
-            >
-              Skip Login (Guest Mode)
-            </button>
+                <button 
+                  onClick={handleGuestMode}
+                  className="w-full py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  Skip Login (Guest Mode)
+                </button>
+              </>
+            )}
 
             {error && (
               <motion.div 

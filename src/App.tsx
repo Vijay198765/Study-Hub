@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Shield } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -13,7 +13,6 @@ import AdminPanel from './pages/AdminPanel';
 import Games from './pages/Games';
 import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
-import MusicPlayer from './pages/MusicPlayer';
 import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
@@ -49,6 +48,8 @@ export default function App() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
+  const [userIp, setUserIp] = useState<string | null>(null);
 
   // Test connection and listen to config
   useEffect(() => {
@@ -63,12 +64,24 @@ export default function App() {
     };
     checkConnection();
     
+    // Get IP
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => setUserIp(data.ip))
+      .catch(e => console.error("IP check failed:", e));
+
     // Listen to global site config
     const configRef = doc(db, 'config', 'site');
     const unsubConfig = onSnapshot(configRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setSiteConfig(data);
+        
+        // Check banning
+        if (userIp && data.bannedIps?.includes(userIp)) {
+          setIsBanned(true);
+        }
+
         // Immediately close rating modal if it's disabled globally
         if (data.isRatingEnabled === false) {
           setShowRatingModal(false);
@@ -84,7 +97,17 @@ export default function App() {
     }
 
     return () => unsubConfig();
-  }, []);
+  }, [userIp]);
+
+  // Check ban if IP changes or userProfile changes
+  useEffect(() => {
+    if (siteConfig?.bannedIps && userIp && siteConfig.bannedIps.includes(userIp)) {
+      setIsBanned(true);
+    }
+    if (siteConfig?.bannedIps && userProfile?.ip && siteConfig.bannedIps.includes(userProfile.ip)) {
+      setIsBanned(true);
+    }
+  }, [siteConfig, userIp, userProfile]);
 
   // Listen for auth errors globally
   useEffect(() => {
@@ -326,15 +349,47 @@ export default function App() {
   return (
     <ThemeProvider>
       <AnimatePresence mode="wait">
-        {(loading || !minLoadingComplete) ? (
+        {isBanned ? (
+          <motion.div 
+            key="banned"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col items-center justify-center p-8 text-center"
+          >
+            <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 mb-8 border border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+              <Shield size={48} />
+            </div>
+            <h1 className="text-5xl font-black text-white mb-6 uppercase tracking-tighter italic">Access Restricted</h1>
+            <p className="text-white/40 max-w-md mx-auto leading-relaxed text-sm mb-10">
+              Your IP Address (<span className="text-red-400 font-mono">{userIp || 'unknown'}</span>) has been flagged and blocked from accessing this system. If you believe this is an error, contact the administrator.
+            </p>
+            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3">
+              <AlertCircle size={18} className="text-red-500" />
+              <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest leading-relaxed">System Security Protocol Active</p>
+            </div>
+          </motion.div>
+        ) : (loading || !minLoadingComplete) ? (
           <LoadingScreen key="loading" />
         ) : (
           <ErrorBoundary key="app">
             {firebaseError && <FirebaseSetupGuide errorType={firebaseError} projectId={firebaseConfig.projectId} />}
             {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} siteConfig={siteConfig} />}
             <div className="flex flex-col min-h-screen relative overflow-hidden">
+              {siteConfig?.bgEffect === 'snow' && <div className="fixed inset-0 pointer-events-none z-0"><div className="absolute inset-0 bg-[url('https://picsum.photos/seed/snow/1920/1080')] opacity-5 mix-blend-overlay animate-pulse" /></div>}
+              
               <Watermark />
               
+              {siteConfig?.showAnnouncement && (
+                <div 
+                  className="w-full py-2 overflow-hidden whitespace-nowrap z-[60] relative"
+                  style={{ backgroundColor: siteConfig?.announcementColor || '#00E5FF' }}
+                >
+                  <div className="animate-marquee inline-block pl-[100%] text-[10px] font-black uppercase tracking-[0.2em] text-black">
+                    {siteConfig?.announcementText || 'Welcome to our learning platform! Explore new classes and features.'}
+                  </div>
+                </div>
+              )}
+
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
               
               <main className="flex-grow">
@@ -374,7 +429,6 @@ export default function App() {
                       <Route path="/live-club" element={<LiveComments />} />
                       <Route path="/tests" element={<Tests />} />
                       <Route path="/login" element={<Login />} />
-                      <Route path="/secret-player" element={<MusicPlayer />} />
                       <Route 
                         path="/admin" 
                         element={
