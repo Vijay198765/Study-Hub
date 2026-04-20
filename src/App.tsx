@@ -389,7 +389,6 @@ export default function App() {
                 </AnimatePresence>
               </main>
 
-              <LeaderboardScroller />
               <Footer siteConfig={siteConfig} />
               <NotificationPrompt />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />

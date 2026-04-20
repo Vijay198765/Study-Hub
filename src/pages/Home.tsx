@@ -419,6 +419,11 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
           <p className="text-white/50">Keep track of your quiz scores and see how much you've improved over time.</p>
         </div>
       </section>
+
+      {/* Leaderboard Section */}
+      <section className="mt-32">
+        <LeaderboardScroller />
+      </section>
     </div>
   </div>
 );

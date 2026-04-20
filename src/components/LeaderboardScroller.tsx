@@ -55,9 +55,9 @@ export default function LeaderboardScroller() {
   if (loading || topUsers.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#050505] border-t border-white/5 pt-10 pb-20 relative overflow-hidden">
+    <div className="w-full bg-transparent pt-10 pb-10 relative overflow-hidden">
       {/* Background Decor */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-neon-blue/20 to-transparent" />
       
       <div className="max-w-5xl mx-auto px-6 space-y-8">
         <div className="flex flex-col items-center gap-2 text-center">
@@ -69,7 +69,7 @@ export default function LeaderboardScroller() {
         </div>
 
         {/* Scrollable Leaderboard Container */}
-        <div className="glass-card bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden backdrop-blur-3xl shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+        <div className="glass-card bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden backdrop-blur-3xl">
           {/* Header Row */}
           <div className="grid grid-cols-[80px_1fr_120px] px-8 py-4 bg-white/[0.03] border-b border-white/5">
             <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Rank</span>
