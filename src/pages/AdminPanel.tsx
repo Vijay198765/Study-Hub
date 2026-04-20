@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
   Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -3218,6 +3218,42 @@ export default function AdminPanel() {
                             className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.secretLoginEnabled !== false ? 'bg-neon-pink' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.secretLoginEnabled !== false ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-white/10 text-white/40">
+                              <Eye size={20} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-white">Show Secret Login Entry</p>
+                               <p className="text-[10px] text-white/40">Show the "©" clickable link in the footer</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ showSecretLoginEntry: !siteConfig?.showSecretLoginEntry })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showSecretLoginEntry !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showSecretLoginEntry !== false ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-white/10 text-white/40">
+                              <LayoutDashboard size={20} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-white">Show Dashboard Link</p>
+                               <p className="text-[10px] text-white/40">Show "Dashboard" in Navbar for secret login users</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => saveSiteConfig({ showDashboardLinkForSecret: !siteConfig?.showDashboardLinkForSecret })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showDashboardLinkForSecret !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showDashboardLinkForSecret !== false ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 

@@ -64,11 +64,38 @@ export default function App() {
     };
     checkConnection();
     
-    // Get IP
-    fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(data => setUserIp(data.ip))
-      .catch(e => console.error("IP check failed:", e));
+    // Get IP with fallback
+    const getIp = async () => {
+      if (userIp) return;
+      
+      const providers = [
+        'https://api.ipify.org?format=json',
+        'https://api64.ipify.org?format=json',
+        'https://ipapi.co/json/',
+        'https://ident.me/.json'
+      ];
+
+      for (const url of providers) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          const data = await res.json();
+          if (data.ip) {
+            setUserIp(data.ip);
+            return;
+          }
+        } catch (e) {
+          console.warn(`IP fetch from ${url} failed, trying next...`);
+        }
+      }
+      console.error("All IP check providers failed");
+    };
+
+    getIp();
 
     // Listen to global site config
     const configRef = doc(db, 'config', 'site');
@@ -167,14 +194,29 @@ export default function App() {
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
 
       if (firebaseUser) {
-        // Fetch IP address - Do it once per session
-        let userIp = 'unknown';
-        try {
-          const response = await fetch('https://api.ipify.org?format=json');
-          const data = await response.json();
-          userIp = data.ip;
-        } catch (e) {
-          console.error("Failed to fetch IP:", e);
+        // Fetch IP address - Do it once per session with fallbacks
+        let detectedIp = 'unknown';
+        const providers = [
+          'https://api.ipify.org?format=json',
+          'https://api64.ipify.org?format=json',
+          'https://ipapi.co/json/',
+          'https://ident.me/.json'
+        ];
+
+        for (const url of providers) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            const data = await res.json();
+            if (data.ip) {
+              detectedIp = data.ip;
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
         }
 
         const userRef = doc(db, 'users', firebaseUser.uid);
@@ -189,7 +231,7 @@ export default function App() {
             
             // Side-effect updates (IP, photo, name, secret upgrade)
             const updates: any = {};
-            if (profileData.ip !== userIp) updates.ip = userIp;
+            if (profileData.ip !== detectedIp) updates.ip = detectedIp;
             if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
             if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
@@ -241,7 +283,7 @@ export default function App() {
               role: role,
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
-              ip: userIp,
+              ip: detectedIp,
               totalTimeSpent: 0,
               isSecret: isSecretLogin,
               secretLoginLogged: isSecretLogin,

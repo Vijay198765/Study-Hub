@@ -227,13 +227,17 @@ export default function Footer({ siteConfig }: FooterProps) {
       </div>
       
       <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-white/5 text-center text-white/30 text-sm">
-        <span 
-          className="cursor-pointer hover:text-white transition-colors p-2 inline-block"
-          onClick={() => setShowSecretLogin(true)}
-          title="Secret Login"
-        >
-          ©
-        </span> {new Date().getFullYear()} {siteName} by {adminName}. All rights reserved.
+        {siteConfig?.showSecretLoginEntry !== false ? (
+          <span 
+            className="cursor-pointer hover:text-white transition-colors p-2 inline-block"
+            onClick={() => setShowSecretLogin(true)}
+            title="Secret Login"
+          >
+            ©
+          </span>
+        ) : (
+          <span className="p-2 inline-block opacity-50">©</span>
+        )} {new Date().getFullYear()} {siteName} by {adminName}. All rights reserved.
       </div>
     </footer>
   );

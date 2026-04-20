@@ -156,6 +156,8 @@ export interface SiteConfig {
   liveClubEnabled?: boolean;
   bgEffect?: 'none' | 'snow' | 'confetti' | 'stars';
   secretLoginEnabled?: boolean;
+  showSecretLoginEntry?: boolean;
+  showDashboardLinkForSecret?: boolean;
   secretLoginKey?: string;
   secretProfiles?: SecretProfile[];
   limitedAdminTabs?: string[];

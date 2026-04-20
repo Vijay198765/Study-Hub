@@ -83,7 +83,9 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     { name: 'Tests', path: '/tests', icon: ClipboardList },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
-    ...(isAdmin || isSpecialAdmin ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
+    ...((isAdmin && !isSpecialAdmin) || (isSpecialAdmin && siteConfig?.showDashboardLinkForSecret !== false) 
+      ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] 
+      : []),
   ];
 
   return (
