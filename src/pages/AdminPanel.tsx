@@ -270,7 +270,7 @@ export default function AdminPanel() {
   // Toast timer
   useEffect(() => {
     if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
+      const timer = setTimeout(() => setToast(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [toast]);

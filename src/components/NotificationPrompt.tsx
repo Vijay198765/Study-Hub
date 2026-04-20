@@ -10,6 +10,7 @@ export default function NotificationPrompt() {
   const [showBar, setShowBar] = useState(false);
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [toastDuration, setToastDuration] = useState(5000);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -59,8 +60,9 @@ export default function NotificationPrompt() {
             setShowToast(true);
             localStorage.setItem(seenKey, 'true');
             
-            // Auto hide toast after 3 seconds as requested
-            setTimeout(() => setShowToast(false), 3000);
+            // Auto hide toast after 5 seconds as requested
+            setToastDuration(5000);
+            setTimeout(() => setShowToast(false), 5000);
           }
         }
       }
@@ -68,9 +70,50 @@ export default function NotificationPrompt() {
       handleFirestoreError(error, OperationType.GET, 'notifications');
     });
 
+    // Admin Visitor Alerts
+    let unsubscribeLogs: (() => void) | null = null;
+    const adminEmail = 'vijayninama683@gmail.com';
+    
+    if (auth.currentUser?.email?.toLowerCase() === adminEmail) {
+      const logsQ = query(
+        collection(db, 'activityLogs'),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+
+      unsubscribeLogs = onSnapshot(logsQ, (snapshot) => {
+        if (!snapshot.empty) {
+          const log = snapshot.docs[0].data() as any;
+          
+          // Only show if it's "new" (within last minute) and it's a "Session Started" action
+          const now = Date.now();
+          const logTime = log.timestamp?.toMillis ? log.timestamp.toMillis() : now;
+          
+          if (log.action === 'Session Started' && (now - logTime < 60000)) {
+            const visitorName = log.userName || 'Someone';
+            // Show as a special notification
+            setLatestNotification({
+              id: 'visitor-' + snapshot.docs[0].id,
+              title: 'New Visitor Detected',
+              message: `${visitorName} has just landed on Study HUB!`,
+              type: 'success',
+              createdAt: log.timestamp,
+              createdBy: 'system'
+            });
+            setShowToast(true);
+            
+            // Auto hide visitor alerts after 3 seconds as requested
+            setToastDuration(3000);
+            setTimeout(() => setShowToast(false), 3000);
+          }
+        }
+      });
+    }
+
     return () => {
       clearTimeout(timer);
       unsubscribe();
+      if (unsubscribeLogs) unsubscribeLogs();
     };
   }, []);
 
@@ -181,9 +224,10 @@ export default function NotificationPrompt() {
               
               {/* Progress bar for auto-hide */}
               <motion.div 
+                key={`progress-${latestNotification.id}`}
                 initial={{ width: "100%" }}
                 animate={{ width: "0%" }}
-                transition={{ duration: 3, ease: "linear" }}
+                transition={{ duration: toastDuration / 1000, ease: "linear" }}
                 className="absolute bottom-0 left-0 h-0.5 bg-white/10"
               />
             </div>

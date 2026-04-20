@@ -279,14 +279,32 @@ const Scene = () => {
   );
 };
 
+const LOADING_MESSAGES = [
+  "Initializing Neural Pathways...",
+  "Architecting Knowledge Grids...",
+  "Optimizing Cognitive Engines...",
+  "Sourcing Academic Archives...",
+  "Syncing Scholastic Protocols...",
+  "Calibrating HUB Systems..."
+];
+
 export const LoadingScreen = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2500);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -295,7 +313,7 @@ export const LoadingScreen = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.8 }}
-      className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[9999] bg-[#050505] flex flex-col items-center justify-center overflow-hidden"
     >
       <motion.div 
         initial={{ opacity: 0, scale: 1.1 }}
@@ -318,65 +336,78 @@ export const LoadingScreen = () => {
         </Canvas>
       </motion.div>
       
-      {/* Background Glow */}
-      <div className="absolute inset-0 bg-gradient-to-t from-neon-blue/10 via-transparent to-transparent pointer-events-none" />
+      {/* Background Decor */}
+      <div className="absolute inset-0 bg-gradient-to-t from-neon-blue/20 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.8)_100%)] pointer-events-none" />
 
       <motion.div 
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 mt-auto mb-16 sm:mb-20 flex flex-col items-center gap-6 px-6 text-center w-full max-w-lg"
+        className="relative z-10 mt-auto mb-10 sm:mb-16 flex flex-col items-center gap-8 px-6 text-center w-full max-w-lg"
       >
-        <div className="relative group">
+        <div className="space-y-2">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 1 }}
-            className="absolute -inset-4 bg-neon-blue/20 blur-2xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity"
-          />
-          <motion.h1
-            animate={{ 
-              opacity: [0.6, 1, 0.6],
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="text-white font-sans text-3xl sm:text-4xl font-extrabold tracking-widest uppercase"
+            transition={{ delay: 0.2, duration: 1 }}
+            className="flex flex-col items-center gap-1"
           >
-            STUDY HUB
-          </motion.h1>
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mb-4" />
+            <motion.h1
+              animate={{ 
+                opacity: [0.7, 1, 0.7],
+              }}
+              transition={{ 
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="text-white font-sans text-4xl sm:text-5xl font-black tracking-[0.25em] uppercase italic bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40 drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            >
+              STUDY HUB
+            </motion.h1>
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mt-4" />
+          </motion.div>
         </div>
 
-        <motion.div
-          animate={{ opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-32 h-0.5 bg-white/20"
-        />
-        
-        <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-          <motion.div 
-            animate={{ 
-              x: ["-100%", "100%"]
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="w-full h-full bg-white/20"
-          />
-        </div>
-        
-        <div className="mt-4">
-          <motion.p 
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity }}
-            className="text-white/40 text-[10px] uppercase font-bold tracking-[0.5em]"
-          >
-            Loading...
-          </motion.p>
+        <div className="flex flex-col items-center gap-6 w-full">
+          <div className="w-full max-w-[280px] h-[3px] bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
+            <motion.div 
+              animate={{ 
+                x: ["-100%", "100%"]
+              }}
+              transition={{ 
+                duration: 2.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/60 to-transparent shadow-[0_0_20px_white]"
+            />
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <AnimatePresence mode="wait">
+              <motion.p 
+                key={messageIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.5 }}
+                className="text-neon-blue/80 text-[11px] uppercase font-mono tracking-[0.4em] font-medium"
+              >
+                {LOADING_MESSAGES[messageIndex]}
+              </motion.p>
+            </AnimatePresence>
+            
+            <motion.div
+              animate={{ opacity: [0.1, 0.3, 0.1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-[9px] text-white/20 uppercase tracking-[0.6em] font-black"
+            >
+              System Online
+            </motion.div>
+          </div>
         </div>
       </motion.div>
     </motion.div>
