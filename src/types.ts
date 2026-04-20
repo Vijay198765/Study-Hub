@@ -177,6 +177,8 @@ export interface SiteConfig {
   leaderboardVisible?: boolean;
   registrationEnabled?: boolean;
   notificationDuration?: number; // In seconds
+  cloudinaryCloudName?: string;
+  cloudinaryUploadPreset?: string;
   lastUpdated?: any;
 }
 

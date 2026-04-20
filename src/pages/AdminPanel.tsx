@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Music as MusicIcon
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Music as MusicIcon, Cloud
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -148,6 +148,39 @@ export default function AdminPanel() {
   };
   
   const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [musicUploading, setMusicUploading] = useState(false);
+  const [musicUploadProgress, setMusicUploadProgress] = useState(0);
+
+  const handleCloudinaryUpload = () => {
+    if (!siteConfig?.cloudinaryCloudName || !siteConfig?.cloudinaryUploadPreset) {
+      setToast({ 
+        message: "Please setup Cloudinary Cloud Name and Upload Preset in Site Control first!", 
+        type: 'error' 
+      });
+      return;
+    }
+
+    const myWidget = (window as any).cloudinary.createUploadWidget(
+      {
+        cloudName: siteConfig.cloudinaryCloudName,
+        uploadPreset: siteConfig.cloudinaryUploadPreset,
+        multiple: false,
+        resourceType: "auto",
+        clientAllowedFormats: ["mp3", "wav", "m4a"],
+        maxFileSize: 20000000, // 20MB
+      },
+      (error: any, result: any) => {
+        if (!error && result && result.event === "success") {
+          setEditingEntity((prev: any) => ({ ...prev, url: result.info.secure_url }));
+          setToast({ message: "Music uploaded to Cloudinary successfully!", type: 'success' });
+        } else if (error) {
+          console.error("Cloudinary error:", error);
+          setToast({ message: "Cloudinary setup error. Check Cloud Name & Preset.", type: 'error' });
+        }
+      }
+    );
+    myWidget.open();
+  };
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -1159,13 +1192,12 @@ export default function AdminPanel() {
                   <Star size={14} className="text-neon-blue" />
                   How to add music?
                 </h3>
-                <ul className="text-xs text-white/60 space-y-2 list-disc ml-5">
-                  <li><strong>Recommended:</strong> Use <strong>Dropbox</strong>. Replace <code>www.dropbox.com</code> with <code>dl.dropboxusercontent.com</code> in the link.</li>
-                  <li><strong>Google Drive:</strong> Ensure the file is shared as "Anyone with the link". Use our auto-converter or paste the standard share link.</li>
-                  <li><strong>Discord:</strong> Right-click an uploaded audio file in Discord and select "Copy Link". These usually work perfectly.</li>
-                  <li><strong>Cover Image:</strong> Use a square image URL (Picsum seeds work too!).</li>
-                  <li>Save the song and access the player via your secret shortcut.</li>
-                </ul>
+                <ol className="text-xs text-white/60 space-y-2 list-decimal ml-5">
+                  <li><strong>Upload Direct (New):</strong> Click "Add New Song" → Use the <strong>"Upload MP3"</strong> button to pick a file from your device. It will be stored safely in our cloud.</li>
+                  <li><strong>Local Files:</strong> Upload files to the <code>public/music/</code> folder via the file explorer, then enter the filename.</li>
+                  <li><strong>Cover Image:</strong> Enter a square image URL for the song art.</li>
+                  <li>Save and refresh the Music Player to see your updates.</li>
+                </ol>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -3331,6 +3363,39 @@ export default function AdminPanel() {
                         value={siteConfig?.supportEmail || ''}
                         onChange={(e) => saveSiteConfig({ supportEmail: e.target.value })}
                       />
+                      {/* Cloudinary Config */}
+                      <div className="space-y-6 pt-4 border-t border-white/10">
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <CloudRain size={16} className="text-neon-blue" />
+                          Cloudinary Integration (Music Host)
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Cloud Name</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. dxyz123"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                              value={siteConfig?.cloudinaryCloudName || ''}
+                              onChange={(e) => saveSiteConfig({ cloudinaryCloudName: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Upload Preset (Unsigned)</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. music_preset"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                              value={siteConfig?.cloudinaryUploadPreset || ''}
+                              onChange={(e) => saveSiteConfig({ cloudinaryUploadPreset: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-white/20 italic leading-relaxed">
+                          Setup a free account at <strong>Cloudinary.com</strong>. Go to Settings &gt; Upload &gt; Add Upload Preset, set it to "Unsigned", then copy the Preset Name and Cloud Name here.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4370,17 +4435,30 @@ export default function AdminPanel() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/60">MP3 URL (Direct or Drive Link)</label>
-                      <input 
-                        type="text" 
-                        placeholder="https://..."
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={editingEntity.url}
-                        onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
-                      />
-                      <p className="text-[10px] text-white/20 italic">For Google Drive, ensure it's shared with 'Anyone with link'.</p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-white/60">Music File source</label>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="text" 
+                          placeholder="Song filename or URL..."
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.url}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, url: e.target.value })}
+                        />
+                        <button
+                          onClick={handleCloudinaryUpload}
+                          className="btn-neon border-neon-blue text-neon-blue px-4 py-3 flex items-center gap-2 shrink-0 bg-neon-blue/10"
+                        >
+                          <Upload size={16} />
+                          Upload to Cloudinary
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-white/20 italic">
+                        <span className="text-neon-blue font-bold">Cloudinary Mode:</span> Uploads are fast and reliable. Setup credentials in Site Control tab.
+                      </p>
                     </div>
+                  </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-white/60">Cover Image URL</label>
                       <input 
