@@ -126,12 +126,13 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
+      return request.auth != null && 
         (
-          (request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com") ||
+          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true))
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin') ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true)
         );
     }
 
@@ -422,7 +423,7 @@ service cloud.firestore {
         (
           (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
           (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
-          request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com" ||
+          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
           (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 
@@ -532,9 +533,15 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidActivityLog(request.resource.data);
     }
 
+    match /test/connection {
+      allow read: if true;
+    }
+
     match /userMessages/{msgId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create, delete: if isAdmin() && (request.resource == null || isValidUserMessage(request.resource.data));
+      allow write: if isAdmin();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['showCount']);
     }
   }
 }

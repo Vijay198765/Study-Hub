@@ -74,27 +74,50 @@ export default function App() {
         'https://api.ipify.org?format=json',
         'https://api64.ipify.org?format=json',
         'https://ipapi.co/json/',
-        'https://ident.me/.json'
+        'https://ident.me/.json',
+        'https://api.ip.sb/ip',
+        'https://checkip.amazonaws.com',
+        'https://api.myip.com',
+        'https://www.trackip.net/ip',
+        'https://httpbin.org/ip',
+        'https://ifconfig.me/all.json',
+        'https://ipv4.seeip.org/json',
+        'https://api.ipify.org?format=text'
       ];
 
       for (const url of providers) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
           
           const res = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
           
-          const data = await res.json();
-          if (data.ip) {
-            setUserIp(data.ip);
-            return;
+          if (!res.ok) throw new Error('Network response was not ok');
+
+          if (url.includes('json') || url.includes('ident.me')) {
+            const data = await res.json();
+            if (data.ip) {
+              setUserIp(data.ip);
+              return;
+            }
+          } else {
+            const text = await res.text();
+            const ip = text.trim();
+            if (ip) {
+              setUserIp(ip);
+              return;
+            }
           }
         } catch (e) {
-          console.warn(`IP fetch from ${url} failed, trying next...`);
+          // Silent fail for individual providers
         }
       }
-      console.error("All IP check providers failed");
+      // If all fail, use a generic fallback for logging purposes
+      if (!userIp) {
+        console.warn("All IP check providers failed, using fallback");
+        setUserIp('127.0.0.1'); 
+      }
     };
 
     getIp();
@@ -195,6 +218,11 @@ export default function App() {
         unsubscribeProfile();
         unsubscribeProfile = null;
       }
+      
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+        unsubscribeMessages = null;
+      }
 
       const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
@@ -206,23 +234,45 @@ export default function App() {
           'https://api.ipify.org?format=json',
           'https://api64.ipify.org?format=json',
           'https://ipapi.co/json/',
-          'https://ident.me/.json'
+          'https://ident.me/.json',
+          'https://api.ip.sb/ip',
+          'https://checkip.amazonaws.com',
+          'https://api.myip.com',
+          'https://www.trackip.net/ip',
+          'https://httpbin.org/ip',
+          'https://ifconfig.me/all.json',
+          'https://ipv4.seeip.org/json',
+          'https://api.ipify.org?format=text'
         ];
 
         for (const url of providers) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timeoutId);
-            const data = await res.json();
-            if (data.ip) {
-              detectedIp = data.ip;
-              break;
+            
+            if (url.includes('json') || url.includes('ident.me')) {
+              const data = await res.json();
+              if (data.ip) {
+                detectedIp = data.ip;
+                break;
+              }
+            } else {
+              const text = await res.text();
+              const ip = text.trim();
+              if (ip) {
+                detectedIp = ip;
+                break;
+              }
             }
           } catch (e) {
             continue;
           }
+        }
+        
+        if (detectedIp === 'unknown' && userIp) {
+          detectedIp = userIp;
         }
 
         const userRef = doc(db, 'users', firebaseUser.uid);

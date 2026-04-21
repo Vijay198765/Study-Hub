@@ -279,9 +279,9 @@ export default function AdminPanel() {
 
   // Load initial data
   useEffect(() => {
-    if (!isAdmin && !isSpecialAdmin) return;
+    if ((!isAdmin && !isSpecialAdmin) || !auth.currentUser) return;
     
-    console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
+    console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser.uid);
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
     const unsubTests = getTests(setTests);

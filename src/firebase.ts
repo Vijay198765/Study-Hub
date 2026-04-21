@@ -23,8 +23,10 @@ const app = initializeApp(config);
 export const auth = getAuth(app);
 
 // Use initializeFirestore with memoryLocalCache to prevent assertion failures in sandboxed environments
+// Experimental Long Polling is often more stable in proxied cloud environments
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
+  experimentalForceLongPolling: true,
 }, import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)');
 
 export const storage = getStorage(app);
