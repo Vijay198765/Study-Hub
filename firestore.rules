@@ -535,6 +535,7 @@ service cloud.firestore {
     match /userMessages/{msgId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create, delete: if isAdmin() && (request.resource == null || isValidUserMessage(request.resource.data));
+      allow update: if (isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid)) && isValidUserMessage(request.resource.data);
     }
   }
 }

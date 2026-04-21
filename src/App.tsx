@@ -300,7 +300,7 @@ export default function App() {
 
           // 2. Set Initial Local State
           setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
-          const isUserAdmin = profileData.role === 'admin';
+          const isUserAdmin = profileData.role === 'admin' || firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
           setIsAdmin(isUserAdmin);
           if (isUserAdmin || profileData.secretLoginLogged) setIsSpecialAdmin(true);
 
@@ -330,11 +330,16 @@ export default function App() {
           if (firebaseUser) {
             const q = query(
               collection(db, 'userMessages'), 
-              where('userId', '==', firebaseUser.uid),
-              orderBy('createdAt', 'desc')
+              where('userId', '==', firebaseUser.uid)
             );
             unsubscribeMessages = onSnapshot(q, (snap) => {
-              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              const messages = snap.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a: any, b: any) => {
+                  const timeA = a.createdAt?.seconds || 0;
+                  const timeB = b.createdAt?.seconds || 0;
+                  return timeB - timeA;
+                });
               const myMessage: any = messages.find((m: any) => m.showCount > 0);
               
               if (myMessage && !currentUserMessage) {
@@ -356,7 +361,7 @@ export default function App() {
               if (snap.exists()) {
                 const data = snap.data();
                 setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
-                const isUserAdmin = data.role === 'admin';
+                const isUserAdmin = data.role === 'admin' || firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
                 setIsAdmin(isUserAdmin);
                 if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
               }

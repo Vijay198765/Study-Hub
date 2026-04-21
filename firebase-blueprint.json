@@ -268,6 +268,19 @@
         "createdBy": { "type": "string" }
       },
       "required": ["title", "message", "createdAt"]
+    },
+    "UserMessage": {
+      "title": "UserMessage",
+      "description": "Targeted messages for specific users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "duration": { "type": "number" },
+        "showCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "message", "showCount", "createdAt"]
     }
   },
   "firestore": {
@@ -334,6 +347,10 @@
     "/notifications/{notifId}": {
       "schema": "Notification",
       "description": "App notifications"
+    },
+    "/userMessages/{msgId}": {
+      "schema": "UserMessage",
+      "description": "Direct messages for users"
     }
   }
 }

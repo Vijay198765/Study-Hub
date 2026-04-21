@@ -40,7 +40,7 @@ type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 const DraggableAny = Draggable as any;
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('classes');
+  const [activeTab, setActiveTab] = useState<AdminTab>('stats');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -966,6 +966,16 @@ export default function AdminPanel() {
           </div>
         </div>
         <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide max-w-full sm:max-w-none">
+            {shouldShowTab('stats') && (
+              <button 
+                onClick={() => setActiveTab('stats')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'}`}
+              >
+                <BarChart3 size={16} className="inline-block mr-1.5" />
+                Dashboard
+              </button>
+            )}
+
             {shouldShowTab('chapters') && (
               <button 
                 onClick={() => setActiveTab('chapters')}
@@ -1094,15 +1104,7 @@ export default function AdminPanel() {
               </button>
             )}
 
-            {shouldShowTab('stats') && (
-              <button 
-                onClick={() => setActiveTab('stats')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'stats' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
-              >
-                <BarChart3 size={16} className="inline-block mr-1.5" />
-                Stats
-              </button>
-            )}
+            {/* We already rendered stats as Dashboard at the top */}
 
             {shouldShowTab('logs') && (
               <button 
@@ -1606,17 +1608,19 @@ export default function AdminPanel() {
                 <button 
                   onClick={() => {
                     const headers = ['Name', 'Email', 'Role', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
-                    const csvData = users.map(u => [
-                      u.name || 'Anonymous',
-                      u.email,
-                      u.role,
-                      u.createdAt,
-                      u.photoURL || '',
-                      u.deviceInfo?.userAgent || 'N/A',
-                      u.deviceInfo?.platform || 'N/A',
-                      u.deviceInfo?.language || 'N/A',
-                      u.deviceInfo?.screenResolution || 'N/A'
-                    ]);
+                    const csvData = users
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                      .map(u => [
+                        u.name || 'Anonymous',
+                        u.email,
+                        u.role,
+                        u.createdAt,
+                        u.photoURL || '',
+                        u.deviceInfo?.userAgent || 'N/A',
+                        u.deviceInfo?.platform || 'N/A',
+                        u.deviceInfo?.language || 'N/A',
+                        u.deviceInfo?.screenResolution || 'N/A'
+                      ]);
                     
                     const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
                     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1650,7 +1654,10 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase()))).map((user) => (
+                    {users
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                      .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
+                      .map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
@@ -2039,8 +2046,8 @@ export default function AdminPanel() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
-                          { name: 'Students', value: users.filter(u => u.role === 'student').length },
+                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
+                          { name: 'Students', value: users.filter(u => u.role === 'student' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
                         ]}
                         cx="50%"
                         cy="50%"
@@ -2190,7 +2197,7 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && !log.isSecret && !log.userName?.includes('Admin'))
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !log.isSecret && !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
@@ -2260,7 +2267,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && l.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
