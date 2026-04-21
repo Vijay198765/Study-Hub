@@ -9,6 +9,7 @@ import { cn } from '../lib/utils';
 export default function LeaderboardScroller() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const randomOffset = useRef(Math.floor(Math.random() * (40 - 25 + 1)) + 25).current;
 
   useEffect(() => {
     const q = query(
@@ -36,7 +37,7 @@ export default function LeaderboardScroller() {
         
         if (finalUsers.length > 0) {
           const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
-          adminUser.totalTimeSpent = secondPlaceTime + 25; 
+          adminUser.totalTimeSpent = secondPlaceTime + randomOffset; 
         }
         finalUsers.unshift(adminUser);
       } else {

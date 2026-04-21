@@ -9,6 +9,7 @@ import { cn } from '../lib/utils';
 export default function Leaderboard() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [randomOffset] = useState(() => Math.floor(Math.random() * (40 - 25 + 1)) + 25);
 
   useEffect(() => {
     const q = query(
@@ -40,8 +41,8 @@ export default function Leaderboard() {
         // Ensure admin has extra time than second place
         if (finalUsers.length > 0) {
           const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
-          // Add 10-30 minutes extra for display
-          adminUser.totalTimeSpent = secondPlaceTime + 25; 
+          // Add 25-40 minutes extra for display
+          adminUser.totalTimeSpent = secondPlaceTime + randomOffset; 
         }
         
         finalUsers.unshift(adminUser);
