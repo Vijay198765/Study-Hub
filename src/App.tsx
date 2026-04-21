@@ -19,7 +19,7 @@ import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
@@ -328,10 +328,14 @@ export default function App() {
 
           // 4. Listen for User Messages
           if (firebaseUser) {
-            const q = query(collection(db, 'userMessages'), orderBy('createdAt', 'desc'));
+            const q = query(
+              collection(db, 'userMessages'), 
+              where('userId', '==', firebaseUser.uid),
+              orderBy('createdAt', 'desc')
+            );
             unsubscribeMessages = onSnapshot(q, (snap) => {
               const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              const myMessage: any = messages.find((m: any) => m.userId === firebaseUser.uid && m.showCount > 0);
+              const myMessage: any = messages.find((m: any) => m.showCount > 0);
               
               if (myMessage && !currentUserMessage) {
                 setCurrentUserMessage(myMessage);

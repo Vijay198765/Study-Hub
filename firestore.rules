@@ -128,9 +128,10 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (
-          (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com") ||
+          (request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com") ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true))
         );
     }
 
@@ -379,6 +380,15 @@ service cloud.firestore {
              (!('userAgent' in data) || data.userAgent is string);
     }
 
+    function isValidUserMessage(data) {
+      return data.keys().hasAll(['userId', 'message', 'createdAt']) &&
+             data.userId is string &&
+             data.message is string &&
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (!('duration' in data) || data.duration is number) &&
+             (!('showCount' in data) || data.showCount is number);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -410,8 +420,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (
-          request.resource.data.role == 'student' || 
-          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
+          (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
+          (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
+          request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com" ||
           (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 
@@ -420,8 +431,8 @@ service cloud.firestore {
           (
             request.auth.uid == userId && 
             (
-              request.resource.data.role == resource.data.role ||
-              (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
+              (request.resource.data.role == resource.data.role && request.resource.data.get('isLegend', false) == resource.data.get('isLegend', false)) ||
+              ((request.resource.data.role == 'admin' || request.resource.data.get('isLegend', false) == true) && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
             )
           )
         ) && isValidUser(request.resource.data);
@@ -519,6 +530,11 @@ service cloud.firestore {
     match /activityLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isAuthenticated() && isValidActivityLog(request.resource.data);
+    }
+
+    match /userMessages/{msgId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create, delete: if isAdmin() && (request.resource == null || isValidUserMessage(request.resource.data));
     }
   }
 }
