@@ -296,7 +296,7 @@ export default function App() {
             let forceUpgrade = false;
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
-              updates.adminKey = siteConfig?.secretLoginKey || 'Vijay1987';
+              updates.adminKey = localStorage.getItem('adminKey_secret') || siteConfig?.secretLoginKey || 'Vijay1987';
               updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
               updates.isLegend = true;
               updates.secretLoginLogged = true;
@@ -323,7 +323,7 @@ export default function App() {
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {
-              const dynamicAdminKey = siteConfig?.secretLoginKey || 'Vijay1987';
+              const dynamicAdminKey = localStorage.getItem('adminKey_secret') || siteConfig?.secretLoginKey || 'Vijay1987';
               extraData = { 
                 adminKey: dynamicAdminKey, 
                 isLegend: true,
@@ -338,7 +338,7 @@ export default function App() {
               photoURL: firebaseUser.photoURL || '',
               role: role,
               createdAt: new Date().toISOString(),
-              isLegend: role === 'admin',
+              isLegend: role === 'admin' || isSecretLogin,
               ip: detectedIp,
               totalTimeSpent: 0,
               isSecret: isSecretLogin,
@@ -349,8 +349,8 @@ export default function App() {
           }
 
           // 2. Set Initial Local State
-          setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
-          const isUserAdmin = profileData.role === 'admin';
+          const isUserAdmin = profileData.role === 'admin' || profileData.email?.toLowerCase() === 'vijayninama683@gmail.com';
+          setUserProfile({ ...profileData, isLegend: profileData.isLegend || isUserAdmin });
           setIsAdmin(isUserAdmin);
           if (isUserAdmin || profileData.secretLoginLogged) setIsSpecialAdmin(true);
 
