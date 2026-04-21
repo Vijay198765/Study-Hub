@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'userMessages';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -132,11 +132,14 @@ export default function AdminPanel() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [userMessages, setUserMessages] = useState<any[]>([]);
   
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
   const [isAddingNotif, setIsAddingNotif] = useState(false);
   const [newNotif, setNewNotif] = useState({ title: '', message: '', type: 'info', url: '' });
+  const [isAddingUserMsg, setIsAddingUserMsg] = useState(false);
+  const [newUserMsg, setNewUserMsg] = useState({ userId: '', message: '', duration: 10, showCount: 1 });
   
   const shouldShowTab = (tabId: string) => {
     if (!isLimitedAdmin) return true;
@@ -313,6 +316,10 @@ export default function AdminPanel() {
       setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
 
+    const unsubMessages = onSnapshot(query(collection(db, 'userMessages'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setUserMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'userMessages'));
+
     const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -352,6 +359,7 @@ export default function AdminPanel() {
       unsubNews();
       unsubNotifications();
       unsubLogs();
+      unsubMessages();
       unsubConfig();
     };
   }, [auth.currentUser?.uid, isAdmin, isSpecialAdmin]);
@@ -471,6 +479,30 @@ export default function AdminPanel() {
       setToast({ message: 'Notification deleted!', type: 'success' });
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'notifications');
+    }
+  };
+
+  const handleAddUserMessage = async () => {
+    if (!newUserMsg.userId || !newUserMsg.message) return;
+    try {
+      await addDoc(collection(db, 'userMessages'), {
+        ...newUserMsg,
+        createdAt: serverTimestamp()
+      });
+      setNewUserMsg({ userId: '', message: '', duration: 10, showCount: 1 });
+      setIsAddingUserMsg(false);
+      setToast({ message: 'Targeted message sent!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'userMessages');
+    }
+  };
+
+  const deleteUserMessage = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'userMessages', id));
+      setToast({ message: 'Message removed!', type: 'success' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'userMessages');
     }
   };
 
@@ -1092,6 +1124,16 @@ export default function AdminPanel() {
               </button>
             )}
 
+            {shouldShowTab('userMessages') && (
+              <button 
+                onClick={() => setActiveTab('userMessages')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'userMessages' ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <MessageSquare size={16} className="inline-block mr-1.5" />
+                Targeted Messages
+              </button>
+            )}
+
             {shouldShowTab('theme') && (
               <button 
                 onClick={() => setActiveTab('theme')}
@@ -1621,10 +1663,14 @@ export default function AdminPanel() {
                                 </div>
                               )}
                             </div>
-                            <span className="text-white font-medium">{user.name || 'Anonymous'}</span>
+                            <span className="text-white font-medium">
+                              {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? 'Main Administrator' : (user.name || 'Anonymous')}
+                            </span>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-white/60">{user.email}</td>
+                        <td className="py-4 px-4 text-white/60">
+                          {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? '••••••••@gmail.com' : user.email}
+                        </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
                             {user.role}
@@ -1646,19 +1692,21 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
-                            <button 
-                              onClick={() => {
-                                const newRole = user.role === 'admin' ? 'student' : 'admin';
-                                saveUser({ ...user, role: newRole });
-                              }}
-                              className="text-xs font-bold text-white/40 hover:text-white transition-all"
-                            >
-                              Toggle Role
-                            </button>
+                            {user.email !== 'vijayninama683@gmail.com' && (
+                              <button 
+                                onClick={() => {
+                                  const newRole = user.role === 'admin' ? 'student' : 'admin';
+                                  saveUser({ ...user, role: newRole });
+                                }}
+                                className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-all ${user.role === 'admin' ? 'border-neon-blue text-neon-blue bg-neon-blue/5' : 'border-white/20 text-white/40 hover:text-white'}`}
+                              >
+                                {user.role === 'admin' ? 'Demote to Student' : 'Promote to Admin'}
+                              </button>
+                            )}
                             {user.email !== 'vijayninama683@gmail.com' && user.uid !== auth.currentUser?.uid && (
                               <button 
                                 onClick={() => handleDelete('user', user.uid, user.email)}
-                                className="text-red-400/40 hover:text-red-400 transition-all"
+                                className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                                 title="Delete User"
                               >
                                 <Trash2 size={16} />
@@ -3147,26 +3195,6 @@ export default function AdminPanel() {
                             </div>
 
                             <div className="space-y-3">
-                              <h5 className="text-[10px] uppercase font-bold text-neon-purple">Cloudinary Configuration</h5>
-                              <div className="space-y-2">
-                                <input 
-                                  type="text" 
-                                  placeholder="Cloud Name"
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-purple"
-                                  value={siteConfig?.cloudinaryCloudName || ''}
-                                  onChange={(e) => saveSiteConfig({ cloudinaryCloudName: e.target.value })}
-                                />
-                                <input 
-                                  type="text" 
-                                  placeholder="Upload Preset"
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-purple"
-                                  value={siteConfig?.cloudinaryUploadPreset || ''}
-                                  onChange={(e) => saveSiteConfig({ cloudinaryUploadPreset: e.target.value })}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-3">
                               <h5 className="text-[10px] uppercase font-bold text-red-400 font-black">Security & Banning</h5>
                               <div className="space-y-2">
                                 <label className="text-[10px] text-white/40 uppercase">Banned IP List (Comma separated)</label>
@@ -3329,6 +3357,18 @@ export default function AdminPanel() {
                                               className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-white focus:border-neon-pink outline-none"
                                             />
                                           </div>
+                                          <div className="flex-grow pt-4">
+                                             <button 
+                                               onClick={() => {
+                                                 const next = [...siteConfig.secretProfiles];
+                                                 next[pIdx].showDashboardLink = !next[pIdx].showDashboardLink;
+                                                 saveSiteConfig({ secretProfiles: next });
+                                               }}
+                                               className={`w-full py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all border ${profile.showDashboardLink ? 'bg-neon-blue/10 border-neon-blue text-neon-blue' : 'bg-white/5 border-white/10 text-white/20'}`}
+                                             >
+                                               {profile.showDashboardLink ? 'Dashboard Link ON' : 'Dashboard Link OFF'}
+                                             </button>
+                                          </div>
                                           <div className="flex items-center justify-between gap-2 pt-5">
                                             <div className="flex items-center gap-2">
                                               <button 
@@ -3373,6 +3413,7 @@ export default function AdminPanel() {
                                               { id: 'logs', label: 'Logs' },
                                               { id: 'site', label: 'Site settings' },
                                               { id: 'notifications', label: 'News' },
+                                              { id: 'userMessages', label: 'User Messages' },
                                               { id: 'theme', label: 'Theme' }
                                             ].map(tab => (
                                               <button
@@ -3511,6 +3552,138 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'userMessages' && (
+            <div className="space-y-8">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-white">Targeted User Messaging</h2>
+                  <p className="text-sm text-white/40">Send private messages that appear on a specific user's screen when they come online.</p>
+                </div>
+                <button 
+                  onClick={() => setIsAddingUserMsg(true)}
+                  className="btn-neon bg-orange-500 text-white px-8 py-3 flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(249,115,22,0.3)]"
+                >
+                  <Plus size={20} />
+                  New Targeted Message
+                </button>
+              </div>
+
+              {isAddingUserMsg && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">Target User</label>
+                       <select 
+                         className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-orange-500 appearance-none"
+                         value={newUserMsg.userId}
+                         onChange={(e) => setNewUserMsg({ ...newUserMsg, userId: e.target.value })}
+                       >
+                         <option value="" className="bg-zinc-900">Select a student...</option>
+                         {users.map(u => (
+                           <option key={u.uid} value={u.uid} className="bg-zinc-900">{u.name || u.email} ({u.email})</option>
+                         ))}
+                       </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">Duration (Sec)</label>
+                        <input 
+                          type="number"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-orange-500"
+                          value={newUserMsg.duration}
+                          onChange={(e) => setNewUserMsg({ ...newUserMsg, duration: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">Show Count</label>
+                        <input 
+                          type="number"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-orange-500"
+                          value={newUserMsg.showCount}
+                          onChange={(e) => setNewUserMsg({ ...newUserMsg, showCount: parseInt(e.target.value) })}
+                          placeholder="Times to show after refresh"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">Your Message</label>
+                    <textarea 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-orange-500 min-h-[100px] resize-none"
+                      placeholder="Type your private message here..."
+                      value={newUserMsg.message}
+                      onChange={(e) => setNewUserMsg({ ...newUserMsg, message: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                    <button 
+                      onClick={() => setIsAddingUserMsg(false)}
+                      className="px-6 py-3 rounded-xl bg-white/5 text-white/40 font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleAddUserMessage}
+                      className="px-8 py-3 rounded-xl bg-orange-500 text-white font-bold text-xs uppercase tracking-widest hover:scale-[1.02] shadow-lg"
+                    >
+                      Send Message
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="grid gap-4">
+                {userMessages.map((msg) => (
+                  <motion.div 
+                    key={msg.id}
+                    layout
+                    className="p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-white/[0.07] transition-all group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
+                        <MessageSquare size={24} />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Targeted To</span>
+                          <span className="text-xs font-bold text-white uppercase tracking-widest">{users.find(u => u.uid === msg.userId)?.name || 'Unknown User'}</span>
+                        </div>
+                        <p className="text-white/80 text-sm leading-relaxed">{msg.message}</p>
+                        <div className="flex items-center gap-4 pt-2">
+                          <div className="flex items-center gap-1.5 text-[10px] text-white/20 font-bold uppercase tracking-widest">
+                            <Clock size={10} /> {msg.duration}s Duration
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-white/20 font-bold uppercase tracking-widest">
+                            <RefreshCcw size={10} /> {msg.showCount} Views Remaining
+                          </div>
+                          <div className="text-[10px] text-white/20 font-bold underline cursor-default">
+                             UID: {msg.userId}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => deleteUserMessage(msg.id)}
+                      className="p-3 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </motion.div>
+                ))}
+                {userMessages.length === 0 && (
+                  <div className="h-64 flex flex-col items-center justify-center text-white/20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <MessageSquare size={48} className="mb-4 opacity-10" />
+                    <p className="italic text-sm">No targeted messages found.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

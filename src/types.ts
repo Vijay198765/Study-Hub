@@ -177,8 +177,6 @@ export interface SiteConfig {
   leaderboardVisible?: boolean;
   registrationEnabled?: boolean;
   notificationDuration?: number; // In seconds
-  cloudinaryCloudName?: string;
-  cloudinaryUploadPreset?: string;
   watermarkText?: string;
   watermarkEnabled?: boolean;
   bannedIps?: string[];
@@ -191,12 +189,22 @@ export interface SiteConfig {
   lastUpdated?: any;
 }
 
+export interface UserMessage {
+  id: string;
+  userId: string;
+  message: string;
+  duration: number; // Seconds to show
+  showCount: number; // Remaining times to show after refresh
+  createdAt: any;
+}
+
 export interface SecretProfile {
   id: string;
   label: string;
   key: string;
   password?: string;
   enabled?: boolean;
+  showDashboardLink?: boolean;
   allowedTabs: string[];
 }
 

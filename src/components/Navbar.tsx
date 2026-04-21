@@ -77,15 +77,15 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     }
   };
 
+  const showDashboard = (isAdmin && !isSpecialAdmin) || (isSpecialAdmin && localStorage.getItem('showDashboardLinkForSecret') === 'true' && siteConfig?.showDashboardLinkForSecret !== false);
+
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
     { name: 'Tests', path: '/tests', icon: ClipboardList },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
-    ...((isAdmin && !isSpecialAdmin) || (isSpecialAdmin && siteConfig?.showDashboardLinkForSecret !== false) 
-      ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] 
-      : []),
+    ...(showDashboard ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];
 
   return (

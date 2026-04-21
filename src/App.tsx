@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertCircle, Shield } from 'lucide-react';
+import { AlertCircle, Shield, X } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -19,12 +19,11 @@ import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
-import NotificationPrompt from './components/NotificationPrompt';
 import LeaderboardScroller from './components/LeaderboardScroller';
 
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
@@ -50,6 +49,9 @@ export default function App() {
   const [firebaseError, setFirebaseError] = useState<'auth' | 'firestore' | 'both' | null>(null);
   const [isBanned, setIsBanned] = useState(false);
   const [userIp, setUserIp] = useState<string | null>(null);
+  const [currentUserMessage, setCurrentUserMessage] = useState<any>(null);
+  const [showMessage, setShowMessage] = useState(false);
+  const [messageTimer, setMessageTimer] = useState<number>(10);
 
   // Test connection and listen to config
   useEffect(() => {
@@ -99,22 +101,25 @@ export default function App() {
 
     // Listen to global site config
     const configRef = doc(db, 'config', 'site');
-    const unsubConfig = onSnapshot(configRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setSiteConfig(data);
-        
-        // Check banning
-        if (userIp && data.bannedIps?.includes(userIp)) {
-          setIsBanned(true);
-        }
+    const unsubConfig = onSnapshot(configRef, {
+      next: (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setSiteConfig(data);
+          
+          // Check banning
+          if (userIp && data.bannedIps?.includes(userIp)) {
+            setIsBanned(true);
+          }
 
-        // Immediately close rating modal if it's disabled globally
-        if (data.isRatingEnabled === false) {
-          setShowRatingModal(false);
+          // Immediately close rating modal if it's disabled globally
+          if (data.isRatingEnabled === false) {
+            setShowRatingModal(false);
+          }
         }
-      }
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'config/site'));
+      },
+      error: (error) => handleFirestoreError(error, OperationType.GET, 'config/site')
+    });
 
     // Check for special admin status immediately
     const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
@@ -180,6 +185,7 @@ export default function App() {
     }
 
     let unsubscribeProfile: (() => void) | null = null;
+    let unsubscribeMessages: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
@@ -300,28 +306,60 @@ export default function App() {
 
           // 3. Log activity - Skip for secret logins
           if (!isSpecial) {
+             const deviceInfo = {
+               userAgent: navigator.userAgent,
+               platform: navigator.platform,
+               language: navigator.language,
+               screenResolution: `${window.screen.width}x${window.screen.height}`
+             };
+
              addDoc(collection(db, 'activityLogs'), {
                userId: firebaseUser.uid,
                userName: profileData.name || 'Anonymous',
+               userEmail: profileData.email || 'N/A',
                action: 'Session Started',
                path: window.location.pathname,
-               ip: userIp,
+               ip: detectedIp,
+               deviceInfo,
                isSecret: isSpecial,
                timestamp: serverTimestamp()
              }).catch(e => console.error("Activity logging failed:", e));
           }
 
-          // 4. Start listening for real-time changes WITHOUT doing updates in the listener
-          unsubscribeProfile = onSnapshot(userRef, (snap) => {
-            if (snap.exists()) {
-              const data = snap.data();
-              setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
-              const isUserAdmin = data.role === 'admin';
-              setIsAdmin(isUserAdmin);
-              if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
+          // 4. Listen for User Messages
+          if (firebaseUser) {
+            const q = query(collection(db, 'userMessages'), orderBy('createdAt', 'desc'));
+            unsubscribeMessages = onSnapshot(q, (snap) => {
+              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              const myMessage: any = messages.find((m: any) => m.userId === firebaseUser.uid && m.showCount > 0);
+              
+              if (myMessage && !currentUserMessage) {
+                setCurrentUserMessage(myMessage);
+                setShowMessage(true);
+                setMessageTimer(myMessage.duration || 10);
+                
+                // Decrement showCount
+                updateDoc(doc(db, 'userMessages', myMessage.id), {
+                  showCount: myMessage.showCount - 1
+                });
+              }
+            });
+          }
+
+          // 5. Start listening for real-time profile changes
+          unsubscribeProfile = onSnapshot(userRef, {
+            next: (snap) => {
+              if (snap.exists()) {
+                const data = snap.data();
+                setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
+                const isUserAdmin = data.role === 'admin';
+                setIsAdmin(isUserAdmin);
+                if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
+              }
+            },
+            error: (error) => {
+              handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
             }
-          }, (error) => {
-            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
           });
 
         } catch (error) {
@@ -344,6 +382,7 @@ export default function App() {
     return () => {
       unsubscribeAuth();
       if (unsubscribeProfile) unsubscribeProfile();
+      if (unsubscribeMessages) unsubscribeMessages();
     };
   }, []);
 
@@ -387,6 +426,20 @@ export default function App() {
     const interval = setInterval(trackTime, 60000); // Every minute
     return () => clearInterval(interval);
   }, [user, loading]);
+
+  // User message timer
+  useEffect(() => {
+    let interval: any;
+    if (showMessage && messageTimer > 0) {
+      interval = setInterval(() => {
+        setMessageTimer(prev => prev - 1);
+      }, 1000);
+    } else if (messageTimer <= 0) {
+      setShowMessage(false);
+      setCurrentUserMessage(null);
+    }
+    return () => clearInterval(interval);
+  }, [showMessage, messageTimer]);
 
   return (
     <ThemeProvider>
@@ -486,9 +539,51 @@ export default function App() {
               </main>
 
               <Footer siteConfig={siteConfig} />
-              <NotificationPrompt />
               <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
               <WhatsAppFloat />
+
+              {/* Individual User Message / Alert Overlay */}
+              <AnimatePresence>
+                {showMessage && currentUserMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 50 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 50 }}
+                    className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-md"
+                  >
+                    <div className="bg-dark-card border border-white/10 rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden backdrop-blur-xl">
+                      <div className="absolute top-0 left-0 h-1 bg-neon-blue transition-all duration-1000 ease-linear" style={{ width: `${(messageTimer / (currentUserMessage.duration || 10)) * 100}%` }} />
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue flex-shrink-0 animate-pulse">
+                          <AlertCircle size={24} />
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-white mb-2 italic">Important Message</h3>
+                          <p className="text-white/70 text-sm leading-relaxed">
+                            {currentUserMessage.message}
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => { setShowMessage(false); setCurrentUserMessage(null); }}
+                          className="p-1 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-all flex-shrink-0"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex gap-1">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="w-1 h-1 rounded-full bg-white/10" />
+                          ))}
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/20">System Broadcast</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </ErrorBoundary>
         )}

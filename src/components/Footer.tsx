@@ -58,6 +58,13 @@ export default function Footer({ siteConfig }: FooterProps) {
         localStorage.setItem('isAdminLogin', 'true'); // Changed to true to enable dashboard visibility
         localStorage.setItem('hasSkippedLogin', 'false');
         
+        // Store if dashboard link should be shown
+        if (matchedProfile) {
+          localStorage.setItem('showDashboardLinkForSecret', matchedProfile.showDashboardLink !== false ? 'true' : 'false');
+        } else {
+          localStorage.setItem('showDashboardLinkForSecret', 'true'); // Default true for legacy/master key
+        }
+        
         // Store session-specific permissions
         if (matchedProfile) {
           localStorage.setItem('sessionAllowedTabs', JSON.stringify(matchedProfile.allowedTabs || []));
