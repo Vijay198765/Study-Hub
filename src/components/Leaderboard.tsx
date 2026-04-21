@@ -2,16 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
 
 export default function Leaderboard() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [randomOffset] = useState(() => Math.floor(Math.random() * (40 - 25 + 1)) + 25);
+  const [siteConfig, setSiteConfig] = useState<any>(null);
 
   useEffect(() => {
+    // 1. Listen to site config
+    const configUnsub = onSnapshot(doc(db, 'config', 'site'), (snap) => {
+      if (snap.exists()) {
+        setSiteConfig(snap.data());
+      }
+    });
+
+    // 2. Listen to users
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc')
@@ -26,7 +34,7 @@ export default function Leaderboard() {
       // Filter out users who have a name AND exclude special/secret accounts
       const filtered = users.filter(u => u.name && !u.secretLoginLogged);
       
-      // Ensure Admin (Vijay Ninama) is always first
+      // Ensure Admin (Vijay Ninama) is always handled
       const adminEmail = 'vijayninama683@gmail.com';
       const adminIdx = filtered.findIndex(u => u.email?.toLowerCase() === adminEmail);
       
@@ -35,17 +43,15 @@ export default function Leaderboard() {
         const adminUser = { ...finalUsers[adminIdx] };
         finalUsers.splice(adminIdx, 1);
         
-        // Take the top 10 others
-        finalUsers = finalUsers.slice(0, 9);
-        
-        // Ensure admin has extra time than second place
-        if (finalUsers.length > 0) {
-          const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
-          // Add 25-40 minutes extra for display
-          adminUser.totalTimeSpent = secondPlaceTime + randomOffset; 
+        // Use manual time if set in config, otherwise use real time
+        if (siteConfig?.adminRankingTime !== undefined && siteConfig.adminRankingTime !== null) {
+          adminUser.totalTimeSpent = siteConfig.adminRankingTime;
         }
-        
-        finalUsers.unshift(adminUser);
+
+        finalUsers.push(adminUser);
+        // Re-sort because manual time might change rank
+        finalUsers.sort((a, b) => (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0));
+        finalUsers = finalUsers.slice(0, 10);
       } else {
         finalUsers = finalUsers.slice(0, 10);
       }
@@ -57,8 +63,11 @@ export default function Leaderboard() {
       setLoading(false);
     });
 
-    return () => unsub();
-  }, []);
+    return () => {
+      unsub();
+      configUnsub();
+    };
+  }, [siteConfig?.adminRankingTime]);
 
   if (loading) return null;
   if (topUsers.length === 0) return null;

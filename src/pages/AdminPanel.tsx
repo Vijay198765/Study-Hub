@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Edit2, Trash2, GripVertical, Save, X, 
-  ChevronRight, ChevronDown, Search, Users, 
+  ChevronRight, ChevronDown, Search, Users, Crown,
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
@@ -2634,6 +2634,34 @@ export default function AdminPanel() {
                         onChange={(e) => saveSiteConfig({ siteSubtitle: e.target.value })}
                       />
                     </div>
+
+                    {/* ONLY FOR MAIN ADMIN: Study Time Override */}
+                    {auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' && (
+                      <div className="pt-4 mt-4 border-t border-white/10 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Crown size={16} className="text-yellow-400" />
+                          <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Master Admin Override</h4>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Leaderboard Study Time (Minutes)</label>
+                          <div className="flex gap-4">
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 5000"
+                              className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-yellow-400 outline-none transition-all"
+                              value={siteConfig?.adminRankingTime || ''}
+                              onChange={(e) => saveSiteConfig({ adminRankingTime: parseInt(e.target.value) || 0 })}
+                            />
+                            <div className="bg-yellow-400/10 border border-yellow-400/20 px-4 py-3 rounded-xl min-w-[80px] flex items-center justify-center">
+                              <span className="text-xs font-bold text-yellow-400">
+                                {Math.floor((siteConfig?.adminRankingTime || 0) / 60)}h {(siteConfig?.adminRankingTime || 0) % 60}m
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-white/30 italic">This value will be shown as your total study time on the leaderboard.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

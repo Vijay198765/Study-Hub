@@ -186,6 +186,7 @@ export interface SiteConfig {
   customFooterText?: string;
   announcementColor?: string;
   verifyUserEmail?: boolean;
+  adminRankingTime?: number;
   lastUpdated?: any;
 }
 
