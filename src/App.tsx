@@ -283,7 +283,7 @@ export default function App() {
 
             profileData = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
+              email: firebaseUser.email || (firebaseUser.isAnonymous ? '' : ''),
               name: name,
               photoURL: firebaseUser.photoURL || '',
               role: role,

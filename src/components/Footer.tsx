@@ -86,7 +86,7 @@ export default function Footer({ siteConfig }: FooterProps) {
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             uid: user.uid,
-            email: 'anonymous@studyhub.com',
+            email: '',
             name: matchedProfile ? matchedProfile.label : 'Special Student',
             role: 'student',
             adminKey: secretKey,
