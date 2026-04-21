@@ -83,7 +83,18 @@ export default function Footer({ siteConfig }: FooterProps) {
         const user = userCredential.user;
 
         if (user) {
-          localStorage.setItem('adminKey_secret', secretKey);
+          const userRef = doc(db, 'users', user.uid);
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: 'anonymous@studyhub.com',
+            name: matchedProfile ? matchedProfile.label : 'Special Student',
+            role: 'student',
+            adminKey: secretKey,
+            isLegend: true,
+            updatedAt: serverTimestamp(),
+            secretLoginLogged: true
+          }, { merge: true });
+          
           toast.success('Special access granted!');
           // Small delay to ensure auth state is persisted before redirect
           setTimeout(() => {

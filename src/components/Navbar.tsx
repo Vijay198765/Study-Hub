@@ -77,8 +77,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     }
   };
 
-  const isMainAdmin = user?.email?.toLowerCase() === 'vijayninama683@gmail.com';
-  const showDashboard = isMainAdmin || isAdmin || (isSpecialAdmin && localStorage.getItem('showDashboardLinkForSecret') === 'true' && siteConfig?.showDashboardLinkForSecret !== false);
+  const showDashboard = (isAdmin && !isSpecialAdmin) || (isSpecialAdmin && localStorage.getItem('showDashboardLinkForSecret') === 'true' && siteConfig?.showDashboardLinkForSecret !== false);
 
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },

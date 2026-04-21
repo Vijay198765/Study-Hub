@@ -126,13 +126,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return request.auth != null && 
+      return isAuthenticated() && 
         (
-          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
+          (request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com") ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin') ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true)
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true))
         );
     }
 
@@ -179,8 +178,7 @@ service cloud.firestore {
              (!('secretLoginLogged' in data) || data.secretLoginLogged is bool) &&
              (!('totalTimeSpent' in data) || data.totalTimeSpent is number) &&
              (!('welcomeSent' in data) || data.welcomeSent is bool) &&
-             (!('createdAt' in data) || (data.createdAt is string || data.createdAt is timestamp)) &&
-             (!('updatedAt' in data) || (data.updatedAt is string || data.updatedAt is timestamp)) &&
+             (!('createdAt' in data) || data.createdAt is string) &&
              (!('ip' in data) || data.ip is string) &&
              (!('deviceInfo' in data) || data.deviceInfo is map);
     }
@@ -423,8 +421,8 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (
           (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
-          (request.resource.data.get('isLegend', false) == true && request.resource.data.get('adminKey', '') != '') ||
-          request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com" ||
+          (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
+          request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com" ||
           (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 
@@ -434,7 +432,7 @@ service cloud.firestore {
             request.auth.uid == userId && 
             (
               (request.resource.data.role == resource.data.role && request.resource.data.get('isLegend', false) == resource.data.get('isLegend', false)) ||
-              ((request.resource.data.role == 'admin' || request.resource.data.get('isLegend', false) == true) && request.resource.data.get('adminKey', '') != '')
+              ((request.resource.data.role == 'admin' || request.resource.data.get('isLegend', false) == true) && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
             )
           )
         ) && isValidUser(request.resource.data);
@@ -534,15 +532,9 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidActivityLog(request.resource.data);
     }
 
-    match /test/connection {
-      allow read: if true;
-    }
-
     match /userMessages/{msgId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['showCount']);
+      allow create, delete: if isAdmin() && (request.resource == null || isValidUserMessage(request.resource.data));
     }
   }
 }

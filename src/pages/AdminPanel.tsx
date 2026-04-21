@@ -279,9 +279,9 @@ export default function AdminPanel() {
 
   // Load initial data
   useEffect(() => {
-    if ((!isAdmin && !isSpecialAdmin) || !auth.currentUser) return;
+    if (!isAdmin && !isSpecialAdmin) return;
     
-    console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser.uid);
+    console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
     const unsubClasses = getClasses(setClasses);
     const unsubUsers = getUsers(setUsers);
     const unsubTests = getTests(setTests);
@@ -1650,11 +1650,7 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.filter(u => 
-                      u.email?.toLowerCase() !== 'vijayninama683@gmail.com' &&
-                      (u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                      (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
-                    ).map((user) => (
+                    {users.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase()))).map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
@@ -1668,12 +1664,12 @@ export default function AdminPanel() {
                               )}
                             </div>
                             <span className="text-white font-medium">
-                              {user.name || 'Anonymous'}
+                              {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? 'Main Administrator' : (user.name || 'Anonymous')}
                             </span>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white/60">
-                          {user.email}
+                          {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? '••••••••@gmail.com' : user.email}
                         </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
@@ -1696,16 +1692,18 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
-                            <button 
-                              onClick={() => {
-                                const newRole = user.role === 'admin' ? 'student' : 'admin';
-                                saveUser({ ...user, role: newRole });
-                              }}
-                              className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-all ${user.role === 'admin' ? 'border-neon-blue text-neon-blue bg-neon-blue/5' : 'border-white/20 text-white/40 hover:text-white'}`}
-                            >
-                              Toggle
-                            </button>
-                            {user.uid !== auth.currentUser?.uid && (
+                            {user.email !== 'vijayninama683@gmail.com' && (
+                              <button 
+                                onClick={() => {
+                                  const newRole = user.role === 'admin' ? 'student' : 'admin';
+                                  saveUser({ ...user, role: newRole });
+                                }}
+                                className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-all ${user.role === 'admin' ? 'border-neon-blue text-neon-blue bg-neon-blue/5' : 'border-white/20 text-white/40 hover:text-white'}`}
+                              >
+                                {user.role === 'admin' ? 'Demote to Student' : 'Promote to Admin'}
+                              </button>
+                            )}
+                            {user.email !== 'vijayninama683@gmail.com' && user.uid !== auth.currentUser?.uid && (
                               <button 
                                 onClick={() => handleDelete('user', user.uid, user.email)}
                                 className="p-2 text-red-400/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"

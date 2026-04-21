@@ -74,50 +74,27 @@ export default function App() {
         'https://api.ipify.org?format=json',
         'https://api64.ipify.org?format=json',
         'https://ipapi.co/json/',
-        'https://ident.me/.json',
-        'https://api.ip.sb/ip',
-        'https://checkip.amazonaws.com',
-        'https://api.myip.com',
-        'https://www.trackip.net/ip',
-        'https://httpbin.org/ip',
-        'https://ifconfig.me/all.json',
-        'https://ipv4.seeip.org/json',
-        'https://api.ipify.org?format=text'
+        'https://ident.me/.json'
       ];
 
       for (const url of providers) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
           
           const res = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
           
-          if (!res.ok) throw new Error('Network response was not ok');
-
-          if (url.includes('json') || url.includes('ident.me')) {
-            const data = await res.json();
-            if (data.ip) {
-              setUserIp(data.ip);
-              return;
-            }
-          } else {
-            const text = await res.text();
-            const ip = text.trim();
-            if (ip) {
-              setUserIp(ip);
-              return;
-            }
+          const data = await res.json();
+          if (data.ip) {
+            setUserIp(data.ip);
+            return;
           }
         } catch (e) {
-          // Silent fail for individual providers
+          console.warn(`IP fetch from ${url} failed, trying next...`);
         }
       }
-      // If all fail, use a generic fallback for logging purposes
-      if (!userIp) {
-        console.warn("All IP check providers failed, using fallback");
-        setUserIp('127.0.0.1'); 
-      }
+      console.error("All IP check providers failed");
     };
 
     getIp();
@@ -218,11 +195,6 @@ export default function App() {
         unsubscribeProfile();
         unsubscribeProfile = null;
       }
-      
-      if (unsubscribeMessages) {
-        unsubscribeMessages();
-        unsubscribeMessages = null;
-      }
 
       const isSpecial = localStorage.getItem('isSpecialLogin') === 'true';
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
@@ -234,45 +206,23 @@ export default function App() {
           'https://api.ipify.org?format=json',
           'https://api64.ipify.org?format=json',
           'https://ipapi.co/json/',
-          'https://ident.me/.json',
-          'https://api.ip.sb/ip',
-          'https://checkip.amazonaws.com',
-          'https://api.myip.com',
-          'https://www.trackip.net/ip',
-          'https://httpbin.org/ip',
-          'https://ifconfig.me/all.json',
-          'https://ipv4.seeip.org/json',
-          'https://api.ipify.org?format=text'
+          'https://ident.me/.json'
         ];
 
         for (const url of providers) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timeoutId);
-            
-            if (url.includes('json') || url.includes('ident.me')) {
-              const data = await res.json();
-              if (data.ip) {
-                detectedIp = data.ip;
-                break;
-              }
-            } else {
-              const text = await res.text();
-              const ip = text.trim();
-              if (ip) {
-                detectedIp = ip;
-                break;
-              }
+            const data = await res.json();
+            if (data.ip) {
+              detectedIp = data.ip;
+              break;
             }
           } catch (e) {
             continue;
           }
-        }
-        
-        if (detectedIp === 'unknown' && userIp) {
-          detectedIp = userIp;
         }
 
         const userRef = doc(db, 'users', firebaseUser.uid);
@@ -296,7 +246,7 @@ export default function App() {
             let forceUpgrade = false;
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
-              updates.adminKey = localStorage.getItem('adminKey_secret') || siteConfig?.secretLoginKey || 'Vijay1987';
+              updates.adminKey = siteConfig?.secretLoginKey || 'Vijay1987';
               updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
               updates.isLegend = true;
               updates.secretLoginLogged = true;
@@ -323,7 +273,7 @@ export default function App() {
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {
-              const dynamicAdminKey = localStorage.getItem('adminKey_secret') || siteConfig?.secretLoginKey || 'Vijay1987';
+              const dynamicAdminKey = siteConfig?.secretLoginKey || 'Vijay1987';
               extraData = { 
                 adminKey: dynamicAdminKey, 
                 isLegend: true,
@@ -333,12 +283,12 @@ export default function App() {
 
             profileData = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || (firebaseUser.isAnonymous ? '' : ''),
+              email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
               name: name,
               photoURL: firebaseUser.photoURL || '',
               role: role,
               createdAt: new Date().toISOString(),
-              isLegend: role === 'admin' || isSecretLogin,
+              isLegend: role === 'admin',
               ip: detectedIp,
               totalTimeSpent: 0,
               isSecret: isSecretLogin,
@@ -349,8 +299,8 @@ export default function App() {
           }
 
           // 2. Set Initial Local State
-          const isUserAdmin = profileData.role === 'admin' || profileData.email?.toLowerCase() === 'vijayninama683@gmail.com';
-          setUserProfile({ ...profileData, isLegend: profileData.isLegend || isUserAdmin });
+          setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
+          const isUserAdmin = profileData.role === 'admin';
           setIsAdmin(isUserAdmin);
           if (isUserAdmin || profileData.secretLoginLogged) setIsSpecialAdmin(true);
 
@@ -380,18 +330,12 @@ export default function App() {
           if (firebaseUser) {
             const q = query(
               collection(db, 'userMessages'), 
-              where('userId', '==', firebaseUser.uid)
+              where('userId', '==', firebaseUser.uid),
+              orderBy('createdAt', 'desc')
             );
             unsubscribeMessages = onSnapshot(q, (snap) => {
-              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-              // Sort client-side to avoid needing a composite index
-              const sortedMessages = messages.sort((a, b) => {
-                const timeA = a.createdAt?.toMillis?.() || 0;
-                const timeB = b.createdAt?.toMillis?.() || 0;
-                return timeB - timeA;
-              });
-
-              const myMessage = sortedMessages.find((m: any) => m.showCount > 0);
+              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              const myMessage: any = messages.find((m: any) => m.showCount > 0);
               
               if (myMessage && !currentUserMessage) {
                 setCurrentUserMessage(myMessage);
