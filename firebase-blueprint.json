@@ -224,7 +224,6 @@
         "showFooterCredit": { "type": "boolean" },
         "leaderboardVisible": { "type": "boolean" },
         "registrationEnabled": { "type": "boolean" },
-        "adminRankingTime": { "type": "number" },
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
     },

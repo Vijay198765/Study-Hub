@@ -2,24 +2,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
 
 export default function LeaderboardScroller() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [siteConfig, setSiteConfig] = useState<any>(null);
 
   useEffect(() => {
-    // 1. Listen to site config
-    const configUnsub = onSnapshot(doc(db, 'config', 'site'), (snap) => {
-      if (snap.exists()) {
-        setSiteConfig(snap.data());
-      }
-    });
-
-    // 2. Listen to users
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc'),
@@ -41,16 +32,13 @@ export default function LeaderboardScroller() {
       if (adminIdx !== -1) {
         const adminUser = { ...finalUsers[adminIdx] };
         finalUsers.splice(adminIdx, 1);
+        finalUsers = finalUsers.slice(0, 14);
         
-        // Use manual time if set in config, otherwise use real time
-        if (siteConfig?.adminRankingTime !== undefined && siteConfig.adminRankingTime !== null) {
-          adminUser.totalTimeSpent = siteConfig.adminRankingTime;
+        if (finalUsers.length > 0) {
+          const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
+          adminUser.totalTimeSpent = secondPlaceTime + 25; 
         }
-
-        finalUsers.push(adminUser);
-        // Re-sort because manual time might change rank
-        finalUsers.sort((a, b) => (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0));
-        finalUsers = finalUsers.slice(0, 15);
+        finalUsers.unshift(adminUser);
       } else {
         finalUsers = finalUsers.slice(0, 15);
       }
@@ -61,11 +49,8 @@ export default function LeaderboardScroller() {
       setLoading(false);
     });
 
-    return () => {
-      unsub();
-      configUnsub();
-    };
-  }, [siteConfig?.adminRankingTime]);
+    return () => unsub();
+  }, []);
 
   if (loading || topUsers.length === 0) return null;
 
