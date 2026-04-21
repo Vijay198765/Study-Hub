@@ -380,12 +380,18 @@ export default function App() {
           if (firebaseUser) {
             const q = query(
               collection(db, 'userMessages'), 
-              where('userId', '==', firebaseUser.uid),
-              orderBy('createdAt', 'desc')
+              where('userId', '==', firebaseUser.uid)
             );
             unsubscribeMessages = onSnapshot(q, (snap) => {
-              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              const myMessage: any = messages.find((m: any) => m.showCount > 0);
+              const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+              // Sort client-side to avoid needing a composite index
+              const sortedMessages = messages.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis?.() || 0;
+                const timeB = b.createdAt?.toMillis?.() || 0;
+                return timeB - timeA;
+              });
+
+              const myMessage = sortedMessages.find((m: any) => m.showCount > 0);
               
               if (myMessage && !currentUserMessage) {
                 setCurrentUserMessage(myMessage);
