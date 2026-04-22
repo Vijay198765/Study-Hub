@@ -52,6 +52,8 @@ export interface User {
   createdAt: any;
   isLegend?: boolean;
   secretLoginLogged?: boolean;
+  showOnLeaderboard?: boolean;
+  pinnedToTop?: boolean;
   totalTimeSpent?: number; // in minutes
   lastActive?: any;
   ip?: string;

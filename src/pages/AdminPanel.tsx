@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
@@ -1647,21 +1647,21 @@ export default function AdminPanel() {
                     <tr className="border-b border-white/10">
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40 text-center">Leaderboard</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
-                      <th className="py-4 px-4 text-sm font-medium text-white/40">Device Info</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com')
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
                       .map((user) => (
-                      <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
+                      <tr key={user.uid} className={`border-b border-white/5 hover:bg-white/5 transition-all group ${user.email === 'vijayninama683@gmail.com' ? 'bg-neon-blue/5' : ''}`}>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                            <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden relative">
                               {user.photoURL ? (
                                 <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
@@ -1669,14 +1669,40 @@ export default function AdminPanel() {
                                   <Users size={20} />
                                 </div>
                               )}
+                              {user.pinnedToTop && (
+                                <div className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full p-0.5">
+                                  <Crown size={10} />
+                                </div>
+                              )}
                             </div>
-                            <span className="text-white font-medium">
-                              {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? 'Main Administrator' : (user.name || 'Anonymous')}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-white font-medium">
+                                {(user.email?.toLowerCase() === 'vijayninama683@gmail.com') ? 'Main Administrator' : (user.name || 'Anonymous')}
+                              </span>
+                              {user.showOnLeaderboard === false && (
+                                <span className="text-[8px] text-red-500 font-bold uppercase">Hidden from Leaderboard</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white/60">
                           {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? '••••••••@gmail.com' : user.email}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col items-center gap-2">
+                             <button
+                               onClick={() => saveUser({ ...user, showOnLeaderboard: user.showOnLeaderboard === false })}
+                               className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${user.showOnLeaderboard !== false ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}
+                             >
+                               {user.showOnLeaderboard !== false ? 'Visible' : 'Hidden'}
+                             </button>
+                             <button
+                               onClick={() => saveUser({ ...user, pinnedToTop: !user.pinnedToTop })}
+                               className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${user.pinnedToTop ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-white/5 border-white/10 text-white/40'}`}
+                             >
+                               {user.pinnedToTop ? 'Pinned Top' : 'Normal'}
+                             </button>
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
@@ -1685,16 +1711,10 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4 text-white/60 font-mono text-xs">
                           {user.ip || user.deviceInfo?.ip || 'N/A'}
-                        </td>
-                        <td className="py-4 px-4">
-                          {user.deviceInfo ? (
-                            <div className="text-[10px] text-white/40 space-y-0.5">
-                              <p className="truncate max-w-[150px]" title={user.deviceInfo.userAgent}>UA: {user.deviceInfo.userAgent}</p>
-                              <p>Platform: {user.deviceInfo.platform}</p>
-                              <p>Res: {user.deviceInfo.screenResolution}</p>
+                          {user.deviceInfo && (
+                            <div className="text-[10px] text-white/40 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {user.deviceInfo.platform} • {user.deviceInfo.screenResolution}
                             </div>
-                          ) : (
-                            <span className="text-[10px] text-white/20 italic">No info</span>
                           )}
                         </td>
                         <td className="py-4 px-4">

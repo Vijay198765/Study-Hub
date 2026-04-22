@@ -102,13 +102,15 @@ export default function Login() {
     } catch (err: any) {
       console.error("Login error:", err);
       if (err.code === 'auth/popup-blocked') {
-        setError('Popup blocked by browser. Please allow popups for this site and try again.');
+        setError('Popup blocked! Please click the login button again or try opening the site in a new tab.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. This usually means a connection to Firebase was blocked. Check your internet or disable ad-blockers.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError('This domain is not authorized for login. Please check Firebase console settings.');
+        setError('This domain is not authorized for login. Check Firebase Console > Auth > Settings > Authorized domains.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError('Google Login is not enabled in the Firebase console. Please enable it in Authentication > Sign-in method.');
+        setError('Google Login is not enabled in the Firebase console.');
       } else {
-        setError('Failed to login with Gmail. Please try again.');
+        setError('Failed to login with Gmail. If this persists, try refreshing the page or using a different browser.');
       }
     } finally {
       setLoading(false);

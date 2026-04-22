@@ -23,8 +23,10 @@ const app = initializeApp(config);
 export const auth = getAuth(app);
 
 // Use initializeFirestore with memoryLocalCache to prevent assertion failures in sandboxed environments
+// Enable long polling to bypass restrictive network/firewall environments
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
+  experimentalForceLongPolling: true,
 }, import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)');
 
 export const storage = getStorage(app);
@@ -86,10 +88,15 @@ export function handleFirestoreError(error: any, operationType: OperationType, p
 export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
+  } catch (error: any) {
+    if (error.code === 'permission-denied') {
+       // This is actually good - it means it REACHED the server and got rejected (expected if no test doc exists)
+       return;
     }
-    // Skip logging for other errors, as this is simply a connection test.
+    if (error.message?.includes('the client is offline') || error.message?.includes('unavailable')) {
+      console.warn("Firebase Connection Warning: Unable to reach the backend. This might be a temporary network issue or a restricted firewall.");
+    } else {
+      console.error("Firebase Configuration Error: Please verify your Firebase project settings and ensure the current domain is allowlisted.", error);
+    }
   }
 }

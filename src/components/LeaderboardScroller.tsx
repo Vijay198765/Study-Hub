@@ -23,25 +23,14 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
+      const filtered = users.filter(u => u.name && !u.secretLoginLogged && u.showOnLeaderboard !== false);
       
-      const adminEmail = 'vijayninama683@gmail.com';
-      const adminIdx = filtered.findIndex(u => u.email?.toLowerCase() === adminEmail);
-      
-      let finalUsers = [...filtered];
-      if (adminIdx !== -1) {
-        const adminUser = { ...finalUsers[adminIdx] };
-        finalUsers.splice(adminIdx, 1);
-        finalUsers = finalUsers.slice(0, 14);
-        
-        if (finalUsers.length > 0) {
-          const secondPlaceTime = finalUsers[0].totalTimeSpent || 0;
-          adminUser.totalTimeSpent = secondPlaceTime + 25; 
-        }
-        finalUsers.unshift(adminUser);
-      } else {
-        finalUsers = finalUsers.slice(0, 15);
-      }
+      // Sort: pinnedToTop first, then by totalTimeSpent
+      const finalUsers = [...filtered].sort((a, b) => {
+        if (a.pinnedToTop && !b.pinnedToTop) return -1;
+        if (!a.pinnedToTop && b.pinnedToTop) return 1;
+        return (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0);
+      }).slice(0, 15);
 
       setTopUsers(finalUsers);
       setLoading(false);
