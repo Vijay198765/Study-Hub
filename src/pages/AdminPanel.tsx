@@ -1122,7 +1122,7 @@ export default function AdminPanel() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-neon-pink text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'text-white/60 hover:text-white'}`}
               >
                 <Zap size={16} className="inline-block mr-1.5" />
-                Alerts
+                News Ticker
               </button>
             )}
 
@@ -1132,7 +1132,7 @@ export default function AdminPanel() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'userMessages' ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'text-white/60 hover:text-white'}`}
               >
                 <MessageSquare size={16} className="inline-block mr-1.5" />
-                Targeted Messages
+                Push Alerts
               </button>
             )}
 
@@ -1155,8 +1155,8 @@ export default function AdminPanel() {
             <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/40 p-6 rounded-3xl border border-white/10">
                 <div>
-                  <h2 className="text-3xl font-display font-bold text-neon-pink mb-1">Push Notifications</h2>
-                  <p className="text-white/40 text-xs">Send instant alerts to active users</p>
+                  <h2 className="text-3xl font-display font-bold text-neon-pink mb-1">News & Alerts Ticker</h2>
+                  <p className="text-white/40 text-xs">These alerts appear in the scrolling ticker for all users</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <button 
@@ -1655,7 +1655,15 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {users
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com')
+                      .filter(u => {
+                        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
+                        const currentUserEmail = auth.currentUser?.email?.toLowerCase();
+                        // ONLY the main admin can see themselves in the list
+                        if (isMainAdmin) {
+                          return currentUserEmail === 'vijayninama683@gmail.com';
+                        }
+                        return true;
+                      })
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
                       .map((user) => (
                       <tr key={user.uid} className={`border-b border-white/5 hover:bg-white/5 transition-all group ${user.email === 'vijayninama683@gmail.com' ? 'bg-neon-blue/5' : ''}`}>
@@ -3239,20 +3247,28 @@ export default function AdminPanel() {
                     </div>
 
                     {isSuperAdmin && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest flex items-center gap-2">
-                          <Lock size={14} /> Admin Security Key
-                        </label>
-                        <div className="relative">
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-white/20">Legacy Master Key</label>
                           <input 
                             type="text" 
-                            placeholder="Current: 101987"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white font-mono focus:border-neon-blue outline-none transition-all"
-                            value={siteConfig?.adminUnlockKey || '101987'}
-                            onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
+                            placeholder="Default: Vijay1987"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            value={siteConfig?.secretLoginKey || ''}
+                            onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
                           />
                         </div>
-                        <p className="text-[10px] text-white/20 italic">Master key for full dashboard access. Default: 101987</p>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-white/20">Legacy Master Password (Optional)</label>
+                          <input 
+                            type="text" 
+                            placeholder="Add pass for legacy key"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            value={siteConfig?.secretLoginPassword || ''}
+                            onChange={(e) => saveSiteConfig({ secretLoginPassword: e.target.value })}
+                          />
+                        </div>
                       </div>
                     )}
 
@@ -3613,7 +3629,8 @@ export default function AdminPanel() {
                          value={newUserMsg.userId}
                          onChange={(e) => setNewUserMsg({ ...newUserMsg, userId: e.target.value })}
                        >
-                         <option value="" className="bg-zinc-900">Select a student...</option>
+                         <option value="" className="bg-zinc-900">Select a target...</option>
+                          <option value="all" className="bg-zinc-900 border-b border-white/10 text-orange-500 font-bold">📢 ALL USERS (Broadcast Alert)</option>
                          {users.map(u => (
                            <option key={u.uid} value={u.uid} className="bg-zinc-900">{u.name || u.email} ({u.email})</option>
                          ))}
@@ -3681,7 +3698,9 @@ export default function AdminPanel() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Targeted To</span>
-                          <span className="text-xs font-bold text-white uppercase tracking-widest">{users.find(u => u.uid === msg.userId)?.name || 'Unknown User'}</span>
+                          <span className="text-xs font-bold text-white uppercase tracking-widest">
+                            {msg.userId === 'all' ? '📢 ALL USERS' : (users.find(u => u.uid === msg.userId)?.name || 'Unknown User')}
+                          </span>
                         </div>
                         <p className="text-white/80 text-sm leading-relaxed">{msg.message}</p>
                         <div className="flex items-center gap-4 pt-2">

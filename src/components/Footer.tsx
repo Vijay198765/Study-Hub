@@ -37,6 +37,7 @@ export default function Footer({ siteConfig }: FooterProps) {
     // Check if key matches legacy or any profile
     const matchedProfile = secretProfiles.find((p: any) => p.key === secretKey);
     const isLegacyMatch = secretKey === legacySecretKey;
+    const legacySecretPassword = siteConfig?.secretLoginPassword;
 
     if (matchedProfile || isLegacyMatch) {
       // Check if profile is enabled
@@ -45,9 +46,15 @@ export default function Footer({ siteConfig }: FooterProps) {
         return;
       }
 
-      // Check password if profile has one
+      // Check password for matched profile
       if (matchedProfile && matchedProfile.password && matchedProfile.password !== password) {
         toast.error('Incorrect password for this profile');
+        return;
+      }
+
+      // Check password for legacy match
+      if (isLegacyMatch && !matchedProfile && legacySecretPassword && legacySecretPassword !== password) {
+        toast.error('Incorrect password for master access');
         return;
       }
 

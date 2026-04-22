@@ -330,7 +330,7 @@ export default function App() {
           if (firebaseUser) {
             const q = query(
               collection(db, 'userMessages'), 
-              where('userId', '==', firebaseUser.uid)
+              where('userId', 'in', [firebaseUser.uid, 'all'])
             );
             unsubscribeMessages = onSnapshot(q, (snap) => {
               const messages = snap.docs
@@ -347,10 +347,13 @@ export default function App() {
                 setShowMessage(true);
                 setMessageTimer(myMessage.duration || 10);
                 
-                // Decrement showCount
-                updateDoc(doc(db, 'userMessages', myMessage.id), {
-                  showCount: myMessage.showCount - 1
-                });
+                // Decrement showCount ONLY for targeted individual messages
+                // Global messages (userId === 'all') should not be auto-decremented by a single user's view
+                if (myMessage.userId !== 'all') {
+                  updateDoc(doc(db, 'userMessages', myMessage.id), {
+                    showCount: myMessage.showCount - 1
+                  });
+                }
               }
             });
           }
@@ -495,6 +498,10 @@ export default function App() {
               )}
 
               <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
+              
+              <div className="pt-[64px]">
+                <NewsTicker />
+              </div>
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">

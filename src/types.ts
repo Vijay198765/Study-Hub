@@ -161,6 +161,7 @@ export interface SiteConfig {
   showSecretLoginEntry?: boolean;
   showDashboardLinkForSecret?: boolean;
   secretLoginKey?: string;
+  secretLoginPassword?: string;
   secretProfiles?: SecretProfile[];
   limitedAdminTabs?: string[];
   adminUnlockKey?: string;

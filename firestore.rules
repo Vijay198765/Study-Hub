@@ -128,7 +128,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (
-          (request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com") ||
+          (request.auth.token.email.lower() == "vijayninama683@gmail.com") ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true))
@@ -317,6 +317,17 @@ service cloud.firestore {
              (!('showFooterCredit' in data) || data.showFooterCredit is bool) &&
              (!('leaderboardVisible' in data) || data.leaderboardVisible is bool) &&
              (!('registrationEnabled' in data) || data.registrationEnabled is bool) &&
+             (!('notificationDuration' in data) || data.notificationDuration is number) &&
+             (!('watermarkText' in data) || (data.watermarkText is string && data.watermarkText.size() < 500)) &&
+             (!('watermarkEnabled' in data) || data.watermarkEnabled is bool) &&
+             (!('bannedIps' in data) || data.bannedIps is list) &&
+             (!('studyTimerEnabled' in data) || data.studyTimerEnabled is bool) &&
+             (!('globalLeaderboardEnabled' in data) || data.globalLeaderboardEnabled is bool) &&
+             (!('guestModeEnabled' in data) || data.guestModeEnabled is bool) &&
+             (!('customFooterText' in data) || (data.customFooterText is string && data.customFooterText.size() < 5000)) &&
+             (!('announcementColor' in data) || (data.announcementColor is string && data.announcementColor.size() < 50)) &&
+             (!('verifyUserEmail' in data) || data.verifyUserEmail is bool) &&
+             (!('secretLoginPassword' in data) || (data.secretLoginPassword is string && data.secretLoginPassword.size() < 100)) &&
              (!('lastUpdated' in data) || (data.lastUpdated is timestamp || data.lastUpdated == request.time));
     }
 
@@ -422,7 +433,7 @@ service cloud.firestore {
         (
           (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
           (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
-          request.auth.token.get('email', '').toLower() == "vijayninama683@gmail.com" ||
+          request.auth.token.email.lower() == "vijayninama683@gmail.com" ||
           (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 

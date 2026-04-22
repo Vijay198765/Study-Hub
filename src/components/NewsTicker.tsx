@@ -10,7 +10,7 @@ export default function NewsTicker() {
 
   useEffect(() => {
     const q = query(
-      collection(db, 'news'),
+      collection(db, 'notifications'),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
