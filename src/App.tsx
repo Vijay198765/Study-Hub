@@ -19,7 +19,7 @@ import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy, where, getDocFromCache, getDocFromServer } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
@@ -229,10 +229,27 @@ export default function App() {
         
         try {
           // 1. Initial Profile Setup/Upgrade (one-time action)
-          const docSnap = await getDoc(userRef);
+          // Try to get document from server with a short timeout, fallback to cache if available
+          let docSnap;
+          try {
+            // First attempt to get from cache to be fast
+            docSnap = await getDocFromCache(userRef);
+            console.log("Profile loaded from local cache.");
+          } catch (cacheError) {
+            // If not in cache, try to fetch from server
+            try {
+              docSnap = await getDoc(userRef);
+            } catch (serverError: any) {
+              // If we're offline, this will fail. We'll handle it below.
+              console.warn("Could not reach Firestore for profile setup, will retry via snapshot:", serverError.message);
+              // Throw it so we catch it in the outer block and log properly if needed
+              throw serverError;
+            }
+          }
+
           let profileData: any = null;
 
-          if (docSnap.exists()) {
+          if (docSnap && docSnap.exists()) {
             profileData = docSnap.data();
             
             // Side-effect updates (IP, photo, name, secret upgrade)
@@ -397,8 +414,23 @@ export default function App() {
             }
           });
 
-        } catch (error) {
-          console.error("Critical error in user profile setup:", error);
+        } catch (error: any) {
+          if (error.message?.includes('offline')) {
+            console.warn("Profile setup: Client is currently offline. Relying on background listeners once online.");
+            // Set a basic temporary profile so the app doesn't stay in a broken state
+            const tempProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.displayName || 'Guest',
+              role: 'student',
+              isOffline: true
+            };
+            setUserProfile(tempProfile);
+            const isUserAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
+            setIsAdmin(isUserAdmin);
+          } else {
+            console.error("Critical error in user profile setup:", error);
+          }
         } finally {
           setLoading(false);
         }
