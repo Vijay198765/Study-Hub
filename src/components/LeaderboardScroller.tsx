@@ -31,7 +31,7 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const filtered = users.filter(u => u.name && !u.secretLoginLogged && u.showOnLeaderboard !== false);
+      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
       
       // Sort priority:
       // 1. Globally pinned in SiteConfig (and not expired)

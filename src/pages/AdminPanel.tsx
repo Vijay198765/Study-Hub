@@ -1660,7 +1660,6 @@ export default function AdminPanel() {
                     <tr className="border-b border-white/10">
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
-                      <th className="py-4 px-4 text-sm font-medium text-white/40 text-center">Leaderboard</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
@@ -1668,18 +1667,10 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {users
-                      .filter(u => {
-                        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-                        const currentUserEmail = auth.currentUser?.email?.toLowerCase();
-                        // ONLY the main admin can see themselves in the list
-                        if (isMainAdmin) {
-                          return currentUserEmail === 'vijayninama683@gmail.com';
-                        }
-                        return true;
-                      })
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
                       .map((user) => (
-                      <tr key={user.uid} className={`border-b border-white/5 hover:bg-white/5 transition-all group ${user.email === 'vijayninama683@gmail.com' ? 'bg-neon-blue/5' : ''}`}>
+                      <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden relative">
@@ -1698,26 +1689,13 @@ export default function AdminPanel() {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-white font-medium">
-                                {(user.email?.toLowerCase() === 'vijayninama683@gmail.com') ? 'Main Administrator' : (user.name || 'Anonymous')}
+                                {user.name || 'Anonymous'}
                               </span>
-                              {user.showOnLeaderboard === false && (
-                                <span className="text-[8px] text-red-500 font-bold uppercase">Hidden from Leaderboard</span>
-                              )}
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white/60">
-                          {(user.email?.toLowerCase() === 'vijayninama683@gmail.com' && !isSuperAdmin) ? '••••••••@gmail.com' : user.email}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex flex-col items-center gap-2">
-                             <button
-                               onClick={() => saveUser({ ...user, showOnLeaderboard: user.showOnLeaderboard === false })}
-                               className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${user.showOnLeaderboard !== false ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}
-                             >
-                               {user.showOnLeaderboard !== false ? 'Visible' : 'Hidden'}
-                             </button>
-                          </div>
+                          {user.email}
                         </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
@@ -3111,7 +3089,7 @@ export default function AdminPanel() {
                                 onChange={(e) => setPinUserId(e.target.value)}
                               >
                                 <option value="" className="bg-dark-bg">Choose a student...</option>
-                                {users.filter(u => u.name && u.role === 'student' && u.email !== 'vijayninama683@gmail.com').map(u => (
+                                {users.filter(u => u.name && u.role === 'student' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').map(u => (
                                   <option key={u.uid} value={u.uid} className="bg-dark-bg">{u.name} ({u.email?.split('@')[0]})</option>
                                 ))}
                               </select>
@@ -3867,7 +3845,9 @@ export default function AdminPanel() {
                         onChange={(e) => setSelectedIdentityUid(e.target.value)}
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
-                        {users.filter(u => u.name).map(u => (
+                        {users
+                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                          .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
                              {u.name} ({u.email || u.uid.substring(0, 8)})
                           </option>

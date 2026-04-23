@@ -30,8 +30,8 @@ export default function Leaderboard() {
         ...doc.data()
       })) as UserProfile[];
       
-      // Filter out users who have a name AND respect hidden status
-      const filtered = users.filter(u => u.name && !u.secretLoginLogged && u.showOnLeaderboard !== false);
+      // Filter out users who have a name
+      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
       
       // Sort priority:
       // 1. Check if user is globally pinned in SiteConfig (and not expired)
