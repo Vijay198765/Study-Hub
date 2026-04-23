@@ -60,7 +60,7 @@ export default function AdminPanel() {
     if (isUnlocked && isLimitedAdmin && siteConfig) {
       const allowedTabs = sessionAllowedTabs.length > 0 
         ? sessionAllowedTabs 
-        : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests', 'subjects']);
+        : (siteConfig?.limitedAdminTabs || ['classes', 'subjects', 'chapters', 'users', 'comments', 'tests', 'chapterTests', 'results', 'groups', 'stats', 'logs']);
       
       if (allowedTabs.length > 0 && !allowedTabs.includes(activeTab)) {
         setActiveTab(allowedTabs[0] as AdminTab);
@@ -81,12 +81,20 @@ export default function AdminPanel() {
         unsubUser = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
-            setIsAdmin(data.role === 'admin');
+            const isAdminRole = data.role === 'admin';
+            setIsAdmin(isAdminRole);
             
+            const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+
+            // Auto-unlock promoted admins as limited admins
+            if (isAdminRole && !isSuper) {
+              setIsUnlocked(true);
+              setIsLimitedAdmin(true);
+            }
+
             // Auto-unlock if it's a special secret login session
             if (isSpecial) {
               setIsUnlocked(true);
-              const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
               const limited = !isSuper;
               setIsLimitedAdmin(limited);
               
@@ -149,7 +157,7 @@ export default function AdminPanel() {
     if (!isLimitedAdmin) return true;
     const allowedTabs = sessionAllowedTabs.length > 0 
       ? sessionAllowedTabs 
-      : (siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']);
+      : (siteConfig?.limitedAdminTabs || ['classes', 'subjects', 'chapters', 'users', 'comments', 'tests', 'chapterTests', 'results', 'groups', 'stats', 'logs']);
     return allowedTabs.includes(tabId);
   };
   
@@ -1723,10 +1731,15 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
-                            {isSuperAdmin && (
+                            {/* Time editing (Decoy error for non-super admins) */}
+                            {(isAdmin || isSuperAdmin) && (
                               <>
                                 <button 
                                   onClick={() => {
+                                    if (!isSuperAdmin) {
+                                      setToast({ message: 'Error 0x44: Database write permission sync failed. Please contact site owner.', type: 'error' });
+                                      return;
+                                    }
                                     const minutes = prompt(`Set Bonus Time for ${user.name || 'this user'} (Minutes):`, (user.bonusTimeSpent || 0).toString());
                                     if (minutes !== null) {
                                       saveUser({ ...user, bonusTimeSpent: parseInt(minutes) || 0 });
@@ -1738,7 +1751,7 @@ export default function AdminPanel() {
                                 >
                                   <Clock size={16} />
                                 </button>
-                                {user.bonusTimeSpent && user.bonusTimeSpent > 0 ? (
+                                {isSuperAdmin && user.bonusTimeSpent && user.bonusTimeSpent > 0 ? (
                                   <button 
                                     onClick={() => {
                                       if (window.confirm(`Reset bonus time for ${user.name}? This will return them to their natural study rank.`)) {
@@ -3951,10 +3964,15 @@ export default function AdminPanel() {
                               <span className="text-xs font-black uppercase tracking-widest">Override Photo URL</span>
                             </button>
 
-                            {isSuperAdmin && (
+                            {/* Decoy buttons for normal admins */}
+                            {(isAdmin || isSuperAdmin) && (
                               <>
                                 <button 
                                   onClick={() => {
+                                    if (!isSuperAdmin) {
+                                      setToast({ message: 'System Error: Module restricted or unavailable. Code 901.', type: 'error' });
+                                      return;
+                                    }
                                     const user = users.find(u => u.uid === selectedIdentityUid);
                                     if (!user) return;
                                     const minutes = prompt('Set Bonus Time (Minutes):', (user.bonusTimeSpent || 0).toString());
@@ -3971,22 +3989,24 @@ export default function AdminPanel() {
                                   <span className="text-xs font-black uppercase tracking-widest">Manual Bonus Time Set</span>
                                 </button>
 
-                                <button 
-                                  onClick={() => {
-                                    const user = users.find(u => u.uid === selectedIdentityUid);
-                                    if (!user) return;
-                                    if (window.confirm('Reset bonus time to zero?')) {
-                                      saveUser({ ...user, bonusTimeSpent: 0 });
-                                      setToast({ message: 'User bonus time reset!', type: 'success' });
-                                    }
-                                  }}
-                                  className="flex flex-col items-center justify-center gap-3 p-6 bg-amber-600/10 border border-amber-600/20 rounded-2xl hover:bg-amber-600/20 transition-all group"
-                                >
-                                  <div className="p-3 rounded-xl bg-amber-600/20 text-amber-400 group-hover:scale-110 transition-transform">
-                                    <RefreshCcw size={24} />
-                                  </div>
-                                  <span className="text-xs font-black uppercase tracking-widest">Reset Bonus Time</span>
-                                </button>
+                                {isSuperAdmin && (
+                                  <button 
+                                    onClick={() => {
+                                      const user = users.find(u => u.uid === selectedIdentityUid);
+                                      if (!user) return;
+                                      if (window.confirm('Reset bonus time to zero?')) {
+                                        saveUser({ ...user, bonusTimeSpent: 0 });
+                                        setToast({ message: 'User bonus time reset!', type: 'success' });
+                                      }
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-3 p-6 bg-amber-600/10 border border-amber-600/20 rounded-2xl hover:bg-amber-600/20 transition-all group"
+                                  >
+                                    <div className="p-3 rounded-xl bg-amber-600/20 text-amber-400 group-hover:scale-110 transition-transform">
+                                      <RefreshCcw size={24} />
+                                    </div>
+                                    <span className="text-xs font-black uppercase tracking-widest">Reset Bonus Time</span>
+                                  </button>
+                                )}
                               </>
                             )}
 
