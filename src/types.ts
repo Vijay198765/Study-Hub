@@ -55,7 +55,8 @@ export interface User {
   secretLoginLogged?: boolean;
   showOnLeaderboard?: boolean;
   pinnedToTop?: boolean;
-  totalTimeSpent?: number; // in minutes
+  totalTimeSpent?: number; // in minutes (natural)
+  bonusTimeSpent?: number; // in minutes (manual adjustment)
   lastActive?: any;
   ip?: string;
   deviceInfo?: {

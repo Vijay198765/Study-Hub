@@ -46,7 +46,8 @@ export default function Leaderboard() {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
         const isPinned = pinnedUids.has(u.uid) || u.pinnedToTop;
         
-        if (isMainAdmin && !isPinned) return false;
+        // Show main admin normally now as requested
+        if (isMainAdmin) return true;
         
         return u.name && !u.secretLoginLogged;
       });
@@ -57,7 +58,11 @@ export default function Leaderboard() {
 
         if (aPinned && !bPinned) return -1;
         if (!aPinned && bPinned) return 1;
-        return (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0);
+        
+        // Rank by combined time
+        const aTotal = (a.totalTimeSpent || 0) + (a.bonusTimeSpent || 0);
+        const bTotal = (b.totalTimeSpent || 0) + (b.bonusTimeSpent || 0);
+        return bTotal - aTotal;
       }).slice(0, 10);
 
       setTopUsers(finalUsers);

@@ -1621,12 +1621,15 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => {
-                    const headers = ['Name', 'Email', 'Role', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
+                    const headers = ['Name', 'Email', 'Role', 'Natural Time (Min)', 'Bonus Time (Min)', 'Total Time (Min)', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
                     const csvData = users
                       .map(u => [
                         u.name || 'Anonymous',
                         u.email,
                         u.role,
+                        u.totalTimeSpent || 0,
+                        u.bonusTimeSpent || 0,
+                        (u.totalTimeSpent || 0) + (u.bonusTimeSpent || 0),
                         u.createdAt,
                         u.photoURL || '',
                         u.deviceInfo?.userAgent || 'N/A',
@@ -1704,6 +1707,11 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4 text-white font-mono text-xs">
                           {Math.floor((user.totalTimeSpent || 0) / 60)}h {Math.floor((user.totalTimeSpent || 0) % 60)}m
+                          {user.bonusTimeSpent && user.bonusTimeSpent > 0 ? (
+                            <span className="text-emerald-400 ml-1">
+                              (+ {Math.floor(user.bonusTimeSpent / 60)}h {user.bonusTimeSpent % 60}m)
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-4 px-4 text-white/60 font-mono text-xs">
                           {user.ip || user.deviceInfo?.ip || 'N/A'}
@@ -1715,19 +1723,37 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
-                            <button 
-                              onClick={() => {
-                                const minutes = prompt(`Set Total Time Spent for ${user.name || 'this user'} (Minutes):`, (user.totalTimeSpent || 0).toString());
-                                if (minutes !== null) {
-                                  saveUser({ ...user, totalTimeSpent: parseInt(minutes) || 0 });
-                                  setToast({ message: 'User time updated!', type: 'success' });
-                                }
-                              }}
-                              className="p-2 text-emerald-400/40 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-all"
-                              title="Edit Time Spent"
-                            >
-                              <Clock size={16} />
-                            </button>
+                            {isSuperAdmin && (
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    const minutes = prompt(`Set Bonus Time for ${user.name || 'this user'} (Minutes):`, (user.bonusTimeSpent || 0).toString());
+                                    if (minutes !== null) {
+                                      saveUser({ ...user, bonusTimeSpent: parseInt(minutes) || 0 });
+                                      setToast({ message: 'User bonus time updated!', type: 'success' });
+                                    }
+                                  }}
+                                  className="p-2 text-emerald-400/40 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-all"
+                                  title="Edit Bonus Time"
+                                >
+                                  <Clock size={16} />
+                                </button>
+                                {user.bonusTimeSpent && user.bonusTimeSpent > 0 ? (
+                                  <button 
+                                    onClick={() => {
+                                      if (window.confirm(`Reset bonus time for ${user.name}? This will return them to their natural study rank.`)) {
+                                        saveUser({ ...user, bonusTimeSpent: 0 });
+                                        setToast({ message: 'Bonus time reset to natural!', type: 'success' });
+                                      }
+                                    }}
+                                    className="p-2 text-amber-400/40 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
+                                    title="Reset to Natural Time"
+                                  >
+                                    <RefreshCcw size={16} />
+                                  </button>
+                                ) : null}
+                              </>
+                            )}
                             {user.email !== 'vijayninama683@gmail.com' && (
                               <button 
                                 onClick={() => {
@@ -3925,23 +3951,44 @@ export default function AdminPanel() {
                               <span className="text-xs font-black uppercase tracking-widest">Override Photo URL</span>
                             </button>
 
-                            <button 
-                              onClick={() => {
-                                const user = users.find(u => u.uid === selectedIdentityUid);
-                                if (!user) return;
-                                const minutes = prompt('Set Total Time Spent (Minutes):', (user.totalTimeSpent || 0).toString());
-                                if (minutes !== null) {
-                                  saveUser({ ...user, totalTimeSpent: parseInt(minutes) || 0 });
-                                  setToast({ message: 'User time updated!', type: 'success' });
-                                }
-                              }}
-                              className="flex flex-col items-center justify-center gap-3 p-6 bg-emerald-600/10 border border-emerald-600/20 rounded-2xl hover:bg-emerald-600/20 transition-all group"
-                            >
-                              <div className="p-3 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition-transform">
-                                <Clock size={24} />
-                              </div>
-                              <span className="text-xs font-black uppercase tracking-widest">Manual Time Set</span>
-                            </button>
+                            {isSuperAdmin && (
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    const user = users.find(u => u.uid === selectedIdentityUid);
+                                    if (!user) return;
+                                    const minutes = prompt('Set Bonus Time (Minutes):', (user.bonusTimeSpent || 0).toString());
+                                    if (minutes !== null) {
+                                      saveUser({ ...user, bonusTimeSpent: parseInt(minutes) || 0 });
+                                      setToast({ message: 'User bonus time updated!', type: 'success' });
+                                    }
+                                  }}
+                                  className="flex flex-col items-center justify-center gap-3 p-6 bg-emerald-600/10 border border-emerald-600/20 rounded-2xl hover:bg-emerald-600/20 transition-all group"
+                                >
+                                  <div className="p-3 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition-transform">
+                                    <Clock size={24} />
+                                  </div>
+                                  <span className="text-xs font-black uppercase tracking-widest">Manual Bonus Time Set</span>
+                                </button>
+
+                                <button 
+                                  onClick={() => {
+                                    const user = users.find(u => u.uid === selectedIdentityUid);
+                                    if (!user) return;
+                                    if (window.confirm('Reset bonus time to zero?')) {
+                                      saveUser({ ...user, bonusTimeSpent: 0 });
+                                      setToast({ message: 'User bonus time reset!', type: 'success' });
+                                    }
+                                  }}
+                                  className="flex flex-col items-center justify-center gap-3 p-6 bg-amber-600/10 border border-amber-600/20 rounded-2xl hover:bg-amber-600/20 transition-all group"
+                                >
+                                  <div className="p-3 rounded-xl bg-amber-600/20 text-amber-400 group-hover:scale-110 transition-transform">
+                                    <RefreshCcw size={24} />
+                                  </div>
+                                  <span className="text-xs font-black uppercase tracking-widest">Reset Bonus Time</span>
+                                </button>
+                              </>
+                            )}
 
                             <button 
                               onClick={() => {

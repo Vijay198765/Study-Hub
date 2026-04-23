@@ -243,12 +243,19 @@ export default function App() {
             }
             if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+            if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
 
             // Specific constraint for tagged email
             if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
               if (profileData.name !== 'Hania Aamir') {
                 updates.name = 'Hania Aamir';
               }
+            }
+
+            // Also ensure main admin photo is always synced from Google if not overridden
+            const isMainAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
+            if (isMainAdmin && firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
+              updates.photoURL = firebaseUser.photoURL;
             }
 
             // Upgrade anonymous user to admin if they have the special login flags
