@@ -31,7 +31,11 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
+      const filtered = users.filter(u => 
+        u.name && 
+        !u.secretLoginLogged && 
+        u.email?.toLowerCase() !== 'vijayninama683@gmail.com'
+      );
       
       // Sort priority:
       // 1. Globally pinned in SiteConfig (and not expired)

@@ -635,7 +635,7 @@ export default function AdminPanel() {
     { name: 'Classes', value: classes.length },
     { name: 'Chapters', value: chapters.length },
     { name: 'Tests', value: tests.length },
-    { name: 'Users', value: users.length },
+    { name: 'Users', value: users.filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
   ];
 
   const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
@@ -1676,7 +1676,7 @@ export default function AdminPanel() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden relative">
                               {user.photoURL ? (
-                                <img src={transformDriveUrl(user.photoURL)} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={convertDriveUrl(user.photoURL)} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/40">
                                   <Users size={20} />
@@ -3873,7 +3873,7 @@ export default function AdminPanel() {
                             return (
                               <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
                                 <img 
-                                  src={transformDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                                  src={convertDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
                                   className="w-16 h-16 rounded-full border-2 border-indigo-500/50 object-cover" 
                                   referrerPolicy="no-referrer"
                                   onError={(e) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Megaphone, X, ExternalLink } from 'lucide-react';
@@ -11,12 +11,18 @@ export default function AnnouncementBar() {
   useEffect(() => {
     const q = query(
       collection(db, 'notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(1)
+      where('userId', 'in', ['', 'all']),
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const docs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a: any, b: any) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
       setNotifications(docs);
       if (docs.length > 0) setIsVisible(true);
     });

@@ -30,8 +30,12 @@ export default function Leaderboard() {
         ...doc.data()
       })) as UserProfile[];
       
-      // Filter out users who have a name
-      const filtered = users.filter(u => u.name && !u.secretLoginLogged);
+      // Filter out users who have a name, secret logins, and the main admin
+      const filtered = users.filter(u => 
+        u.name && 
+        !u.secretLoginLogged && 
+        u.email?.toLowerCase() !== 'vijayninama683@gmail.com'
+      );
       
       // Sort priority:
       // 1. Check if user is globally pinned in SiteConfig (and not expired)

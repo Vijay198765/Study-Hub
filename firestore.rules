@@ -438,7 +438,7 @@ service cloud.firestore {
         );
       allow update: if isAuthenticated() && 
         (
-          isAdmin() || 
+          (isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com") || 
           (
             request.auth.uid == userId && 
             (
@@ -447,7 +447,7 @@ service cloud.firestore {
             )
           )
         ) && isValidUser(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com";
     }
 
     match /userProgress/{progressId} {

@@ -14,15 +14,23 @@ export default function NewsTicker() {
     const q = query(
       collection(db, 'notifications'),
       where('userId', 'in', ['', 'all']),
-      orderBy('createdAt', 'desc'),
-      limit(10)
+      limit(50)
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      const newsData = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const newsData = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        // Sort by createdAt in-memory to avoid index requirement
+        .sort((a: any, b: any) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        })
+        .slice(0, 10);
+
       setNews(newsData);
     });
 
