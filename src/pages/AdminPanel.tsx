@@ -7,14 +7,14 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { storage, db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc, where 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'userMessages';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'userMessages' | 'identity';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -134,6 +134,9 @@ export default function AdminPanel() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [userMessages, setUserMessages] = useState<any[]>([]);
   
+  const [pinUserId, setPinUserId] = useState('');
+  const [pinDuration, setPinDuration] = useState('24'); // Default 24 hours
+  const [selectedIdentityUid, setSelectedIdentityUid] = useState('');
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
   const [isAddingNotif, setIsAddingNotif] = useState(false);
@@ -1026,6 +1029,16 @@ export default function AdminPanel() {
               </button>
             )}
 
+            {shouldShowTab('identity') && (
+              <button 
+                onClick={() => setActiveTab('identity')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'identity' ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <Fingerprint size={16} className="inline-block mr-1.5" />
+                Managed IDs
+              </button>
+            )}
+
             {shouldShowTab('groups') && (
               <button 
                 onClick={() => setActiveTab('groups')}
@@ -1703,12 +1716,6 @@ export default function AdminPanel() {
                                className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${user.showOnLeaderboard !== false ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}
                              >
                                {user.showOnLeaderboard !== false ? 'Visible' : 'Hidden'}
-                             </button>
-                             <button
-                               onClick={() => saveUser({ ...user, pinnedToTop: !user.pinnedToTop })}
-                               className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${user.pinnedToTop ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-white/5 border-white/10 text-white/40'}`}
-                             >
-                               {user.pinnedToTop ? 'Pinned Top' : 'Normal'}
                              </button>
                           </div>
                         </td>
@@ -3082,6 +3089,102 @@ export default function AdminPanel() {
                         </div>
                       </div>
 
+                      {/* Pinned Scholars on Leaderboard */}
+                      <div className="space-y-4 pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
+                            <Crown size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Pinned Scholars</p>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Managed Top 10 List (Global)</p>
+                          </div>
+                        </div>
+
+                        <div className="glass-card p-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Select Student</label>
+                              <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-yellow-400 appearance-none"
+                                value={pinUserId}
+                                onChange={(e) => setPinUserId(e.target.value)}
+                              >
+                                <option value="" className="bg-dark-bg">Choose a student...</option>
+                                {users.filter(u => u.name && u.role === 'student' && u.email !== 'vijayninama683@gmail.com').map(u => (
+                                  <option key={u.uid} value={u.uid} className="bg-dark-bg">{u.name} ({u.email?.split('@')[0]})</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Duration (Hours)</label>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type="number"
+                                  min="1"
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-yellow-400"
+                                  value={pinDuration}
+                                  onChange={(e) => setPinDuration(e.target.value)}
+                                />
+                                <span className="text-[10px] text-white/20 font-bold">HRS</span>
+                              </div>
+                            </div>
+                            <div className="flex items-end">
+                              <button 
+                                disabled={!pinUserId}
+                                onClick={() => {
+                                  const user = users.find(u => u.uid === pinUserId);
+                                  if (!user) return;
+                                  const hours = parseInt(pinDuration) || 24;
+                                  const expiresAt = new Date(Date.now() + hours * 3600000);
+                                  const newPinned = [...(siteConfig?.pinnedEntries || [])];
+                                  newPinned.push({
+                                    uid: user.uid,
+                                    name: user.name || 'Scholar',
+                                    expiresAt: expiresAt
+                                  });
+                                  saveSiteConfig({ pinnedEntries: newPinned });
+                                  setPinUserId('');
+                                  setToast({ message: `${user.name} pinned for ${hours} hours!`, type: 'success' });
+                                }}
+                                className="w-full bg-yellow-400 text-black font-bold h-[38px] rounded-xl hover:shadow-[0_0_15px_rgba(250,204,21,0.4)] transition-all disabled:opacity-50 text-xs uppercase"
+                              >
+                                Add to Pinned
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* List of currently pinned */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                            {(siteConfig?.pinnedEntries || []).map((entry, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                   <Crown size={14} className="text-yellow-400" />
+                                   <div>
+                                     <p className="text-xs font-bold text-white truncate max-w-[150px]">{entry.name}</p>
+                                     <p className="text-[10px] text-white/40">Expires: {new Date(entry.expiresAt?.seconds ? entry.expiresAt.seconds * 1000 : entry.expiresAt).toLocaleString()}</p>
+                                   </div>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    const newPinned = siteConfig?.pinnedEntries?.filter((_, i) => i !== idx);
+                                    saveSiteConfig({ pinnedEntries: newPinned });
+                                  }}
+                                  className="p-1.5 text-white/20 hover:text-red-500 transition-colors"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            {(siteConfig?.pinnedEntries || []).length === 0 && (
+                              <div className="sm:col-span-2 text-center py-4 text-white/10 italic text-[10px] uppercase tracking-widest">
+                                No scholars currently pinned
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* System Optimization Controls */}
                       <div className="pt-4 border-t border-white/5 space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">System Optimization</h4>
@@ -3730,6 +3833,237 @@ export default function AdminPanel() {
                     <p className="italic text-sm">No targeted messages found.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'identity' && (
+            <div className="space-y-8">
+              <div className="bg-black/40 p-8 rounded-3xl border border-white/10">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="p-3 rounded-2xl bg-indigo-600/20 text-indigo-400">
+                    <Fingerprint size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white mb-1">Managed Identities</h2>
+                    <p className="text-white/40 text-sm italic">Nuclear profile management and identity synchronization</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* User Selector & Identity Controls */}
+                <div className="space-y-6">
+                  <div className="glass-card p-6 space-y-4">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Users size={20} className="text-indigo-400" />
+                      Select Target Scholar
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <select 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-indigo-500 outline-none transition-all appearance-none"
+                        value={selectedIdentityUid}
+                        onChange={(e) => setSelectedIdentityUid(e.target.value)}
+                      >
+                        <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
+                        {users.filter(u => u.name).map(u => (
+                          <option key={u.uid} value={u.uid} className="bg-zinc-900">
+                             {u.name} ({u.email || u.uid.substring(0, 8)})
+                          </option>
+                        ))}
+                      </select>
+
+                      {!selectedIdentityUid ? (
+                         <div className="p-12 border-2 border-dashed border-white/5 rounded-2xl text-center">
+                            <ShieldAlert size={48} className="mx-auto text-white/5 mb-4" />
+                            <p className="text-white/20 text-xs font-bold uppercase tracking-widest">Select a user to unlock identity tools</p>
+                         </div>
+                      ) : (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-6 pt-4"
+                        >
+                          {/* Profile Overview */}
+                          {(() => {
+                            const user = users.find(u => u.uid === selectedIdentityUid);
+                            if (!user) return null;
+                            return (
+                              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                <img 
+                                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                                  className="w-16 h-16 rounded-full border-2 border-indigo-500/50" 
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'S')}&background=random&color=fff`;
+                                  }}
+                                />
+                                <div>
+                                  <p className="text-lg font-bold text-white">{user.name}</p>
+                                  <p className="text-xs text-white/40 font-mono">{user.email}</p>
+                                  <p className="text-[10px] text-indigo-400 font-bold uppercase mt-1">UID: {user.uid}</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Identity Actions */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button 
+                              onClick={() => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                const url = prompt('Set New Photo URL (Direct Link):', user.photoURL || '');
+                                if (url !== null) {
+                                  saveUser({ ...user, photoURL: url, photoURLOverridden: true });
+                                  setToast({ message: 'Identity photo updated!', type: 'success' });
+                                }
+                              }}
+                              className="flex flex-col items-center justify-center gap-3 p-6 bg-indigo-600/10 border border-indigo-600/20 rounded-2xl hover:bg-indigo-600/20 transition-all group"
+                            >
+                              <div className="p-3 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition-transform">
+                                <Image size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest">Override Photo URL</span>
+                            </button>
+
+                            <button 
+                              onClick={async () => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                if (confirm(`NUCLEAR RESET for ${user.name} (${user.email})?\n\nThis will DELETE:\n- ALL Activity Logs\n- ALL Quiz/Test History\n- ALL Progress Data\n\nThis is irreversible!`)) {
+                                   setToast({ message: 'Executing Nuclear Reset...', type: 'info' });
+                                   try {
+                                      // 1. Delete Activity Logs
+                                      const logSnap = await getDocs(query(collection(db, 'activityLogs'), where('userId', '==', user.uid)));
+                                      await Promise.all(logSnap.docs.map(d => deleteDoc(d.ref)));
+
+                                      // 2. Delete Test Results
+                                      const resSnap = await getDocs(query(collection(db, 'testResults'), where('studentUid', '==', user.uid)));
+                                      await Promise.all(resSnap.docs.map(d => deleteDoc(d.ref)));
+
+                                      // 3. Delete Progress
+                                      const progSnap = await getDocs(query(collection(db, 'userProgress'), where('userId', '==', user.uid)));
+                                      await Promise.all(progSnap.docs.map(d => deleteDoc(d.ref)));
+
+                                      // 4. Force Update Profile
+                                      await saveUser({ 
+                                        ...user, 
+                                        totalTimeSpent: 0,
+                                        pinnedToTop: false,
+                                        showOnLeaderboard: true,
+                                        photoURLOverridden: false,
+                                        photoURL: '' // Clear photo to force re-fetch from Google
+                                      });
+
+                                      setToast({ message: 'Nuclear cleaning finished!', type: 'success' });
+                                   } catch (e) {
+                                      console.error(e);
+                                      setToast({ message: 'Nucleus reset failed.', type: 'error' });
+                                   }
+                                }
+                              }}
+                              className="flex flex-col items-center justify-center gap-3 p-6 bg-red-600/10 border border-red-600/20 rounded-2xl hover:bg-red-600/20 transition-all group"
+                            >
+                              <div className="p-3 rounded-xl bg-red-600/20 text-red-500 group-hover:scale-110 transition-transform">
+                                <RefreshCcw size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest text-red-500">Nuclear Data Reset</span>
+                            </button>
+
+                            <button 
+                              onClick={async () => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                if (confirm(`PERMANENTLY DELETE USER DOCUMENT for ${user.name}?\n\nThis will remove them from the database entirely. They will need to log in again to recreat their profile. Any logs/test results will become orphaned unless deleted first.\n\nContinue?`)) {
+                                   try {
+                                      await removeUser(user.uid);
+                                      setSelectedIdentityUid('');
+                                      setToast({ message: 'User document deleted.', type: 'success' });
+                                   } catch (e) {
+                                      console.error(e);
+                                      setToast({ message: 'Deletion failed.', type: 'error' });
+                                   }
+                                }
+                              }}
+                              className="flex flex-col items-center justify-center gap-3 p-6 bg-red-900/10 border border-red-900/20 rounded-2xl hover:bg-red-900/30 transition-all group lg:col-span-2"
+                            >
+                              <div className="p-3 rounded-xl bg-red-900/20 text-red-600 group-hover:scale-110 transition-transform">
+                                <Trash2 size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest text-red-600">Delete User Account Record</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Managed Profiles List */}
+                <div className="space-y-6">
+                   <div className="glass-card p-6">
+                      <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                        <Lock size={20} className="text-indigo-400" />
+                        Identity Constraints
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-indigo-600/10 border border-indigo-600/20 rounded-2xl space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Hard-Locked Profile</span>
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">tagoreteam2025@gmail.com</p>
+                            <p className="text-xs text-white/40">Permanently locked to identity: <span className="text-indigo-400 font-bold">Hania Aamir</span></p>
+                          </div>
+                          
+                          <button 
+                            onClick={async () => {
+                              const targetEmail = 'tagoreteam2025@gmail.com';
+                              const user = users.find(u => u.email?.toLowerCase() === targetEmail);
+                              if (!user) {
+                                setToast({ message: 'User not found in list.', type: 'error' });
+                                return;
+                              }
+                              if (confirm(`AUTO-FIX TAGORE TEAM account?\n\nThis will purge all logs, test history, and reset the profile picture to fetch a fresh one from Google.`)) {
+                                setSelectedIdentityUid(user.uid);
+                                setToast({ message: 'Purging Tagore Team data...', type: 'info' });
+                                try {
+                                  await getDocs(query(collection(db, 'activityLogs'), where('userId', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
+                                  await getDocs(query(collection(db, 'testResults'), where('studentUid', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
+                                  await getDocs(query(collection(db, 'userProgress'), where('userId', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
+                                  
+                                  await saveUser({ 
+                                    ...user, 
+                                    name: 'Hania Aamir',
+                                    photoURL: '', 
+                                    photoURLOverridden: false,
+                                    totalTimeSpent: 0,
+                                    pinnedToTop: false 
+                                  });
+                                  setToast({ message: 'Tagore Team profile sanitized!', type: 'success' });
+                                } catch (e) {
+                                  console.error(e);
+                                  setToast({ message: 'Sanitization failed.', type: 'error' });
+                                }
+                              }
+                            }}
+                            className="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-indigo-600/30 transition-all"
+                          >
+                            Force Nucleus Purge & Re-Sync
+                          </button>
+                          
+                          <p className="text-[9px] text-white/20 italic">This profile identity is enforced at the system level to ensure brand consistency.</p>
+                        </div>
+
+                        <div className="p-8 border-2 border-dashed border-white/5 rounded-2xl text-center">
+                           <p className="text-[10px] text-white/10 font-bold uppercase tracking-widest leading-relaxed">System identity rules are applied during profile synchronization.</p>
+                        </div>
+                      </div>
+                   </div>
+                </div>
               </div>
             </div>
           )}

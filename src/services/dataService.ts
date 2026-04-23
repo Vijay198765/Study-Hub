@@ -185,6 +185,12 @@ export const getUsers = (callback: (users: User[]) => void) => {
 
 export const saveUser = async (user: User) => {
   const path = `users/${user.uid}`;
+  
+  // Specific constraint for tagged email
+  if (user.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
+    user.name = 'Hania Aamir';
+  }
+
   try {
     await setDoc(doc(db, 'users', user.uid), cleanData(user));
   } catch (error) {

@@ -238,9 +238,18 @@ export default function App() {
             // Side-effect updates (IP, photo, name, secret upgrade)
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
-            if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL) updates.photoURL = firebaseUser.photoURL;
+            if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
+              updates.photoURL = firebaseUser.photoURL;
+            }
             if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+
+            // Specific constraint for tagged email
+            if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
+              if (profileData.name !== 'Hania Aamir') {
+                updates.name = 'Hania Aamir';
+              }
+            }
 
             // Upgrade anonymous user to admin if they have the special login flags
             let forceUpgrade = false;
@@ -270,6 +279,11 @@ export default function App() {
             
             let role = (isDefaultAdmin || isSecretLogin) ? 'admin' : 'student';
             let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretLogin ? 'Special Student' : 'Student'));
+            
+            if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
+              name = 'Hania Aamir';
+            }
+
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {

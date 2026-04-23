@@ -2,21 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { UserProfile } from '../types';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { UserProfile, SiteConfig } from '../types';
 import { cn } from '../lib/utils';
 
 export default function Leaderboard() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Fetch Site Config for Global Pins
+    const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
+      if (snap.exists()) {
+        setSiteConfig(snap.data() as SiteConfig);
+      }
+    });
+
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc')
     );
 
-    const unsub = onSnapshot(q, (snap) => {
+    const unsubUsers = onSnapshot(q, (snap) => {
       const users = snap.docs.map(doc => ({
         uid: doc.id,
         ...doc.data()
@@ -25,10 +33,25 @@ export default function Leaderboard() {
       // Filter out users who have a name AND respect hidden status
       const filtered = users.filter(u => u.name && !u.secretLoginLogged && u.showOnLeaderboard !== false);
       
-      // Sort: pinnedToTop first, then by totalTimeSpent
+      // Sort priority:
+      // 1. Check if user is globally pinned in SiteConfig (and not expired)
+      // 2. Fallback to individual pinnedToTop (optional, but requested to remove, so we'll check siteConfig first)
+      const now = Date.now();
+      const pinnedUids = new Set(
+        (siteConfig?.pinnedEntries || [])
+          .filter(p => {
+            const expiry = p.expiresAt?.seconds ? p.expiresAt.seconds * 1000 : p.expiresAt;
+            return expiry > now;
+          })
+          .map(p => p.uid)
+      );
+
       const finalUsers = [...filtered].sort((a, b) => {
-        if (a.pinnedToTop && !b.pinnedToTop) return -1;
-        if (!a.pinnedToTop && b.pinnedToTop) return 1;
+        const aPinned = pinnedUids.has(a.uid) || a.pinnedToTop;
+        const bPinned = pinnedUids.has(b.uid) || b.pinnedToTop;
+
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
         return (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0);
       }).slice(0, 10);
 
@@ -39,8 +62,11 @@ export default function Leaderboard() {
       setLoading(false);
     });
 
-    return () => unsub();
-  }, []);
+    return () => {
+      unsubConfig();
+      unsubUsers();
+    };
+  }, [siteConfig?.pinnedEntries]);
 
   if (loading) return null;
   if (topUsers.length === 0) return null;

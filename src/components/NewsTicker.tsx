@@ -2,17 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Megaphone, ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
 
 export default function NewsTicker() {
   const [news, setNews] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    // Only fetch global notifications (userId empty or 'all')
+    // Note: Firestore 'in' query can handle multiple values
     const q = query(
       collection(db, 'notifications'),
+      where('userId', 'in', ['', 'all']),
       orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(10)
     );
 
     const unsub = onSnapshot(q, (snap) => {
