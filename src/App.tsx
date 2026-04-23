@@ -323,7 +323,9 @@ export default function App() {
           setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
           const isUserAdmin = profileData.role === 'admin' || firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
           setIsAdmin(isUserAdmin);
-          if (isUserAdmin || profileData.secretLoginLogged) setIsSpecialAdmin(true);
+          
+          // Only treat as special admin if it was a secret login session
+          setIsSpecialAdmin(isSpecial || (profileData.isSecret && profileData.secretLoginLogged));
 
           // 3. Log activity - Skip for secret logins
           if (!isSpecial) {
