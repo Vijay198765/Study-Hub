@@ -32,10 +32,10 @@ export default function WelcomeOverlay({ onComplete, siteConfig }: WelcomeOverla
       const userSnap = await getDoc(userRef);
       
       const deviceInfo = {
-        userAgent: navigator.userAgent,
-        platform: (navigator as any).platform || 'unknown',
-        language: navigator.language,
-        screenResolution: `${window.screen.width}x${window.screen.height}`
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',
+        language: typeof navigator !== 'undefined' ? navigator.language : 'en',
+        screenResolution: (typeof window !== 'undefined' && window.screen) ? `${window.screen.width}x${window.screen.height}` : 'unknown'
       };
       
       if (!userSnap.exists()) {

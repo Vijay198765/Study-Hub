@@ -23,10 +23,9 @@ const app = initializeApp(config);
 export const auth = getAuth(app);
 
 // Use initializeFirestore with memoryLocalCache to prevent assertion failures in sandboxed environments
-// Enable long polling to bypass restrictive network/firewall environments
+// Removing experimentalForceLongPolling as it can cause internal assertion failures in recent Firebase versions
 export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
-  experimentalForceLongPolling: true,
+  localCache: memoryLocalCache()
 }, import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)');
 
 export const storage = getStorage(app);

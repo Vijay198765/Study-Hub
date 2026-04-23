@@ -635,7 +635,7 @@ export default function AdminPanel() {
     { name: 'Classes', value: classes.length },
     { name: 'Chapters', value: chapters.length },
     { name: 'Tests', value: tests.length },
-    { name: 'Users', value: users.filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
+    { name: 'Users', value: users.length },
   ];
 
   const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
@@ -1623,7 +1623,6 @@ export default function AdminPanel() {
                   onClick={() => {
                     const headers = ['Name', 'Email', 'Role', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
                     const csvData = users
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .map(u => [
                         u.name || 'Anonymous',
                         u.email,
@@ -1662,13 +1661,13 @@ export default function AdminPanel() {
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Email</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Role</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Time Spent</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
                       .map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
@@ -1703,6 +1702,9 @@ export default function AdminPanel() {
                             {user.role}
                           </span>
                         </td>
+                        <td className="py-4 px-4 text-white font-mono text-xs">
+                          {Math.floor((user.totalTimeSpent || 0) / 60)}h {Math.floor((user.totalTimeSpent || 0) % 60)}m
+                        </td>
                         <td className="py-4 px-4 text-white/60 font-mono text-xs">
                           {user.ip || user.deviceInfo?.ip || 'N/A'}
                           {user.deviceInfo && (
@@ -1713,6 +1715,19 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-4">
+                            <button 
+                              onClick={() => {
+                                const minutes = prompt(`Set Total Time Spent for ${user.name || 'this user'} (Minutes):`, (user.totalTimeSpent || 0).toString());
+                                if (minutes !== null) {
+                                  saveUser({ ...user, totalTimeSpent: parseInt(minutes) || 0 });
+                                  setToast({ message: 'User time updated!', type: 'success' });
+                                }
+                              }}
+                              className="p-2 text-emerald-400/40 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-all"
+                              title="Edit Time Spent"
+                            >
+                              <Clock size={16} />
+                            </button>
                             {user.email !== 'vijayninama683@gmail.com' && (
                               <button 
                                 onClick={() => {
@@ -2060,8 +2075,8 @@ export default function AdminPanel() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
-                          { name: 'Students', value: users.filter(u => u.role === 'student' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
+                          { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
+                          { name: 'Students', value: users.filter(u => u.role === 'student').length },
                         ]}
                         cx="50%"
                         cy="50%"
@@ -3090,8 +3105,8 @@ export default function AdminPanel() {
                                 onChange={(e) => setPinUserId(e.target.value)}
                               >
                                 <option value="" className="bg-dark-bg">Choose a student...</option>
-                                {users.filter(u => u.name && u.role === 'student' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').map(u => (
-                                  <option key={u.uid} value={u.uid} className="bg-dark-bg">{u.name} ({u.email?.split('@')[0]})</option>
+                                {users.filter(u => u.name).map(u => (
+                                  <option key={u.uid} value={u.uid} className="bg-dark-bg">{u.name} ({u.email?.split('@')[0]}) {u.email?.toLowerCase() === 'vijayninama683@gmail.com' ? '[ADMIN]' : ''}</option>
                                 ))}
                               </select>
                             </div>
@@ -3847,10 +3862,10 @@ export default function AdminPanel() {
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
                         {users
-                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                          .filter(u => u.name)
                           .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
-                             {u.name} ({u.email || u.uid.substring(0, 8)})
+                             {u.name} ({u.email || u.uid.substring(0, 8)}) {u.email?.toLowerCase() === 'vijayninama683@gmail.com' ? '[ADMIN]' : ''}
                           </option>
                         ))}
                       </select>
@@ -3908,6 +3923,63 @@ export default function AdminPanel() {
                                 <Image size={24} />
                               </div>
                               <span className="text-xs font-black uppercase tracking-widest">Override Photo URL</span>
+                            </button>
+
+                            <button 
+                              onClick={() => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                const minutes = prompt('Set Total Time Spent (Minutes):', (user.totalTimeSpent || 0).toString());
+                                if (minutes !== null) {
+                                  saveUser({ ...user, totalTimeSpent: parseInt(minutes) || 0 });
+                                  setToast({ message: 'User time updated!', type: 'success' });
+                                }
+                              }}
+                              className="flex flex-col items-center justify-center gap-3 p-6 bg-emerald-600/10 border border-emerald-600/20 rounded-2xl hover:bg-emerald-600/20 transition-all group"
+                            >
+                              <div className="p-3 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition-transform">
+                                <Clock size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest">Manual Time Set</span>
+                            </button>
+
+                            <button 
+                              onClick={() => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                const isPinned = !user.pinnedToTop;
+                                saveUser({ ...user, pinnedToTop: isPinned });
+                                
+                                const currentPins = siteConfig?.pinnedEntries || [];
+                                let newPins = [...currentPins];
+                                
+                                if (isPinned) {
+                                  if (!newPins.find(p => p.uid === user.uid)) {
+                                    newPins.push({
+                                      uid: user.uid,
+                                      name: user.name || 'Anonymous',
+                                      expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
+                                    });
+                                  }
+                                } else {
+                                  newPins = newPins.filter(p => p.uid !== user.uid);
+                                }
+                                
+                                saveSiteConfig({ pinnedEntries: newPins });
+                                setToast({ message: isPinned ? 'Student pinned to Top Scholars!' : 'Student unpinned.', type: 'success' });
+                              }}
+                              className={`flex flex-col items-center justify-center gap-3 p-6 border rounded-2xl transition-all group ${
+                                users.find(u => u.uid === selectedIdentityUid)?.pinnedToTop 
+                                  ? 'bg-yellow-400/10 border-yellow-400/20 text-yellow-500 hover:bg-yellow-400/20' 
+                                  : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/20'
+                              }`}
+                            >
+                              <div className={`p-3 rounded-xl transition-transform group-hover:scale-110 ${
+                                users.find(u => u.uid === selectedIdentityUid)?.pinnedToTop ? 'bg-yellow-400/20 text-yellow-400' : 'bg-white/10 text-white/40'
+                              }`}>
+                                <Crown size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest">Pin to Global TOP 10</span>
                             </button>
 
                             <button 

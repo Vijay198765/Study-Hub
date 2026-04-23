@@ -321,10 +321,10 @@ export default function App() {
           // 3. Log activity - Skip for secret logins
           if (!isSpecial) {
              const deviceInfo = {
-               userAgent: navigator.userAgent,
-               platform: navigator.platform,
-               language: navigator.language,
-               screenResolution: `${window.screen.width}x${window.screen.height}`
+               userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+               platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',
+               language: typeof navigator !== 'undefined' ? navigator.language : 'en',
+               screenResolution: (typeof window !== 'undefined' && window.screen) ? `${window.screen.width}x${window.screen.height}` : 'unknown'
              };
 
              addDoc(collection(db, 'activityLogs'), {

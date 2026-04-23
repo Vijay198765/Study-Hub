@@ -31,15 +31,6 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const filtered = users.filter(u => 
-        u.name && 
-        !u.secretLoginLogged && 
-        u.email?.toLowerCase() !== 'vijayninama683@gmail.com'
-      );
-      
-      // Sort priority:
-      // 1. Globally pinned in SiteConfig (and not expired)
-      // 2. Individual pinnedToTop
       const now = Date.now();
       const pinnedUids = new Set(
         (siteConfig?.pinnedEntries || [])
@@ -50,6 +41,15 @@ export default function LeaderboardScroller() {
           .map(p => p.uid)
       );
 
+      const filtered = users.filter(u => {
+        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
+        const isPinned = pinnedUids.has(u.uid) || u.pinnedToTop;
+        
+        if (isMainAdmin && !isPinned) return false;
+        
+        return u.name && !u.secretLoginLogged;
+      });
+      
       const finalUsers = [...filtered].sort((a, b) => {
         const aPinned = pinnedUids.has(a.uid) || a.pinnedToTop;
         const bPinned = pinnedUids.has(b.uid) || b.pinnedToTop;
@@ -69,7 +69,7 @@ export default function LeaderboardScroller() {
       unsubConfig();
       unsubUsers();
     };
-  }, [siteConfig?.pinnedEntries]);
+  }, []); // Empty dependency array - listeners manage their own state updates
 
   if (loading || topUsers.length === 0) return null;
 

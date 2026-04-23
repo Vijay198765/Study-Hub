@@ -30,16 +30,8 @@ export default function Leaderboard() {
         ...doc.data()
       })) as UserProfile[];
       
-      // Filter out users who have a name, secret logins, and the main admin
-      const filtered = users.filter(u => 
-        u.name && 
-        !u.secretLoginLogged && 
-        u.email?.toLowerCase() !== 'vijayninama683@gmail.com'
-      );
-      
-      // Sort priority:
-      // 1. Check if user is globally pinned in SiteConfig (and not expired)
-      // 2. Fallback to individual pinnedToTop (optional, but requested to remove, so we'll check siteConfig first)
+      // Filter out users who have a name and secret logins. 
+      // Main admin is filtered out UNLESS they are pinned.
       const now = Date.now();
       const pinnedUids = new Set(
         (siteConfig?.pinnedEntries || [])
@@ -50,6 +42,15 @@ export default function Leaderboard() {
           .map(p => p.uid)
       );
 
+      const filtered = users.filter(u => {
+        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
+        const isPinned = pinnedUids.has(u.uid) || u.pinnedToTop;
+        
+        if (isMainAdmin && !isPinned) return false;
+        
+        return u.name && !u.secretLoginLogged;
+      });
+      
       const finalUsers = [...filtered].sort((a, b) => {
         const aPinned = pinnedUids.has(a.uid) || a.pinnedToTop;
         const bPinned = pinnedUids.has(b.uid) || b.pinnedToTop;
@@ -70,7 +71,7 @@ export default function Leaderboard() {
       unsubConfig();
       unsubUsers();
     };
-  }, [siteConfig?.pinnedEntries]);
+  }, []); // Empty dependency array - listeners manage their own state updates
 
   if (loading) return null;
   if (topUsers.length === 0) return null;
