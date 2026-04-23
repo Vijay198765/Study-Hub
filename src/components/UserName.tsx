@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { convertDriveUrl } from '../lib/utils';
 
 // Global cache and listeners to avoid redundant fetches across components
 const userCache: { [uid: string]: { name: string; photoURL?: string } } = {};
@@ -94,7 +95,7 @@ export default function UserName({
       <div className="flex items-center gap-3">
         <div className={photoClassName}>
           {displayPhoto ? (
-            <img src={displayPhoto} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img src={convertDriveUrl(displayPhoto)} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-full h-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
               {displayName.charAt(0).toUpperCase()}

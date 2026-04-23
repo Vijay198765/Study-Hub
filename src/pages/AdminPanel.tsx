@@ -28,6 +28,7 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
+import { cn, convertDriveUrl } from '../lib/utils';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, News, SiteConfig, SecretProfile } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
@@ -1675,7 +1676,7 @@ export default function AdminPanel() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden relative">
                               {user.photoURL ? (
-                                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={transformDriveUrl(user.photoURL)} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/40">
                                   <Users size={20} />
@@ -3872,8 +3873,8 @@ export default function AdminPanel() {
                             return (
                               <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
                                 <img 
-                                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
-                                  className="w-16 h-16 rounded-full border-2 border-indigo-500/50" 
+                                  src={transformDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                                  className="w-16 h-16 rounded-full border-2 border-indigo-500/50 object-cover" 
                                   referrerPolicy="no-referrer"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'S')}&background=random&color=fff`;
@@ -3896,7 +3897,8 @@ export default function AdminPanel() {
                                 if (!user) return;
                                 const url = prompt('Set New Photo URL (Direct Link):', user.photoURL || '');
                                 if (url !== null) {
-                                  saveUser({ ...user, photoURL: url, photoURLOverridden: true });
+                                  const finalUrl = convertDriveUrl(url);
+                                  saveUser({ ...user, photoURL: finalUrl, photoURLOverridden: true });
                                   setToast({ message: 'Identity photo updated!', type: 'success' });
                                 }
                               }}

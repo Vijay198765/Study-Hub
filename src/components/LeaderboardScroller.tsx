@@ -4,7 +4,7 @@ import { Trophy, Crown, Clock } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
-import { cn } from '../lib/utils';
+import { cn, convertDriveUrl } from '../lib/utils';
 
 export default function LeaderboardScroller() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
@@ -107,7 +107,7 @@ export default function LeaderboardScroller() {
                       idx === 0 ? "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]" : "border-white/10"
                     )}>
                       <img 
-                        src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                        src={convertDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
                         alt="" 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"

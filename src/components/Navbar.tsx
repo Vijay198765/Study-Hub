@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, convertDriveUrl } from '../lib/utils';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -143,7 +143,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center relative">
                   {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={convertDriveUrl(user.photoURL)} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <User size={16} />
                   )}
@@ -185,7 +185,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
               className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center"
             >
               {user.photoURL ? (
-                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={convertDriveUrl(user.photoURL)} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <User size={16} className="text-white/70" />
               )}
@@ -226,7 +226,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
               <div className="text-center mb-8">
                 <div className="w-20 h-20 rounded-full overflow-hidden bg-white/10 border-2 border-neon-blue mx-auto mb-4 flex items-center justify-center">
                   {user?.photoURL ? (
-                    <img src={user.photoURL} alt={user?.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={convertDriveUrl(user.photoURL)} alt={user?.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <User size={40} className="text-white/20" />
                   )}

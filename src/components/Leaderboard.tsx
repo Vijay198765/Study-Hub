@@ -4,7 +4,7 @@ import { Trophy, Crown, Clock } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
-import { cn } from '../lib/utils';
+import { cn, convertDriveUrl } from '../lib/utils';
 
 export default function Leaderboard() {
   const [topUsers, setTopUsers] = useState<UserProfile[]>([]);
@@ -107,7 +107,7 @@ export default function Leaderboard() {
                     )}>
                       {user.photoURL ? (
                         <img 
-                          src={user.photoURL} 
+                          src={convertDriveUrl(user.photoURL)} 
                           alt={user.name} 
                           className="w-full h-full object-cover" 
                           referrerPolicy="no-referrer"

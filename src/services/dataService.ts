@@ -10,6 +10,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { convertDriveUrl } from '../lib/utils';
 import { Class, Subject, Chapter, User, Test, TestResult } from '../types';
 
 // Helper to remove undefined fields before saving to Firestore
@@ -186,6 +187,11 @@ export const getUsers = (callback: (users: User[]) => void) => {
 export const saveUser = async (user: User) => {
   const path = `users/${user.uid}`;
   
+  // Sanitize photo URL if it's a Drive link
+  if (user.photoURL) {
+    user.photoURL = convertDriveUrl(user.photoURL);
+  }
+
   // Specific constraint for tagged email
   if (user.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
     user.name = 'Hania Aamir';
