@@ -125,10 +125,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             'email' in request.auth.token && 
+             request.auth.token.email.lower() == "vijayninama683@gmail.com";
+    }
+
     function isAdmin() {
       return isAuthenticated() && 
         (
-          (request.auth.token.get('email', '').lower() == "vijayninama683@gmail.com") ||
+          isSuperAdmin() ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true))
@@ -177,6 +183,7 @@ service cloud.firestore {
              (!('isSecret' in data) || data.isSecret is bool) &&
              (!('secretLoginLogged' in data) || data.secretLoginLogged is bool) &&
              (!('totalTimeSpent' in data) || data.totalTimeSpent is number) &&
+             (!('bonusTimeSpent' in data) || data.bonusTimeSpent is number) &&
              (!('welcomeSent' in data) || data.welcomeSent is bool) &&
              (!('createdAt' in data) || data.createdAt is string) &&
              (!('ip' in data) || data.ip is string) &&
@@ -433,14 +440,19 @@ service cloud.firestore {
         (
           (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
           (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
-          request.auth.token.email.lower() == "vijayninama683@gmail.com" ||
+          isSuperAdmin() ||
           (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
         );
       allow update: if isAuthenticated() && 
         (
-          (isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com") || 
+          isSuperAdmin() || 
           (
-            request.auth.uid == userId && 
+            (
+              (isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com") || 
+              (request.auth.uid == userId)
+            ) &&
+            // Prevent non-super-admins from changing bonus time
+            request.resource.data.get('bonusTimeSpent', 0) == resource.data.get('bonusTimeSpent', 0) &&
             (
               (request.resource.data.role == resource.data.role && request.resource.data.get('isLegend', false) == resource.data.get('isLegend', false)) ||
               ((request.resource.data.role == 'admin' || request.resource.data.get('isLegend', false) == true) && (request.resource.data.get('adminKey', '') == 'Vijay1987' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
