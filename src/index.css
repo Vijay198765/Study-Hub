@@ -51,6 +51,10 @@
     background-size: cover;
     background-attachment: fixed;
   }
+  
+  *:focus-visible {
+    @apply outline-none ring-2 ring-neon-blue shadow-[0_0_15px_rgba(0,242,255,0.5)];
+  }
 }
 
 @layer components {

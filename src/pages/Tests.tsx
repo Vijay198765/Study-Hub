@@ -129,6 +129,29 @@ export default function Tests() {
     setAnswers(newAnswers);
   };
 
+  // Keyboard Support for Questions
+  useEffect(() => {
+    if (!activeTest || testCompleted) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Keys 1-4 for options
+      if (['1', '2', '3', '4'].includes(e.key)) {
+        const optionIdx = parseInt(e.key) - 1;
+        if (activeTest.questions[currentQuestionIdx] && activeTest.questions[currentQuestionIdx].options[optionIdx]) {
+          handleAnswer(optionIdx);
+        }
+      }
+
+      // Enter to move next
+      if (e.key === 'Enter' && answers[currentQuestionIdx] !== -1) {
+        nextQuestion();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTest, currentQuestionIdx, answers, testCompleted]);
+
   const nextQuestion = () => {
     if (currentQuestionIdx < (activeTest?.questions.length || 0) - 1) {
       setCurrentQuestionIdx(prev => prev + 1);

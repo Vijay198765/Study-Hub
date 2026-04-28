@@ -40,6 +40,161 @@ type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
 
+interface ResourceItemProps {
+  resource: Resource;
+  index: number;
+  onUpdate: (updates: Partial<Resource>) => void;
+  onDelete: () => void;
+  onToast: (msg: string, type: 'success' | 'error') => void;
+}
+
+const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: ResourceItemProps) => {
+  return (
+    <DraggableAny draggableId={resource.id} index={index}>
+      {(provided: any, snapshot: any) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={cn(
+            "p-4 rounded-2xl border transition-all flex items-start gap-4 mb-3",
+            snapshot.isDragging 
+              ? "bg-neon-blue/20 border-neon-blue shadow-[0_0_20px_rgba(0,229,255,0.3)] z-50 scale-[1.02]" 
+              : "bg-white/5 border-white/10 hover:border-white/20"
+          )}
+        >
+          <div {...provided.dragHandleProps} className="mt-1 text-white/20 hover:text-white/60 transition-colors cursor-grab active:cursor-grabbing">
+            <GripVertical size={20} />
+          </div>
+          
+          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Title</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-3 pr-10 text-sm text-white outline-none focus:border-white/30 transition-all"
+                  value={resource.title}
+                  onChange={(e) => onUpdate({ title: e.target.value })}
+                  placeholder="Resource Title"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {resource.title && (
+                    <button 
+                      onClick={() => onUpdate({ title: '' })}
+                      className="p-1 text-white/20 hover:text-red-400 transition-colors"
+                      title="Clear Title"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Type</label>
+              <select 
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-white/30 transition-all"
+                value={resource.type}
+                onChange={(e) => onUpdate({ type: e.target.value as any })}
+              >
+                <option value="pdf" className="bg-dark-bg">PDF Document</option>
+                <option value="notes" className="bg-dark-bg">Study Notes</option>
+                <option value="qa" className="bg-dark-bg">Q&A</option>
+                <option value="practice" className="bg-dark-bg">Practice</option>
+                <option value="test" className="bg-dark-bg">Test</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          onUpdate({ url: convertDriveUrl(text) });
+                          onToast('Link pasted and optimized!', 'success');
+                        }
+                      } catch (err) {
+                        onToast('Could not access clipboard. Please paste manually.', 'error');
+                      }
+                    }}
+                    className="text-[10px] text-neon-blue hover:underline flex items-center gap-1"
+                  >
+                    <Plus size={10} /> Paste Link
+                  </button>
+                  {resource.url && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(resource.url);
+                        onToast('Link copied to clipboard!', 'success');
+                      }}
+                      className="text-[10px] text-neon-purple hover:underline flex items-center gap-1"
+                    >
+                      <Copy size={10} /> Copy Link
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="relative">
+                <input 
+                  type="text" 
+                  className={cn(
+                    "w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-32 text-xs text-white outline-none transition-all font-mono",
+                    resource.url ? "border-neon-blue/30" : "focus:border-white/30"
+                  )}
+                  value={resource.url}
+                  onChange={(e) => onUpdate({ url: convertDriveUrl(e.target.value) })}
+                  placeholder="Paste Google Drive link or direct URL..."
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {resource.url && (
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={resource.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-neon-blue"
+                        title="Open Resource"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                      <button 
+                        onClick={() => onUpdate({ url: '' })}
+                        className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-red-400"
+                        title="Clear URL"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {resource.url.includes('drive.google.com') && (
+                    <div className="w-6 h-6 rounded-md bg-neon-blue/20 flex items-center justify-center text-neon-blue ml-1" title="Optimized Drive Link">
+                      <Layout size={12} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={onDelete}
+            className="p-2 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all self-center"
+            title="Delete Resource"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      )}
+    </DraggableAny>
+  );
+};
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('stats');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -54,7 +209,7 @@ export default function AdminPanel() {
 
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
 
-  const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+  const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
 
   useEffect(() => {
     if (isUnlocked && isLimitedAdmin && siteConfig) {
@@ -84,7 +239,7 @@ export default function AdminPanel() {
             const isAdminRole = data.role === 'admin';
             setIsAdmin(isAdminRole);
             
-            const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+            const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
 
             // Auto-unlock promoted admins as limited admins
             if (isAdminRole && !isSuper) {
@@ -143,8 +298,6 @@ export default function AdminPanel() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [userMessages, setUserMessages] = useState<any[]>([]);
   
-  const [pinUserId, setPinUserId] = useState('');
-  const [pinDuration, setPinDuration] = useState('24'); // Default 24 hours
   const [selectedIdentityUid, setSelectedIdentityUid] = useState('');
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
@@ -3122,102 +3275,6 @@ export default function AdminPanel() {
                         </div>
                       </div>
 
-                      {/* Pinned Scholars on Leaderboard */}
-                      <div className="space-y-4 pt-4 border-t border-white/5">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
-                            <Crown size={20} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">Pinned Scholars</p>
-                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Managed Top 10 List (Global)</p>
-                          </div>
-                        </div>
-
-                        <div className="glass-card p-4 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Select Student</label>
-                              <select 
-                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-yellow-400 appearance-none"
-                                value={pinUserId}
-                                onChange={(e) => setPinUserId(e.target.value)}
-                              >
-                                <option value="" className="bg-dark-bg">Choose a student...</option>
-                                {users.filter(u => u.name).map(u => (
-                                  <option key={u.uid} value={u.uid} className="bg-dark-bg">{u.name} ({u.email?.split('@')[0]}) {u.email?.toLowerCase() === 'vijayninama683@gmail.com' ? '[ADMIN]' : ''}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Duration (Hours)</label>
-                              <div className="flex items-center gap-2">
-                                <input 
-                                  type="number"
-                                  min="1"
-                                  className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-yellow-400"
-                                  value={pinDuration}
-                                  onChange={(e) => setPinDuration(e.target.value)}
-                                />
-                                <span className="text-[10px] text-white/20 font-bold">HRS</span>
-                              </div>
-                            </div>
-                            <div className="flex items-end">
-                              <button 
-                                disabled={!pinUserId}
-                                onClick={() => {
-                                  const user = users.find(u => u.uid === pinUserId);
-                                  if (!user) return;
-                                  const hours = parseInt(pinDuration) || 24;
-                                  const expiresAt = new Date(Date.now() + hours * 3600000);
-                                  const newPinned = [...(siteConfig?.pinnedEntries || [])];
-                                  newPinned.push({
-                                    uid: user.uid,
-                                    name: user.name || 'Scholar',
-                                    expiresAt: expiresAt
-                                  });
-                                  saveSiteConfig({ pinnedEntries: newPinned });
-                                  setPinUserId('');
-                                  setToast({ message: `${user.name} pinned for ${hours} hours!`, type: 'success' });
-                                }}
-                                className="w-full bg-yellow-400 text-black font-bold h-[38px] rounded-xl hover:shadow-[0_0_15px_rgba(250,204,21,0.4)] transition-all disabled:opacity-50 text-xs uppercase"
-                              >
-                                Add to Pinned
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* List of currently pinned */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                            {(siteConfig?.pinnedEntries || []).map((entry, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                   <Crown size={14} className="text-yellow-400" />
-                                   <div>
-                                     <p className="text-xs font-bold text-white truncate max-w-[150px]">{entry.name}</p>
-                                     <p className="text-[10px] text-white/40">Expires: {new Date(entry.expiresAt?.seconds ? entry.expiresAt.seconds * 1000 : entry.expiresAt).toLocaleString()}</p>
-                                   </div>
-                                </div>
-                                <button 
-                                  onClick={() => {
-                                    const newPinned = siteConfig?.pinnedEntries?.filter((_, i) => i !== idx);
-                                    saveSiteConfig({ pinnedEntries: newPinned });
-                                  }}
-                                  className="p-1.5 text-white/20 hover:text-red-500 transition-colors"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </div>
-                            ))}
-                            {(siteConfig?.pinnedEntries || []).length === 0 && (
-                              <div className="sm:col-span-2 text-center py-4 text-white/10 italic text-[10px] uppercase tracking-widest">
-                                No scholars currently pinned
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
                       {/* System Optimization Controls */}
                       <div className="pt-4 border-t border-white/5 space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">System Optimization</h4>
@@ -4011,45 +4068,6 @@ export default function AdminPanel() {
                             )}
 
                             <button 
-                              onClick={() => {
-                                const user = users.find(u => u.uid === selectedIdentityUid);
-                                if (!user) return;
-                                const isPinned = !user.pinnedToTop;
-                                saveUser({ ...user, pinnedToTop: isPinned });
-                                
-                                const currentPins = siteConfig?.pinnedEntries || [];
-                                let newPins = [...currentPins];
-                                
-                                if (isPinned) {
-                                  if (!newPins.find(p => p.uid === user.uid)) {
-                                    newPins.push({
-                                      uid: user.uid,
-                                      name: user.name || 'Anonymous',
-                                      expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
-                                    });
-                                  }
-                                } else {
-                                  newPins = newPins.filter(p => p.uid !== user.uid);
-                                }
-                                
-                                saveSiteConfig({ pinnedEntries: newPins });
-                                setToast({ message: isPinned ? 'Student pinned to Top Scholars!' : 'Student unpinned.', type: 'success' });
-                              }}
-                              className={`flex flex-col items-center justify-center gap-3 p-6 border rounded-2xl transition-all group ${
-                                users.find(u => u.uid === selectedIdentityUid)?.pinnedToTop 
-                                  ? 'bg-yellow-400/10 border-yellow-400/20 text-yellow-500 hover:bg-yellow-400/20' 
-                                  : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/20'
-                              }`}
-                            >
-                              <div className={`p-3 rounded-xl transition-transform group-hover:scale-110 ${
-                                users.find(u => u.uid === selectedIdentityUid)?.pinnedToTop ? 'bg-yellow-400/20 text-yellow-400' : 'bg-white/10 text-white/40'
-                              }`}>
-                                <Crown size={24} />
-                              </div>
-                              <span className="text-xs font-black uppercase tracking-widest">Pin to Global TOP 10</span>
-                            </button>
-
-                            <button 
                               onClick={async () => {
                                 const user = users.find(u => u.uid === selectedIdentityUid);
                                 if (!user) return;
@@ -4072,7 +4090,6 @@ export default function AdminPanel() {
                                       await saveUser({ 
                                         ...user, 
                                         totalTimeSpent: 0,
-                                        pinnedToTop: false,
                                         showOnLeaderboard: true,
                                         photoURLOverridden: false,
                                         photoURL: '' // Clear photo to force re-fetch from Google
@@ -4161,8 +4178,7 @@ export default function AdminPanel() {
                                     name: 'Hania Aamir',
                                     photoURL: '', 
                                     photoURLOverridden: false,
-                                    totalTimeSpent: 0,
-                                    pinnedToTop: false 
+                                    totalTimeSpent: 0
                                   });
                                   setToast({ message: 'Tagore Team profile sanitized!', type: 'success' });
                                 } catch (e) {
@@ -4658,30 +4674,49 @@ export default function AdminPanel() {
                           onClick={async () => {
                             try {
                               const text = await navigator.clipboard.readText();
-                              if (text && (text.includes('drive.google.com') || text.includes('http'))) {
-                                const newResource: Resource = {
-                                  id: Date.now().toString(),
-                                  title: 'New Resource (Pasted)',
-                                  type: 'pdf',
-                                  url: text,
-                                  enabled: true
-                                };
-                                setEditingEntity({
-                                  ...editingEntity,
-                                  resources: [...(editingEntity.resources || []), newResource]
-                                });
-                                setToast({ message: 'Resource added from clipboard!', type: 'success' });
-                              } else {
-                                setToast({ message: 'Please copy a valid link first!', type: 'error' });
+                              if (text) {
+                                // Extract all URLs from the text
+                                const lines = text.split(/[\n\s,]+/).filter(l => l.startsWith('http'));
+                                if (lines.length > 0) {
+                                  const newResources: Resource[] = lines.map((link, idx) => ({
+                                    id: `${Date.now()}-${idx}`,
+                                    title: `New Resource ${idx + 1}`,
+                                    type: link.endsWith('.pdf') ? 'pdf' : 'notes',
+                                    url: convertDriveUrl(link),
+                                    enabled: true
+                                  }));
+                                  setEditingEntity({
+                                    ...editingEntity,
+                                    resources: [...(editingEntity.resources || []), ...newResources]
+                                  });
+                                  setToast({ message: `${lines.length} resources added from clipboard!`, type: 'success' });
+                                } else {
+                                  setToast({ message: 'No valid links found in clipboard!', type: 'error' });
+                                }
                               }
                             } catch (err) {
                               setToast({ message: 'Could not access clipboard. Please paste manually.', type: 'error' });
                             }
                           }}
                           className="text-[10px] font-bold text-neon-blue hover:text-neon-blue/80 transition-all flex items-center gap-1 uppercase tracking-widest"
+                          title="Paste multiple links at once"
                         >
-                          <Plus size={12} /> Paste Drive Link
+                          <Plus size={12} /> Bulk Paste
                         </button>
+                        {editingEntity.resources?.length > 0 && (
+                          <button 
+                            onClick={() => {
+                              const urls = editingEntity.resources.map((r: Resource) => r.url).filter(Boolean).join('\n');
+                              if (urls) {
+                                navigator.clipboard.writeText(urls);
+                                setToast({ message: 'All resource links copied!', type: 'success' });
+                              }
+                            }}
+                            className="text-[10px] font-bold text-neon-purple hover:text-neon-purple/80 transition-all flex items-center gap-1 uppercase tracking-widest"
+                          >
+                            <Copy size={12} /> Copy All
+                          </button>
+                        )}
                         <button 
                           onClick={() => {
                             const newResource: Resource = {
@@ -4714,255 +4749,21 @@ export default function AdminPanel() {
                         {(provided) => (
                           <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                             {(editingEntity.resources || []).map((resource: Resource, index: number) => (
-                              <DraggableAny key={resource.id} draggableId={resource.id} index={index}>
-                                {(provided: any) => (
-                                  <div 
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-start gap-4"
-                                  >
-                                    <div {...provided.dragHandleProps} className="mt-1 text-white/20">
-                                      <GripVertical size={20} />
-                                    </div>
-                                    <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Title</label>
-                                        <div className="relative">
-                                          <input 
-                                            type="text" 
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-3 pr-10 text-sm text-white outline-none focus:border-white/30"
-                                            value={resource.title}
-                                            onChange={(e) => {
-                                              const newResources = [...editingEntity.resources];
-                                              newResources[index].title = e.target.value;
-                                              setEditingEntity({ ...editingEntity, resources: newResources });
-                                            }}
-                                          />
-                                          <button 
-                                                  onClick={async () => {
-                                                    const newResources = [...editingEntity.resources];
-                                                    if (resource.title) {
-                                                      newResources[index].title = '';
-                                                    } else {
-                                                      try {
-                                                        const text = await navigator.clipboard.readText();
-                                                        if (text) newResources[index].title = text;
-                                                      } catch (err) {
-                                                        setToast({ message: 'Could not access clipboard', type: 'error' });
-                                                      }
-                                                    }
-                                                    setEditingEntity({ ...editingEntity, resources: newResources });
-                                                  }}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
-                                          >
-                                            {resource.title ? <X size={14} /> : <ClipboardList size={14} />}
-                                          </button>
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Type</label>
-                                        <select 
-                                          className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none"
-                                          value={resource.type}
-                                          onChange={(e) => {
-                                            const newResources = [...editingEntity.resources];
-                                            newResources[index].type = e.target.value as any;
-                                            setEditingEntity({ ...editingEntity, resources: newResources });
-                                          }}
-                                        >
-                                          <option value="pdf" className="bg-dark-bg">PDF Document</option>
-                                          <option value="notes" className="bg-dark-bg">Study Notes</option>
-                                          <option value="qa" className="bg-dark-bg">Q&A</option>
-                                          <option value="practice" className="bg-dark-bg">Practice</option>
-                                          <option value="test" className="bg-dark-bg">Test</option>
-                                        </select>
-                                      </div>
-                                      <div className="md:col-span-2 space-y-4">
-                                        <div className="p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-2xl">
-                                          <div className="flex items-center gap-3 mb-2">
-                                            <div className="w-8 h-8 rounded-lg bg-neon-blue/20 flex items-center justify-center text-neon-blue">
-                                              <ExternalLink size={18} />
-                                            </div>
-                                            <div>
-                                              <h4 className="text-sm font-bold text-white">Drive Link System</h4>
-                                              <p className="text-[10px] text-white/40 uppercase tracking-widest">Recommended Alternative</p>
-                                            </div>
-                                          </div>
-                                          <p className="text-xs text-white/60 mb-3 leading-relaxed">
-                                            Since your Firebase Storage is not yet provisioned (as seen in your screenshot), we recommend using **Google Drive**. Just paste the "Anyone with link" URL below.
-                                          </p>
-                                          <div className="flex flex-wrap gap-2">
-                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">Auto-Preview</span>
-                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">No Upload Limit</span>
-                                            <span className="px-2 py-1 rounded bg-white/5 text-[9px] font-bold text-white/40 border border-white/5">Faster Loading</span>
-                                          </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
-                                              <div className="flex items-center gap-3">
-                                                <button 
-                                                  onClick={async () => {
-                                                    const newResources = [...editingEntity.resources];
-                                                    if (resource.url) {
-                                                      newResources[index].url = '';
-                                                    } else {
-                                                      try {
-                                                        const text = await navigator.clipboard.readText();
-                                                        if (text) newResources[index].url = text;
-                                                      } catch (err) {
-                                                        setToast({ message: 'Could not access clipboard. Please paste manually.', type: 'error' });
-                                                      }
-                                                    }
-                                                    setEditingEntity({ ...editingEntity, resources: newResources });
-                                                  }}
-                                                  className="text-[10px] text-neon-blue hover:underline flex items-center gap-1"
-                                                >
-                                                  {resource.url ? <X size={10} /> : <Plus size={10} />}
-                                                  {resource.url ? 'Clear Link' : 'Paste Link'}
-                                                </button>
-                                                <button 
-                                                  onClick={() => setConfirmAction({
-                                                    title: 'Google Drive Help',
-                                                    message: "1. Upload PDF to Google Drive\n2. Right-click > Share\n3. Set to 'Anyone with the link'\n4. Copy and paste here!\n\nOur system will automatically fix the link for a perfect preview.",
-                                                    onConfirm: () => setConfirmAction(null),
-                                                    singleButton: true
-                                                  })}
-                                                  className="text-[10px] text-white/40 hover:text-white flex items-center gap-1"
-                                                >
-                                                  <Info size={10} /> Help
-                                                </button>
-                                              </div>
-                                            </div>
-                                          <div className="flex flex-col sm:flex-row gap-2">
-                                            <div className="relative flex-grow">
-                                              <input 
-                                                type="text" 
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-24 text-sm text-white outline-none focus:border-neon-blue transition-all font-mono"
-                                                value={resource.url}
-                                                onChange={(e) => {
-                                                  const newResources = [...editingEntity.resources];
-                                                  newResources[index].url = e.target.value;
-                                                  setEditingEntity({ ...editingEntity, resources: newResources });
-                                                }}
-                                                placeholder="Paste Google Drive link (e.g. https://drive.google.com/...)"
-                                              />
-                                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                {resource.url && (
-                                                  <div className="flex items-center gap-1">
-                                                    <button 
-                                                      onClick={() => {
-                                                        navigator.clipboard.writeText(resource.url);
-                                                        setToast({ message: 'Link copied!', type: 'success' });
-                                                      }}
-                                                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-neon-blue"
-                                                      title="Copy Link"
-                                                    >
-                                                      <Copy size={14} />
-                                                    </button>
-                                                    <a 
-                                                      href={resource.url}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-neon-purple"
-                                                      title="Test Link"
-                                                    >
-                                                      <Eye size={14} />
-                                                    </a>
-                                                  </div>
-                                                )}
-                                                <div className="w-px h-4 bg-white/10 mx-1" />
-                                                {resource.url.includes('drive.google.com') ? <ExternalLink size={14} className="text-neon-blue" /> : <Layers size={14} className="text-white/20" />}
-                                              </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 my-2">
-                                              <div className="h-px flex-grow bg-white/10"></div>
-                                              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">OR UPLOAD TO FIREBASE</span>
-                                              <div className="h-px flex-grow bg-white/10"></div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                            <label className="btn-neon bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center justify-center min-w-[120px] relative overflow-hidden h-full">
-                                              {uploadingResource === resource.id ? (
-                                                <>
-                                                  <div 
-                                                    className="absolute bottom-0 left-0 h-1 bg-neon-blue transition-all duration-300" 
-                                                    style={{ width: `${uploadProgress[resource.id] || 0}%` }}
-                                                  />
-                                                  <span className="text-xs relative z-10 flex items-center gap-2">
-                                                    <RefreshCcw className="w-3 h-3 animate-spin" />
-                                                    {Math.round(uploadProgress[resource.id] || 0)}%
-                                                  </span>
-                                                </>
-                                              ) : (
-                                                <span className="text-xs font-bold flex items-center gap-2">
-                                                  <Upload size={14} /> Upload PDF
-                                                </span>
-                                              )}
-                                              <input 
-                                                type="file" 
-                                                accept=".pdf"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                  if (e.target.files && e.target.files[0]) {
-                                                    const file = e.target.files[0];
-                                                    if (file.type !== 'application/pdf') {
-                                                      setToast({ message: 'Please select a valid PDF file.', type: 'error' });
-                                                      return;
-                                                    }
-                                                    handleFileUpload(file, resource.id, index);
-                                                  }
-                                                }}
-                                                disabled={uploadingResource === resource.id}
-                                              />
-                                            </label>
-                                              {uploadingResource === resource.id && (
-                                                <button 
-                                                  onClick={() => {
-                                                    setUploadingResource(null);
-                                                    setUploadProgress(prev => ({ ...prev, [resource.id]: 0 }));
-                                                    setToast({ message: 'Upload cancelled.', type: 'info' });
-                                                  }}
-                                                  className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40 transition-colors"
-                                                >
-                                                  <X className="w-4 h-4" />
-                                                </button>
-                                              )}
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center justify-between">
-                                            <p className="text-[9px] text-white/20 italic">
-                                              * Note: Direct upload requires Firebase Storage setup (see your screenshot).
-                                            </p>
-                                            <button 
-                                              onClick={() => setConfirmAction({
-                                                title: 'Firebase Storage Fix',
-                                                message: "FIREBASE STORAGE FIX:\n1. Go to your Firebase Console > Storage.\n2. Click 'Get started' (as shown in your screenshot).\n3. Choose 'Start in test mode' and a location.\n4. Once created, uploads will work!",
-                                                onConfirm: () => setConfirmAction(null),
-                                                singleButton: true
-                                              })}
-                                              className="text-[9px] text-neon-pink hover:underline font-bold"
-                                            >
-                                              Fix 0% Upload Issue
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <button 
-                                      onClick={() => {
-                                        const newResources = editingEntity.resources.filter((_: any, i: number) => i !== index);
-                                        setEditingEntity({ ...editingEntity, resources: newResources });
-                                      }}
-                                      className="mt-1 p-2 text-white/20 hover:text-red-400 transition-all"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
-                                  </div>
-                                )}
-                              </DraggableAny>
+                              <ResourceItem
+                                key={resource.id}
+                                resource={resource}
+                                index={index}
+                                onUpdate={(updates) => {
+                                  const newResources = [...editingEntity.resources];
+                                  newResources[index] = { ...newResources[index], ...updates };
+                                  setEditingEntity({ ...editingEntity, resources: newResources });
+                                }}
+                                onDelete={() => {
+                                  const newResources = editingEntity.resources.filter((_: any, i: number) => i !== index);
+                                  setEditingEntity({ ...editingEntity, resources: newResources });
+                                }}
+                                onToast={(msg, type) => setToast({ message: msg, type: type })}
+                              />
                             ))}
                             {provided.placeholder}
                           </div>

@@ -191,7 +191,7 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             animate={{ opacity: 1, y: 0 }}
             className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-4"
           >
-            🚀 Welcome to Study-hub by Vijay Ninama
+            🚀 Best Learning Platform for Class 6-10 by Vijay Ninama
           </motion.div>
           
           <motion.div
@@ -349,7 +349,7 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-display font-bold flex items-center gap-3">
             <GraduationCap className="text-neon-blue" />
-            Explore Classes
+            Study Materials for Class 6 to 10
           </h2>
         </div>
 

@@ -192,7 +192,26 @@ export default function Footer({ siteConfig }: FooterProps) {
             </p>
             <p className="text-xs text-neon-blue font-bold uppercase tracking-widest">Co-owner: {coOwnerName}</p>
           </div>
-          <p className="text-xs text-white/20 uppercase tracking-widest mb-4">Leading the Future of Learning</p>
+          <p className="text-xs text-white/20 uppercase tracking-widest mb-4">Leading the Future of Learning for Class 6-10</p>
+          
+          <div className="grid grid-cols-2 gap-4 max-w-sm mb-6">
+            <div>
+              <h5 className="text-[10px] uppercase font-black tracking-widest text-white/40 mb-2">Free Resources</h5>
+              <ul className="text-xs space-y-1 text-white/60">
+                <li><a href="/" className="hover:text-neon-blue transition-colors">Class Notes</a></li>
+                <li><a href="/tests" className="hover:text-neon-blue transition-colors">Practice MCQs</a></li>
+                <li><a href="/games" className="hover:text-neon-blue transition-colors">Study Games</a></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="text-[10px] uppercase font-black tracking-widest text-white/40 mb-2">Support</h5>
+              <ul className="text-xs space-y-1 text-white/60">
+                <li><a href="/live-club" className="hover:text-neon-blue transition-colors">Student Community</a></li>
+                <li><a href="/login" className="hover:text-neon-blue transition-colors">Student Login</a></li>
+              </ul>
+            </div>
+          </div>
+
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 max-w-md">
             <p className="text-[10px] text-white/40 leading-relaxed italic">
               <span className="text-neon-blue font-bold not-italic">Disclaimer:</span> All study materials and content provided on this platform are collected from publicly available sources. Original rights and credits belong to their respective authors and authorities. If you have any concerns regarding the content, please contact us.

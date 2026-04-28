@@ -77,7 +77,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     }
   };
 
-  const isSuperAdmin = user?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+  const isSuperAdmin = user?.email?.toLowerCase() === 'vijayninama683@gmail.com' || user?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
   const showDashboard = isSuperAdmin || (isAdmin && !isSpecialAdmin) || (isSpecialAdmin && localStorage.getItem('showDashboardLinkForSecret') === 'true' && siteConfig?.showDashboardLinkForSecret !== false);
 
   const navLinks = [

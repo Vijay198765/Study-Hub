@@ -133,12 +133,6 @@ export interface Rating {
   createdAt: any;
 }
 
-export interface PinnedEntry {
-  uid: string;
-  name: string;
-  expiresAt: any;
-}
-
 export interface SiteConfig {
   id: string;
   isRatingEnabled: boolean;
@@ -152,7 +146,6 @@ export interface SiteConfig {
   siteSubtitle?: string;
   announcementText?: string;
   showAnnouncement?: boolean;
-  pinnedEntries?: PinnedEntry[];
   maintenanceMode?: boolean;
   maintenanceMessage?: string;
   autoApproveUsers?: boolean;

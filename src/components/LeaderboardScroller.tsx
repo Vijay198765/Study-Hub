@@ -31,19 +31,9 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const now = Date.now();
-      const pinnedUids = new Set(
-        (siteConfig?.pinnedEntries || [])
-          .filter(p => {
-            const expiry = p.expiresAt?.seconds ? p.expiresAt.seconds * 1000 : p.expiresAt;
-            return expiry > now;
-          })
-          .map(p => p.uid)
-      );
-
       const filtered = users.filter(u => {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-        const isPinned = pinnedUids.has(u.uid) || u.pinnedToTop;
+        const isPinned = u.pinnedToTop;
         
         // Show main admin normally now as requested
         if (isMainAdmin) return true;
@@ -52,8 +42,8 @@ export default function LeaderboardScroller() {
       });
       
       const finalUsers = [...filtered].sort((a, b) => {
-        const aPinned = pinnedUids.has(a.uid) || a.pinnedToTop;
-        const bPinned = pinnedUids.has(b.uid) || b.pinnedToTop;
+        const aPinned = a.pinnedToTop;
+        const bPinned = b.pinnedToTop;
 
         if (aPinned && !bPinned) return -1;
         if (!aPinned && bPinned) return 1;
@@ -117,8 +107,9 @@ export default function LeaderboardScroller() {
                     )}>
                       <img 
                         src={convertDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
-                        alt="" 
+                        alt={`${user.name || 'Scholar'} profile picture`} 
                         className="w-full h-full object-cover"
+                        loading="lazy"
                         referrerPolicy="no-referrer"
                       />
                     </div>

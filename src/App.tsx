@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 import { AlertCircle, Shield, X } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -37,6 +38,7 @@ const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAd
 
 export default function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -297,7 +299,7 @@ export default function App() {
             }
           } else {
             // New user doc creation
-            const adminEmails = ['vijayninama683@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
             const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
@@ -338,7 +340,9 @@ export default function App() {
 
           // 2. Set Initial Local State
           setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
-          const isUserAdmin = profileData.role === 'admin' || firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
+          const isUserAdmin = profileData.role === 'admin' || 
+                             firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                             firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
           setIsAdmin(isUserAdmin);
           
           // Only treat as special admin if it was a secret login session
@@ -404,7 +408,9 @@ export default function App() {
               if (snap.exists()) {
                 const data = snap.data();
                 setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
-                const isUserAdmin = data.role === 'admin' || firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
+                const isUserAdmin = data.role === 'admin' || 
+                                   firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                                   firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
                 setIsAdmin(isUserAdmin);
                 if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
               }
@@ -426,7 +432,8 @@ export default function App() {
               isOffline: true
             };
             setUserProfile(tempProfile);
-            const isUserAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
+            const isUserAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                               firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
             setIsAdmin(isUserAdmin);
           } else {
             console.error("Critical error in user profile setup:", error);
@@ -508,8 +515,103 @@ export default function App() {
     return () => clearInterval(interval);
   }, [showMessage, messageTimer]);
 
+  const getPageSEO = () => {
+    const path = location.pathname;
+    const baseTitle = siteConfig?.siteName || 'Study Hub Omega';
+    
+    if (path === '/' || path === '/classes') {
+      return {
+        title: 'Free Study Materials & Notes for Class 6-10',
+        desc: 'Access high-quality, free study materials, handwritten notes, and NCERT solutions for Class 6, 7, 8, 9, and 10. Boost your exam preparation today.',
+        keywords: 'study materials, class 10 notes, ncert solutions, free educational resources, CBSE notes'
+      };
+    }
+    if (path.startsWith('/class/')) {
+      return {
+        title: 'Class Wise Study Resources & Subject Notes',
+        desc: 'Explore detailed subject-wise notes and chapter-specific resources tailored for your class curriculum. Perfect for exam revision and deep learning.',
+        keywords: 'class wise notes, subject resources, chapter notes, academic materials, exam revision'
+      };
+    }
+    if (path === '/games') {
+      return {
+        title: 'Educational Games & Interactive Learning',
+        desc: 'Learn while you play! Our interactive educational games cover science, math, and general knowledge to make study sessions engaging and fun.',
+        keywords: 'educational games, learning games for students, interactive study, gamified learning, science games'
+      };
+    }
+    if (path === '/tests') {
+      return {
+        title: 'Online Practice Tests & MCQs with Leaderboard',
+        desc: 'Challenge yourself with our online tests and MCQ quizzes. Track your progress on the global leaderboard and compete with students nationwide.',
+        keywords: 'online tests, MCQ practice, student leaderboard, quiz competition, exam practice'
+      };
+    }
+    if (path === '/live-club') {
+      return {
+        title: 'Live Chat & Student Discussion Community',
+        desc: 'Join our vibrant student community. Discuss chapters, ask questions, and share knowledge in our real-time live club powered by AI and students.',
+        keywords: 'student community, live chat, study discussion, peer learning, student forum'
+      };
+    }
+    return {
+      title: 'Study Hub Omega | Futuristic Learning Platform',
+      desc: 'The ultimate digital companion for modern students. Notes, games, tests, and community discussion all in one place.',
+      keywords: 'study hub, digital learning, edtech platform, student dashboard, study notes'
+    };
+  };
+
+  const seo = getPageSEO();
+
+  // Global Keyboard Navigation
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 1. Esc key to go back
+      if (e.key === 'Escape') {
+        // If we are in a modal or special state, it might have its own handler, 
+        // but as a fallback, go back if possible.
+        const activeElement = document.activeElement;
+        const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+        
+        if (!isInput && location.pathname !== '/') {
+          navigate(-1);
+        }
+      }
+
+      // 2. Arrow Key Navigation Helper
+      // (Focuses next/prev element in the natural tab order)
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        const elements = Array.from(document.querySelectorAll(focusableElements)) as HTMLElement[];
+        const currentIdx = elements.indexOf(document.activeElement as HTMLElement);
+
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          const nextIdx = (currentIdx + 1) % elements.length;
+          elements[nextIdx]?.focus();
+          e.preventDefault();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          const prevIdx = (currentIdx - 1 + elements.length) % elements.length;
+          elements[prevIdx]?.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [location.pathname, navigate]);
+
   return (
     <ThemeProvider>
+      <Helmet>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.desc} />
+        <meta name="keywords" content={seo.keywords} />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.desc} />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.desc} />
+      </Helmet>
       <AnimatePresence mode="wait">
         {isBanned ? (
           <motion.div 

@@ -31,20 +31,10 @@ export default function Leaderboard() {
       })) as UserProfile[];
       
       // Filter out users who have a name and secret logins. 
-      // Main admin is filtered out UNLESS they are pinned.
-      const now = Date.now();
-      const pinnedUids = new Set(
-        (siteConfig?.pinnedEntries || [])
-          .filter(p => {
-            const expiry = p.expiresAt?.seconds ? p.expiresAt.seconds * 1000 : p.expiresAt;
-            return expiry > now;
-          })
-          .map(p => p.uid)
-      );
-
+      // Main admin is filtered out.
       const filtered = users.filter(u => {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-        const isPinned = pinnedUids.has(u.uid) || u.pinnedToTop;
+        const isPinned = u.pinnedToTop;
         
         // Show main admin normally now as requested
         if (isMainAdmin) return true;
@@ -53,8 +43,8 @@ export default function Leaderboard() {
       });
       
       const finalUsers = [...filtered].sort((a, b) => {
-        const aPinned = pinnedUids.has(a.uid) || a.pinnedToTop;
-        const bPinned = pinnedUids.has(b.uid) || b.pinnedToTop;
+        const aPinned = a.pinnedToTop;
+        const bPinned = b.pinnedToTop;
 
         if (aPinned && !bPinned) return -1;
         if (!aPinned && bPinned) return 1;
