@@ -96,8 +96,17 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/20 group-hover:scale-110 transition-transform">
-            <GraduationCap className="text-white w-6 h-6" />
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/20 group-hover:scale-110 transition-transform overflow-hidden">
+            {siteConfig?.siteLogo ? (
+              <img 
+                src={convertDriveUrl(siteConfig.siteLogo)} 
+                alt="Logo" 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer" 
+              />
+            ) : (
+              <GraduationCap className="text-white w-6 h-6" />
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
@@ -123,7 +132,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
               key={link.path}
               to={link.path}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap",
+                "nav-link text-sm font-medium transition-colors hover:text-neon-blue flex items-center gap-2 whitespace-nowrap",
                 location.pathname === link.path ? "text-neon-blue" : "text-white/70"
               )}
             >

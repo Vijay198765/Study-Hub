@@ -26,7 +26,7 @@ import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import LeaderboardScroller from './components/LeaderboardScroller';
-
+import { convertDriveUrl } from './lib/utils';
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -563,27 +563,65 @@ export default function App() {
 
   const seo = getPageSEO();
 
+  // Update dynamic favicon from siteConfig
+  useEffect(() => {
+    if (siteConfig?.siteLogo) {
+      const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (link) {
+        link.href = convertDriveUrl(siteConfig.siteLogo);
+      }
+      
+      const appleLink: HTMLLinkElement | null = document.querySelector("link[rel='apple-touch-icon']");
+      if (appleLink) {
+        appleLink.href = convertDriveUrl(siteConfig.siteLogo);
+      }
+    }
+  }, [siteConfig?.siteLogo]);
+
   // Global Keyboard Navigation
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      
+      const activeElement = document.activeElement;
+      const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+
       // 1. Esc key to go back
       if (e.key === 'Escape') {
-        // If we are in a modal or special state, it might have its own handler, 
-        // but as a fallback, go back if possible.
-        const activeElement = document.activeElement;
-        const isInput = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
-        
         if (!isInput && location.pathname !== '/') {
           navigate(-1);
         }
       }
 
-      // 2. Arrow Key Navigation Helper
-      // (Focuses next/prev element in the natural tab order)
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      // 2. Page Up / Page Down for scrolling
+      if (e.key === 'PageUp') {
+        window.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' });
+        e.preventDefault();
+      }
+      if (e.key === 'PageDown') {
+        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+        e.preventDefault();
+      }
+
+      // 3. Number keys 1-9 for quick navigation (only if not in input)
+      if (!isInput && /^[1-9]$/.test(e.key)) {
+        const navLinks = document.querySelectorAll('.nav-link');
+        const index = parseInt(e.key) - 1;
+        if (navLinks[index]) {
+          (navLinks[index] as HTMLElement).click();
+          e.preventDefault();
+        }
+      }
+
+      // 4. Arrow Key Navigation Helper
+      if (!isInput && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-        const elements = Array.from(document.querySelectorAll(focusableElements)) as HTMLElement[];
-        const currentIdx = elements.indexOf(document.activeElement as HTMLElement);
+        const elements = Array.from(document.querySelectorAll(focusableElements)).filter(el => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0; // Only visible elements
+        }) as HTMLElement[];
+        
+        const currentIdx = elements.indexOf(activeElement as HTMLElement);
 
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
           const nextIdx = (currentIdx + 1) % elements.length;

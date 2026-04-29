@@ -2851,6 +2851,18 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="space-y-2">
+                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Site Logo URL</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. https://example.com/logo.png"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                        value={siteConfig?.siteLogo || ''}
+                        onChange={(e) => saveSiteConfig({ siteLogo: e.target.value })}
+                      />
+                      <p className="text-[10px] text-white/20">Enter a URL for your site logo (replaces the default icon).</p>
+                    </div>
+
+                    <div className="space-y-2">
                       <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Hero Tagline</label>
                       <textarea 
                         rows={2}

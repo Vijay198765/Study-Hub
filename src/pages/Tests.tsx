@@ -134,17 +134,19 @@ export default function Tests() {
     if (!activeTest || testCompleted) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Keys 1-4 for options
-      if (['1', '2', '3', '4'].includes(e.key)) {
+      // Keys 1-9 for options
+      if (/^[1-9]$/.test(e.key)) {
         const optionIdx = parseInt(e.key) - 1;
         if (activeTest.questions[currentQuestionIdx] && activeTest.questions[currentQuestionIdx].options[optionIdx]) {
           handleAnswer(optionIdx);
+          e.preventDefault();
         }
       }
 
       // Enter to move next
       if (e.key === 'Enter' && answers[currentQuestionIdx] !== -1) {
         nextQuestion();
+        e.preventDefault();
       }
     };
 
