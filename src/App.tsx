@@ -258,7 +258,7 @@ export default function App() {
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
             if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
-              updates.photoURL = firebaseUser.photoURL;
+              updates.photoURL = convertDriveUrl(firebaseUser.photoURL);
             }
             if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
@@ -274,7 +274,7 @@ export default function App() {
             // Also ensure main admin photo is always synced from Google if not overridden
             const isMainAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
             if (isMainAdmin && firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
-              updates.photoURL = firebaseUser.photoURL;
+              updates.photoURL = convertDriveUrl(firebaseUser.photoURL);
             }
 
             // Upgrade anonymous user to admin if they have the special login flags

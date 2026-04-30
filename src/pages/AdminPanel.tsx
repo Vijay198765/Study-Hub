@@ -1792,7 +1792,7 @@ export default function AdminPanel() {
                         u.bonusTimeSpent || 0,
                         (u.totalTimeSpent || 0) + (u.bonusTimeSpent || 0),
                         u.createdAt,
-                        u.photoURL || '',
+                        convertDriveUrl(u.photoURL || ''),
                         u.deviceInfo?.userAgent || 'N/A',
                         u.deviceInfo?.platform || 'N/A',
                         u.deviceInfo?.language || 'N/A',

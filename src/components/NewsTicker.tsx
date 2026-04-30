@@ -50,13 +50,13 @@ export default function NewsTicker() {
   const currentNews = news[currentIndex];
 
   return (
-    <div className="w-full bg-black/40 border-y border-white/5 backdrop-blur-md h-10 flex items-center relative overflow-hidden">
+    <div className="w-full bg-black/40 border-y border-white/5 backdrop-blur-md min-h-10 flex items-center relative overflow-hidden py-1">
       <div className="absolute left-0 top-0 bottom-0 bg-neon-blue px-4 flex items-center gap-2 z-10 shadow-[5px_0_15px_rgba(0,242,255,0.3)]">
         <Megaphone size={14} className="text-black" />
         <span className="text-[10px] font-black uppercase tracking-widest text-black whitespace-nowrap hidden sm:inline">Latest News</span>
       </div>
       
-      <div className="flex-grow pl-12 sm:pl-36 pr-4 overflow-hidden relative">
+      <div className="flex-grow pl-12 sm:pl-36 pr-12 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentNews.id}
@@ -64,7 +64,7 @@ export default function NewsTicker() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="flex items-center gap-3"
+            className="flex flex-wrap items-center gap-x-2 py-1"
           >
             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               currentNews.type === 'success' ? 'bg-green-500' :
@@ -72,10 +72,10 @@ export default function NewsTicker() {
               currentNews.type === 'error' ? 'bg-red-500' :
               'bg-neon-blue'
             } animate-pulse shadow-[0_0_8px_currentColor]`} />
-            <span className="text-[11px] font-bold text-white/90 truncate mr-2">
+            <span className="text-[11px] font-bold text-white/90">
               {currentNews.title}:
             </span>
-            <span className="text-[11px] font-medium text-white/60 truncate">
+            <span className="text-[11px] font-medium text-white/80">
               {currentNews.message}
             </span>
           </motion.div>

@@ -44,13 +44,13 @@ export default function AnnouncementBar() {
         className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-neon-blue/90 via-neon-purple/90 to-neon-blue/90 backdrop-blur-md border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white animate-pulse">
               <Megaphone size={16} />
             </div>
-            <div className="flex items-center gap-2 overflow-hidden truncate">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">News Alert:</span>
-              <p className="text-white text-xs font-bold truncate leading-none">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 whitespace-nowrap hidden sm:inline">News Alert:</span>
+              <p className="text-white text-[13px] font-bold leading-tight">
                 {activeNotif.title}: {activeNotif.message}
               </p>
             </div>

@@ -5,6 +5,7 @@ import { Lock, LogIn, AlertCircle, Shield, X } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { convertDriveUrl } from '../lib/utils';
 
 export default function Login() {
   const [name, setName] = useState('');
@@ -83,15 +84,17 @@ export default function Login() {
           uid: user.uid,
           email: user.email,
           name: name.trim(),
+          photoURL: convertDriveUrl(user.photoURL || undefined),
           role: role,
           createdAt: new Date().toISOString()
         });
       } else {
         role = userDoc.data().role;
-        // Update name if different
+        // Update name and sync photo if different
         await setDoc(userRef, {
           ...userDoc.data(),
           name: name.trim(),
+          photoURL: convertDriveUrl(user.photoURL || userDoc.data().photoURL || undefined)
         }, { merge: true });
       }
 
