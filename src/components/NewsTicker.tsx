@@ -9,9 +9,9 @@ export default function NewsTicker() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Only fetch global news from 'news' collection
+    // Fetch global notifications from 'notifications' collection
     const q = query(
-      collection(db, 'news'),
+      collection(db, 'notifications'),
       limit(20)
     );
 
@@ -21,7 +21,9 @@ export default function NewsTicker() {
           id: doc.id,
           ...doc.data()
         }))
-        // Sort by createdAt in-memory to avoid index requirement
+        // Filter for global notifications (no userId or userId is '' or 'all')
+        .filter((d: any) => !d.userId || d.userId === '' || d.userId === 'all')
+        // Sort by createdAt in-memory to avoid composite index requirement
         .sort((a: any, b: any) => {
           const timeA = a.createdAt?.seconds || 0;
           const timeB = b.createdAt?.seconds || 0;
