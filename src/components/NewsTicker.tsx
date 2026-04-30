@@ -9,12 +9,10 @@ export default function NewsTicker() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Only fetch global notifications (userId empty or 'all')
-    // Note: Firestore 'in' query can handle multiple values
+    // Only fetch global news from 'news' collection
     const q = query(
-      collection(db, 'notifications'),
-      where('userId', 'in', ['', 'all']),
-      limit(50)
+      collection(db, 'news'),
+      limit(20)
     );
 
     const unsub = onSnapshot(q, (snap) => {

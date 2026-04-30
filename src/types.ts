@@ -141,6 +141,7 @@ export interface SiteConfig {
   welcomeEmailTemplate: string;
   welcomeEmailSubject: string;
   siteName?: string;
+  siteLogo?: string;
   adminName?: string;
   coOwnerName?: string;
   siteSubtitle?: string;
