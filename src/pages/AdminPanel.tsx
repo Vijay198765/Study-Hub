@@ -2860,26 +2860,6 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Site Logo URL</label>
-                      <div className="flex gap-4 items-start">
-                        <div className="flex-1 space-y-2">
-                          <input 
-                            type="text" 
-                            placeholder="e.g. https://example.com/logo.png"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                            value={siteConfig?.siteLogo || ''}
-                            onChange={(e) => saveSiteConfig({ siteLogo: e.target.value })}
-                          />
-                          <p className="text-[10px] text-white/20">Enter a URL for your site logo (replaces the default icon).</p>
-                        </div>
-                        <div className="flex flex-col items-center gap-1.5">
-                          <Logo siteLogo={siteConfig?.siteLogo} size="md" />
-                          <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
                       <label className="text-xs font-medium text-white/60 uppercase tracking-widest">Hero Tagline</label>
                       <textarea 
                         rows={2}
@@ -3284,13 +3264,21 @@ export default function AdminPanel() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Logo URL (Optional)</label>
-                           <input 
-                             type="text" 
-                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                             value={siteConfig?.logoUrl || ''}
-                             onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
-                             placeholder="https://..."
-                           />
+                           <div className="flex gap-4 items-start">
+                             <div className="flex-1">
+                               <input 
+                                 type="text" 
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                                 value={siteConfig?.logoUrl || ''}
+                                 onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
+                                 placeholder="https://..."
+                               />
+                             </div>
+                             <div className="flex flex-col items-center gap-1.5">
+                               <Logo logoUrl={siteConfig?.logoUrl} size="sm" />
+                               <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>
+                             </div>
+                           </div>
                         </div>
                         <div className="space-y-2">
                            <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Favicon URL (Optional)</label>

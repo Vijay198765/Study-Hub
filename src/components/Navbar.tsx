@@ -97,7 +97,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
         <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
-          <Logo siteLogo={siteConfig?.siteLogo} size="md" />
+          <Logo logoUrl={siteConfig?.logoUrl} size="md" />
           <div className="flex flex-col">
             <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
               {siteConfig?.siteName || 'Study-hub'}

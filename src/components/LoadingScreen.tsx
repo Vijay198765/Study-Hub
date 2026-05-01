@@ -381,7 +381,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
               transition={{ delay: 0.3, duration: 0.8 }}
               className="mb-4"
             >
-              <Logo siteLogo={siteConfig?.siteLogo} size="lg" />
+              <Logo logoUrl={siteConfig?.logoUrl} size="lg" />
             </motion.div>
 
             <motion.h1

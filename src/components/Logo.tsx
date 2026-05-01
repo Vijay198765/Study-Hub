@@ -3,13 +3,13 @@ import { GraduationCap } from 'lucide-react';
 import { cn, convertDriveUrl } from '../lib/utils';
 
 interface LogoProps {
-  siteLogo?: string;
+  logoUrl?: string;
   className?: string;
   iconClassName?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Logo({ siteLogo, className, iconClassName, size = 'md' }: LogoProps) {
+export default function Logo({ logoUrl, className, iconClassName, size = 'md' }: LogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -34,9 +34,9 @@ export default function Logo({ siteLogo, className, iconClassName, size = 'md' }
         {/* Glow effect */}
         <div className="absolute inset-0 bg-neon-blue/5 group-hover:bg-neon-blue/10 transition-colors" />
         
-        {siteLogo ? (
+        {logoUrl ? (
           <img 
-            src={convertDriveUrl(siteLogo)} 
+            src={convertDriveUrl(logoUrl)} 
             alt="Logo" 
             className="w-full h-full object-cover relative z-10" 
             referrerPolicy="no-referrer" 
@@ -48,26 +48,12 @@ export default function Logo({ siteLogo, className, iconClassName, size = 'md' }
           />
         ) : null}
         
-        {/* Fallback Icon / Custom SVG Logo */}
+        {/* Fallback Icon */}
         <div className={cn(
-          "relative z-10 flex items-center justify-center",
-          siteLogo ? "hidden group-[.show-fallback]:flex" : "flex"
+          "relative z-10 flex items-center justify-center text-white",
+          logoUrl ? "hidden group-[.show-fallback]:flex" : "flex"
         )}>
-          <svg 
-            width={iconSizes[size]} 
-            height={iconSizes[size]} 
-            viewBox="0 0 100 100" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-            className={cn("text-white", iconClassName)}
-          >
-            {/* Professional School/Academic Logo SVG */}
-            <path d="M50 15L15 35L50 55L85 35L50 15Z" fill="currentColor" fillOpacity="0.2" stroke="white" strokeWidth="4" strokeLinejoin="round" />
-            <path d="M15 35V65C15 65 30 75 50 75C70 75 85 65 85 65V35" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M50 55V85" stroke="white" strokeWidth="4" strokeLinecap="round" />
-            <path d="M50 15L20 32" stroke="#00f2ff" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="50" cy="40" r="15" stroke="#00f2ff" strokeWidth="2" strokeDasharray="4 4" />
-          </svg>
+          <GraduationCap size={iconSizes[size]} />
         </div>
       </div>
     </div>
