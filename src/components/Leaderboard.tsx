@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock } from 'lucide-react';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
 import { cn, convertDriveUrl } from '../lib/utils';
@@ -13,10 +13,13 @@ export default function Leaderboard() {
 
   useEffect(() => {
     // 1. Fetch Site Config for Global Pins
-    const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
-      if (snap.exists()) {
-        setSiteConfig(snap.data() as SiteConfig);
-      }
+    const unsubConfig = onSnapshot(doc(db, 'config', 'site'), {
+      next: (snap) => {
+        if (snap.exists()) {
+          setSiteConfig(snap.data() as SiteConfig);
+        }
+      },
+      error: (error) => handleFirestoreError(error, OperationType.GET, 'config/site')
     });
 
     const q = query(

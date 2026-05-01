@@ -233,41 +233,41 @@ export default function AdminPanel() {
         setIsSpecialAdmin(isSpecial && isAdminLogin);
 
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        unsubUser = onSnapshot(userRef, (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            const isAdminRole = data.role === 'admin';
-            setIsAdmin(isAdminRole);
-            
-            const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
-
-            // Auto-unlock promoted admins as limited admins
-            if (isAdminRole && !isSuper) {
-              setIsUnlocked(true);
-              setIsLimitedAdmin(true);
-            }
-
-            // Auto-unlock if it's a special secret login session
-            if (isSpecial) {
-              setIsUnlocked(true);
-              const limited = !isSuper;
-              setIsLimitedAdmin(limited);
+        unsubUser = onSnapshot(userRef, {
+          next: (snap) => {
+            if (snap.exists()) {
+              const data = snap.data();
+              const isAdminRole = data.role === 'admin';
+              setIsAdmin(isAdminRole);
               
-              if (limited) {
-                const stored = localStorage.getItem('sessionAllowedTabs');
-                if (stored) {
-                  try {
-                    setSessionAllowedTabs(JSON.parse(stored));
-                  } catch (e) {
-                    console.error("Error parsing stored tabs:", e);
+              const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+
+              // Auto-unlock promoted admins as limited admins
+              if (isAdminRole && !isSuper) {
+                setIsUnlocked(true);
+                setIsLimitedAdmin(true);
+              }
+
+              // Auto-unlock if it's a special secret login session
+              if (isSpecial) {
+                setIsUnlocked(true);
+                const limited = !isSuper;
+                setIsLimitedAdmin(limited);
+                
+                if (limited) {
+                  const stored = localStorage.getItem('sessionAllowedTabs');
+                  if (stored) {
+                    try {
+                      setSessionAllowedTabs(JSON.parse(stored));
+                    } catch (e) {
+                      console.error("Error parsing stored tabs:", e);
+                    }
                   }
                 }
               }
             }
-          }
-        }, (err) => {
-          console.error("Admin check failed:", err);
-          setIsAdmin(false);
+          },
+          error: (error) => handleFirestoreError(error, OperationType.GET, `users/${auth.currentUser?.uid}`)
         });
       } else {
         setIsAdmin(false);
@@ -302,7 +302,7 @@ export default function AdminPanel() {
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newNews, setNewNews] = useState({ title: '', message: '', type: 'info', url: '' });
   const [isAddingNotif, setIsAddingNotif] = useState(false);
-  const [newNotif, setNewNotif] = useState({ title: '', message: '', type: 'info', url: '' });
+  const [newNotif, setNewNotif] = useState({ title: '', message: '', type: 'info', url: '', userId: '' });
   const [isAddingUserMsg, setIsAddingUserMsg] = useState(false);
   const [newUserMsg, setNewUserMsg] = useState({ userId: '', message: '', duration: 10, showCount: 1 });
   
@@ -461,9 +461,12 @@ export default function AdminPanel() {
       setSiteComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'siteComments'));
 
-    const unsubGroups = onSnapshot(collection(db, 'groups'), (snapshot) => {
-      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'groups'));
+    const unsubGroups = onSnapshot(collection(db, 'groups'), {
+      next: (snapshot) => {
+        setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      },
+      error: (error) => handleFirestoreError(error, OperationType.GET, 'groups')
+    });
 
     const unsubRatings = onSnapshot(query(collection(db, 'ratings'), orderBy('createdAt', 'desc')), (snapshot) => {
       setRatings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -627,10 +630,11 @@ export default function AdminPanel() {
       // 2. Add as a fresh document (provides a unique ID for the "seen" check)
       await addDoc(collection(db, 'notifications'), {
         ...newNotif,
+        userId: newNotif.userId || '',
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.uid
       });
-      setNewNotif({ title: '', message: '', type: 'info', url: '' });
+      setNewNotif({ title: '', message: '', type: 'info', url: '', userId: '' });
       setIsAddingNotif(false);
       setToast({ message: 'Alert pushed to active users!', type: 'success' });
     } catch (err) {

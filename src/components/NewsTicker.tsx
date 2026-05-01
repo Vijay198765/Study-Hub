@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Megaphone, ArrowRight } from 'lucide-react';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
 
 export default function NewsTicker() {
@@ -12,26 +12,30 @@ export default function NewsTicker() {
     // Fetch global notifications from 'notifications' collection
     const q = query(
       collection(db, 'notifications'),
+      where('userId', 'in', ['', 'all']),
       limit(20)
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const newsData = snap.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        // Filter for global notifications (no userId or userId is '' or 'all')
-        .filter((d: any) => !d.userId || d.userId === '' || d.userId === 'all')
-        // Sort by createdAt in-memory to avoid composite index requirement
-        .sort((a: any, b: any) => {
-          const timeA = a.createdAt?.seconds || 0;
-          const timeB = b.createdAt?.seconds || 0;
-          return timeB - timeA;
-        })
-        .slice(0, 10);
+    const unsub = onSnapshot(q, {
+      next: (snap) => {
+        const newsData = snap.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          // Filter for global notifications (no userId or userId is '' or 'all')
+          .filter((d: any) => !d.userId || d.userId === '' || d.userId === 'all')
+          // Sort by createdAt in-memory to avoid composite index requirement
+          .sort((a: any, b: any) => {
+            const timeA = a.createdAt?.seconds || 0;
+            const timeB = b.createdAt?.seconds || 0;
+            return timeB - timeA;
+          })
+          .slice(0, 10);
 
-      setNews(newsData);
+        setNews(newsData);
+      },
+      error: (error) => handleFirestoreError(error, OperationType.GET, 'notifications')
     });
 
     return () => unsub();

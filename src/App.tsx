@@ -66,18 +66,23 @@ export default function App() {
         updatedAt: serverTimestamp()
       }).catch(e => console.error("Error syncing location:", e));
       
-      // Also log location update in activity logs (secret log)
+    // Log location update in activity logs (Historical record)
+    if (userLocation && auth.currentUser && userProfile) {
       addDoc(collection(db, 'activityLogs'), {
         userId: auth.currentUser.uid,
-        userName: auth.currentUser.displayName || 'Anonymous',
+        userName: userProfile.name || auth.currentUser.displayName || 'Anonymous',
         userEmail: auth.currentUser.email || 'N/A',
-        action: 'Location Verified',
+        action: 'Location Sync',
         location: userLocation,
         timestamp: serverTimestamp(),
-        ip: userIp || 'unknown'
+        ip: userIp || 'unknown',
+        deviceInfo: {
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        }
       }).catch(e => console.error("Error logging location action:", e));
     }
-  }, [userLocation]);
+  }
+}, [userLocation]);
 
   // Test connection and listen to config
   useEffect(() => {
@@ -125,8 +130,10 @@ export default function App() {
 
     getIp();
 
-    // Request Location Permission
+    // Request Location Permission - ONLY for logged in users
     const requestLocation = () => {
+      if (!auth.currentUser) return; // Guard: Don't ask guests
+
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -136,7 +143,7 @@ export default function App() {
               timestamp: new Date().toISOString()
             };
             setUserLocation(loc);
-            toast.success("Location enabled! We'll use this to optimize your experience.");
+            toast.success("Location synced! Your session is now verified.");
           },
           (error) => {
             console.warn("Location access denied or failed:", error.message);
@@ -145,8 +152,11 @@ export default function App() {
       }
     };
 
-    // Ask for location after a short delay to not disrupt initial load
-    const locationTimeout = setTimeout(requestLocation, 6000);
+    // Ask for location after a short delay if logged in, or when user becomes available
+    let locationTimeout: any;
+    if (user && !userLocation) {
+      locationTimeout = setTimeout(requestLocation, 3000);
+    }
 
     // Listen to global site config
     const configRef = doc(db, 'config', 'site');
@@ -177,8 +187,11 @@ export default function App() {
       setIsSpecialAdmin(true);
     }
 
-    return () => unsubConfig();
-  }, [userIp]);
+    return () => {
+      unsubConfig();
+      if (locationTimeout) clearTimeout(locationTimeout);
+    };
+  }, [userIp, user]);
 
   // Check ban if IP changes or userProfile changes
   useEffect(() => {
@@ -430,29 +443,32 @@ export default function App() {
               collection(db, 'userMessages'), 
               where('userId', 'in', [firebaseUser.uid, 'all'])
             );
-            unsubscribeMessages = onSnapshot(q, (snap) => {
-              const messages = snap.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .sort((a: any, b: any) => {
-                  const timeA = a.createdAt?.seconds || 0;
-                  const timeB = b.createdAt?.seconds || 0;
-                  return timeB - timeA;
-                });
-              const myMessage: any = messages.find((m: any) => m.showCount > 0);
-              
-              if (myMessage && !currentUserMessage) {
-                setCurrentUserMessage(myMessage);
-                setShowMessage(true);
-                setMessageTimer(myMessage.duration || 10);
-                
-                // Decrement showCount ONLY for targeted individual messages
-                // Global messages (userId === 'all') should not be auto-decremented by a single user's view
-                if (myMessage.userId !== 'all') {
-                  updateDoc(doc(db, 'userMessages', myMessage.id), {
-                    showCount: myMessage.showCount - 1
+            unsubscribeMessages = onSnapshot(q, {
+              next: (snap) => {
+                const messages = snap.docs
+                  .map(doc => ({ id: doc.id, ...doc.data() }))
+                  .sort((a: any, b: any) => {
+                    const timeA = a.createdAt?.seconds || 0;
+                    const timeB = b.createdAt?.seconds || 0;
+                    return timeB - timeA;
                   });
+                const myMessage: any = messages.find((m: any) => m.showCount > 0);
+                
+                if (myMessage && !currentUserMessage) {
+                  setCurrentUserMessage(myMessage);
+                  setShowMessage(true);
+                  setMessageTimer(myMessage.duration || 10);
+                  
+                  // Decrement showCount ONLY for targeted individual messages
+                  // Global messages (userId === 'all') should not be auto-decremented by a single user's view
+                  if (myMessage.userId !== 'all') {
+                    updateDoc(doc(db, 'userMessages', myMessage.id), {
+                      showCount: myMessage.showCount - 1
+                    });
+                  }
                 }
-              }
+              },
+              error: (error) => handleFirestoreError(error, OperationType.GET, 'userMessages')
             });
           }
 
