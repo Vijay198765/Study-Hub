@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Float, PerspectiveCamera, Text, MeshWobbleMaterial, OrbitControls, Environment, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'motion/react';
+import Logo from './Logo';
 
 const Robot = () => {
   const group = useRef<THREE.Group>(null);
@@ -289,7 +290,7 @@ const LOADING_MESSAGES = [
   "Calibrating HUB Systems..."
 ];
 
-export const LoadingScreen = () => {
+export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') return window.innerWidth < 768;
     return false;
@@ -372,6 +373,17 @@ export const LoadingScreen = () => {
             className="flex flex-col items-center gap-1"
           >
             <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mb-4" />
+            
+            {/* Logo in Loading Screen */}
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="mb-4"
+            >
+              <Logo siteLogo={siteConfig?.siteLogo} size="lg" />
+            </motion.div>
+
             <motion.h1
               animate={{ 
                 opacity: [0.7, 1, 0.7],
@@ -383,7 +395,7 @@ export const LoadingScreen = () => {
               }}
               className="text-white font-sans text-4xl sm:text-5xl font-black tracking-[0.25em] uppercase italic bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40 drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]"
             >
-              STUDY HUB
+              {siteConfig?.siteName || 'STUDY HUB'}
             </motion.h1>
             <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mt-4" />
           </motion.div>

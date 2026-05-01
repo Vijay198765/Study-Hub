@@ -8,6 +8,7 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import SearchModal from './SearchModal';
 import { toast } from 'sonner';
+import Logo from './Logo';
 
 interface NavbarProps {
   isAdmin: boolean;
@@ -96,18 +97,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
         <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/20 group-hover:scale-110 transition-transform overflow-hidden">
-            {siteConfig?.siteLogo ? (
-              <img 
-                src={convertDriveUrl(siteConfig.siteLogo)} 
-                alt="Logo" 
-                className="w-full h-full object-cover" 
-                referrerPolicy="no-referrer" 
-              />
-            ) : (
-              <GraduationCap className="text-white w-6 h-6" />
-            )}
-          </div>
+          <Logo siteLogo={siteConfig?.siteLogo} size="md" />
           <div className="flex flex-col">
             <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
               {siteConfig?.siteName || 'Study-hub'}

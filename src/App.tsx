@@ -741,7 +741,7 @@ export default function App() {
             </div>
           </motion.div>
         ) : (loading || !minLoadingComplete) ? (
-          <LoadingScreen key="loading" />
+          <LoadingScreen key="loading" siteConfig={siteConfig} />
         ) : (
           <ErrorBoundary key="app">
             {firebaseError && <FirebaseSetupGuide errorType={firebaseError} projectId={firebaseConfig.projectId} />}
