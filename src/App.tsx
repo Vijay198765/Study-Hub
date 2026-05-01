@@ -28,6 +28,7 @@ import { WhatsAppFloat } from './components/WhatsAppFloat';
 import LeaderboardScroller from './components/LeaderboardScroller';
 import { convertDriveUrl } from './lib/utils';
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
+import { toast } from 'sonner';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Protected Route Component
@@ -54,6 +55,29 @@ export default function App() {
   const [currentUserMessage, setCurrentUserMessage] = useState<any>(null);
   const [showMessage, setShowMessage] = useState(false);
   const [messageTimer, setMessageTimer] = useState<number>(10);
+  const [userLocation, setUserLocation] = useState<any>(null);
+
+  // Sync location when it changes and user is logged in
+  useEffect(() => {
+    if (userLocation && auth.currentUser) {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      updateDoc(userRef, {
+        lastLocation: userLocation,
+        updatedAt: serverTimestamp()
+      }).catch(e => console.error("Error syncing location:", e));
+      
+      // Also log location update in activity logs (secret log)
+      addDoc(collection(db, 'activityLogs'), {
+        userId: auth.currentUser.uid,
+        userName: auth.currentUser.displayName || 'Anonymous',
+        userEmail: auth.currentUser.email || 'N/A',
+        action: 'Location Verified',
+        location: userLocation,
+        timestamp: serverTimestamp(),
+        ip: userIp || 'unknown'
+      }).catch(e => console.error("Error logging location action:", e));
+    }
+  }, [userLocation]);
 
   // Test connection and listen to config
   useEffect(() => {
@@ -100,6 +124,29 @@ export default function App() {
     };
 
     getIp();
+
+    // Request Location Permission
+    const requestLocation = () => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const loc = {
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+              timestamp: new Date().toISOString()
+            };
+            setUserLocation(loc);
+            toast.success("Location enabled! We'll use this to optimize your experience.");
+          },
+          (error) => {
+            console.warn("Location access denied or failed:", error.message);
+          }
+        );
+      }
+    };
+
+    // Ask for location after a short delay to not disrupt initial load
+    const locationTimeout = setTimeout(requestLocation, 6000);
 
     // Listen to global site config
     const configRef = doc(db, 'config', 'site');
@@ -263,6 +310,12 @@ export default function App() {
             if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
+            
+            // Sync location if available
+            if (userLocation && (!profileData.lastLocation || 
+                Math.abs(profileData.lastLocation.lat - userLocation.lat) > 0.01)) {
+              updates.lastLocation = userLocation;
+            }
 
             // Specific constraint for tagged email
             if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
@@ -365,6 +418,7 @@ export default function App() {
                path: window.location.pathname,
                ip: detectedIp,
                deviceInfo,
+               location: userLocation || profileData.lastLocation || null,
                isSecret: isSpecial,
                timestamp: serverTimestamp()
              }).catch(e => console.error("Activity logging failed:", e));

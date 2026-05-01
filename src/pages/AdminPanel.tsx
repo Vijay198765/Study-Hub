@@ -1782,7 +1782,7 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => {
-                    const headers = ['Name', 'Email', 'Role', 'Natural Time (Min)', 'Bonus Time (Min)', 'Total Time (Min)', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution'];
+                    const headers = ['Name', 'Email', 'Role', 'Natural Time (Min)', 'Bonus Time (Min)', 'Total Time (Min)', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution', 'Location'];
                     const csvData = users
                       .map(u => [
                         u.name || 'Anonymous',
@@ -1796,7 +1796,8 @@ export default function AdminPanel() {
                         u.deviceInfo?.userAgent || 'N/A',
                         u.deviceInfo?.platform || 'N/A',
                         u.deviceInfo?.language || 'N/A',
-                        u.deviceInfo?.screenResolution || 'N/A'
+                        u.deviceInfo?.screenResolution || 'N/A',
+                        u.lastLocation ? `"${u.lastLocation.lat}, ${u.lastLocation.lon}"` : 'N/A'
                       ]);
                     
                     const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
@@ -2416,9 +2417,9 @@ export default function AdminPanel() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => {
-                      const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'User Agent'];
+                      const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'Location', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !log.isSecret && !log.userName?.includes('Admin'))
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
@@ -2430,6 +2431,7 @@ export default function AdminPanel() {
                           log.ip || 'N/A',
                           log.resolution || 'N/A',
                           log.path || 'N/A',
+                          log.location ? `"${log.location.lat}, ${log.location.lon}"` : 'N/A',
                           `"${log.userAgent?.replace(/"/g, '""')}"` || 'N/A'
                         ];
                       });

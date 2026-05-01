@@ -203,14 +203,14 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             {user ? `Hello ${userName || 'Student'}!` : 'Hello Guest!'}
           </motion.div>
           
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-10 tracking-tight leading-tight min-h-[1.2em]">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-bold mb-6 sm:mb-10 tracking-tight leading-tight min-h-[1.2em]">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
               {displayText}
             </span>
             <span className="animate-pulse text-neon-blue">|</span>
           </h1>
           
-          <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 italic min-h-[3em]">
+          <p className="text-white/60 text-sm sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 sm:mb-12 italic min-h-[3em] px-4">
             "{quote}"
           </p>
 

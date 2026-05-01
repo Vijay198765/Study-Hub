@@ -91,11 +91,11 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
 
   return (
     <nav className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 py-3",
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-2 sm:px-4 py-3",
       isScrolled ? "bg-dark-card/95 backdrop-blur-md border-b border-white/10" : "bg-transparent"
     )}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+        <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/20 group-hover:scale-110 transition-transform overflow-hidden">
             {siteConfig?.siteLogo ? (
               <img 
