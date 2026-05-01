@@ -28,7 +28,7 @@ import {
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
-import { cn, convertDriveUrl } from '../lib/utils';
+import { cn, convertDriveUrl, safeStringify } from '../lib/utils';
 import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, News, SiteConfig, SecretProfile } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
@@ -359,7 +359,7 @@ export default function AdminPanel() {
         }));
       }
       
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([safeStringify(backupData, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -883,7 +883,7 @@ export default function AdminPanel() {
         siteComments,
         timestamp: new Date().toISOString()
       };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([safeStringify(data, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

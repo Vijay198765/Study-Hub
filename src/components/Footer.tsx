@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { signInAnonymously } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { safeStringify } from '../lib/utils';
 
 interface FooterProps {
   siteConfig?: any;
@@ -74,16 +75,16 @@ export default function Footer({ siteConfig }: FooterProps) {
         
         // Store session-specific permissions
         if (matchedProfile) {
-          localStorage.setItem('sessionAllowedTabs', JSON.stringify(matchedProfile.allowedTabs || []));
+          localStorage.setItem('sessionAllowedTabs', safeStringify(matchedProfile.allowedTabs || []));
         } else if (isLegacyMatch) {
           // Legacy permissions - give full access if it's the master key
-          localStorage.setItem('sessionAllowedTabs', JSON.stringify([
+          localStorage.setItem('sessionAllowedTabs', safeStringify([
             'chapters', 'chapterTests', 'classes', 'subjects', 'users', 'comments', 
             'tests', 'results', 'stats', 'groups', 'ratings', 'logs', 'site', 
             'notifications', 'news'
           ]));
         } else {
-          localStorage.setItem('sessionAllowedTabs', JSON.stringify(siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']));
+          localStorage.setItem('sessionAllowedTabs', safeStringify(siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests']));
         }
         
         const userCredential = await signInAnonymously(auth);

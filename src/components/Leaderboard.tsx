@@ -37,10 +37,10 @@ export default function Leaderboard() {
       // Main admin is filtered out.
       const filtered = users.filter(u => {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-        const isPinned = u.pinnedToTop;
+        const isAdminName = u.name?.toLowerCase().includes('admin') || u.name?.toLowerCase().includes('amin');
         
-        // Show main admin normally now as requested
-        if (isMainAdmin) return true;
+        // Show main admin and anyone with "admin" or "amin" in their name
+        if (isMainAdmin || isAdminName) return true;
         
         return u.name && !u.secretLoginLogged;
       });
@@ -151,7 +151,10 @@ export default function Leaderboard() {
                   <div className="flex items-center gap-1.5 justify-end text-sm font-display font-bold text-white">
                     <Clock size={14} className="text-neon-blue" />
                     <span>
-                      {Math.floor((user.totalTimeSpent || 0) / 60)}h {(user.totalTimeSpent || 0) % 60}m
+                      {(() => {
+                        const totalMinutes = (user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0);
+                        return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+                      })()}
                     </span>
                   </div>
                   <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mt-0.5">Study Time</p>

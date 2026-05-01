@@ -35,3 +35,27 @@ export function convertDriveUrl(url: string | undefined): string {
   
   return url;
 }
+
+export function safeStringify(obj: any, indent: number = 0): string {
+  const cache = new Set();
+  const stringified = JSON.stringify(
+    obj,
+    (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (cache.has(value)) {
+          return '[Circular]';
+        }
+        cache.add(value);
+        
+        // Handle Firebase/Firestore specific objects that might cause issues or be too large
+        if (value.constructor.name === 'DocumentReference' || value.constructor.name === 'Query' || value.constructor.name === 'Firestore') {
+          return `[Firebase ${value.constructor.name}]`;
+        }
+      }
+      return value;
+    },
+    indent
+  );
+  cache.clear();
+  return stringified;
+}

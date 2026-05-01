@@ -36,10 +36,10 @@ export default function LeaderboardScroller() {
       
       const filtered = users.filter(u => {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-        const isPinned = u.pinnedToTop;
+        const isAdminName = u.name?.toLowerCase().includes('admin') || u.name?.toLowerCase().includes('amin');
         
-        // Show main admin normally now as requested
-        if (isMainAdmin) return true;
+        // Show main admin and anyone with "admin" or "amin" in their name
+        if (isMainAdmin || isAdminName) return true;
         
         return u.name && !u.secretLoginLogged;
       });
@@ -141,7 +141,10 @@ export default function LeaderboardScroller() {
                     <div className="flex items-center gap-1.5 text-neon-blue bg-neon-blue/5 px-2.5 py-1 rounded-lg border border-neon-blue/10">
                       <Clock size={12} />
                       <span className="text-[11px] font-black tabular-nums">
-                        {Math.floor((user.totalTimeSpent || 0) / 60)}h {(user.totalTimeSpent || 0) % 60}m
+                        {(() => {
+                          const totalMinutes = (user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0);
+                          return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+                        })()}
                       </span>
                     </div>
                     <span className="text-[7px] text-white/20 uppercase tracking-widest mt-0.5 font-bold">Time</span>

@@ -14,6 +14,7 @@ import StudyTimer from '../components/StudyTimer';
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 import { Class, Subject, Chapter, QuizQuestion } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { safeStringify } from '../lib/utils';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { 
@@ -86,7 +87,7 @@ export default function ChapterDetail() {
           };
           const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
           const updated = [newItem, ...filtered].slice(0, 3);
-          localStorage.setItem('recentChapters', JSON.stringify(updated));
+          localStorage.setItem('recentChapters', safeStringify(updated));
         }
       });
     }
@@ -715,7 +716,7 @@ export default function ChapterDetail() {
                         <Download size={12} /> Save
                       </button>
                       <a 
-                        href={getPreviewUrl(previewUrl).replace('&embedded=true', '').replace('/preview', '/view')}
+                        href={previewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/40 hover:text-neon-purple transition-colors bg-white/5 px-2 py-1 rounded"
@@ -749,7 +750,7 @@ export default function ChapterDetail() {
                     <Download size={14} /> Save
                   </button>
                   <a 
-                    href={getPreviewUrl(previewUrl).replace('&embedded=true', '').replace('/preview', '/view')}
+                    href={previewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/60"
