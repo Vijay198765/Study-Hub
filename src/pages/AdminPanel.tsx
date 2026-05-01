@@ -1838,6 +1838,7 @@ export default function AdminPanel() {
                   <tbody>
                     {users
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
@@ -2167,6 +2168,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {testResults
+                      .filter(r => r.studentEmail?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .filter(r => 
                         r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         r.studentEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2272,7 +2274,7 @@ export default function AdminPanel() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Admins', value: users.filter(u => u.role === 'admin').length },
+                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
                           { name: 'Students', value: users.filter(u => u.role === 'student').length },
                         ]}
                         cx="50%"
@@ -3976,7 +3978,7 @@ export default function AdminPanel() {
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
                         {users
-                          .filter(u => u.name)
+                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                           .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
                              {u.name} ({u.email || u.uid.substring(0, 8)}) {u.email?.toLowerCase() === 'vijayninama683@gmail.com' ? '[ADMIN]' : ''}

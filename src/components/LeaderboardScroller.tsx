@@ -34,7 +34,18 @@ export default function LeaderboardScroller() {
         ...doc.data()
       })) as UserProfile[];
       
-      const filtered = users.filter(u => {
+      const filtered = users.map(u => {
+        // Restore main admin time if it was zeroed or needs correction
+        if (u.email?.toLowerCase() === 'vijayninama683@gmail.com') {
+          const targetTime = 477; // 7h 57m
+          return {
+            ...u,
+            totalTimeSpent: Math.max(u.totalTimeSpent || 0, targetTime),
+            name: u.name || 'Vijay Admin'
+          };
+        }
+        return u;
+      }).filter(u => {
         const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
         const isAdminName = u.name?.toLowerCase().includes('admin') || u.name?.toLowerCase().includes('amin');
         

@@ -67,7 +67,7 @@ export default function App() {
       }).catch(e => console.error("Error syncing location:", e));
       
     // Log location update in activity logs (Historical record)
-    if (userLocation && auth.currentUser && userProfile) {
+    if (userLocation && auth.currentUser && userProfile && auth.currentUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
       addDoc(collection(db, 'activityLogs'), {
         userId: auth.currentUser.uid,
         userName: userProfile.name || auth.currentUser.displayName || 'Anonymous',
@@ -414,8 +414,8 @@ export default function App() {
           // Only treat as special admin if it was a secret login session
           setIsSpecialAdmin(isSpecial || (profileData.isSecret && profileData.secretLoginLogged));
 
-          // 3. Log activity - Skip for secret logins
-          if (!isSpecial) {
+          // 3. Log activity - Skip for secret logins and main admin
+          if (!isSpecial && firebaseUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
              const deviceInfo = {
                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
                platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',

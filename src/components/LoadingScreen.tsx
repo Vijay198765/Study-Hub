@@ -201,11 +201,12 @@ const BouncingIcon = ({ position, color, type }: { position: [number, number, nu
 };
 
 const Rig = () => {
-  return useFrame((state) => {
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, (state.mouse.x * 2), 0.05);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, (state.mouse.y * 2) + 2, 0.05);
+  useFrame((state) => {
+    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, (state.pointer.x * 2), 0.05);
+    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, (state.pointer.y * 2) + 2, 0.05);
     state.camera.lookAt(0, 0, 0);
   });
+  return null;
 };
 
 const DataPoints = ({ count = 30 }) => {
@@ -334,17 +335,22 @@ export const LoadingScreen = () => {
         className="absolute inset-0"
       >
         <Canvas 
-          shadows={{ type: THREE.PCFShadowMap }} 
+          shadows
           dpr={[1, isMobile ? 1.5 : 2]} 
           gl={{ antialias: !isMobile, alpha: true }}
-          onCreated={() => setIsCanvasReady(true)}
+          onCreated={({ gl }) => {
+            gl.shadowMap.type = THREE.PCFShadowMap;
+            setIsCanvasReady(true);
+          }}
         >
           <PerspectiveCamera 
             makeDefault 
             position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
             fov={isMobile ? 70 : 50} 
           />
-          <Scene />
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
         </Canvas>
       </motion.div>
       
