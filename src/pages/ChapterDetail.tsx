@@ -314,6 +314,14 @@ export default function ChapterDetail() {
   const getPreviewUrl = (url: string) => {
     if (!url) return '';
     
+    // Handle lh3 image proxy links (backward compatibility for corrupted data)
+    if (url.includes('lh3.googleusercontent.com/d/')) {
+      const match = url.match(/\/d\/([^=]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+
     // Handle Google Drive links
     if (url.includes('drive.google.com')) {
       // Convert /view or /edit to /preview
@@ -462,7 +470,7 @@ export default function ChapterDetail() {
                       <span className="text-xs font-bold">Preview</span>
                     </button>
                     <a 
-                      href={res.url}
+                      href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
@@ -707,7 +715,7 @@ export default function ChapterDetail() {
                         <Download size={12} /> Save
                       </button>
                       <a 
-                        href={previewUrl}
+                        href={getPreviewUrl(previewUrl).replace('&embedded=true', '').replace('/preview', '/view')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/40 hover:text-neon-purple transition-colors bg-white/5 px-2 py-1 rounded"
@@ -741,7 +749,7 @@ export default function ChapterDetail() {
                     <Download size={14} /> Save
                   </button>
                   <a 
-                    href={previewUrl}
+                    href={getPreviewUrl(previewUrl).replace('&embedded=true', '').replace('/preview', '/view')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 text-white/60"

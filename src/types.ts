@@ -59,6 +59,12 @@ export interface User {
   bonusTimeSpent?: number; // in minutes (manual adjustment)
   lastActive?: any;
   ip?: string;
+  lastLocation?: {
+    lat: number;
+    lon: number;
+    address?: string;
+    timestamp: string;
+  };
   deviceInfo?: {
     userAgent: string;
     platform: string;
@@ -79,6 +85,15 @@ export interface ActivityLog {
   resolution?: string;
   userAgent?: string;
   isSecret?: boolean;
+  location?: {
+    lat: number;
+    lon: number;
+    address?: string;
+    timestamp: string;
+  };
+  deviceInfo?: {
+    userAgent: string;
+  };
   timestamp: any;
 }
 

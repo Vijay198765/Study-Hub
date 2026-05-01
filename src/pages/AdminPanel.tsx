@@ -115,7 +115,7 @@ const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: Resource
                       try {
                         const text = await navigator.clipboard.readText();
                         if (text) {
-                          onUpdate({ url: convertDriveUrl(text) });
+                          onUpdate({ url: text });
                           onToast('Link pasted and optimized!', 'success');
                         }
                       } catch (err) {
@@ -148,7 +148,7 @@ const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: Resource
                     resource.url ? "border-neon-blue/30" : "focus:border-white/30"
                   )}
                   value={resource.url}
-                  onChange={(e) => onUpdate({ url: convertDriveUrl(e.target.value) })}
+                  onChange={(e) => onUpdate({ url: e.target.value })}
                   placeholder="Paste Google Drive link or direct URL..."
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
