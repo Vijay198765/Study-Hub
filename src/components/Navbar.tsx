@@ -102,6 +102,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
             faviconUrl={siteConfig?.faviconUrl}
             logoColor={siteConfig?.logoColor}
             logoColorSecondary={siteConfig?.logoColorSecondary}
+            logoInnerColor={siteConfig?.logoInnerColor}
             size="md" 
           />
           <div className="flex flex-col">

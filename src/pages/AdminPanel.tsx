@@ -3288,6 +3288,16 @@ export default function AdminPanel() {
                                        value={siteConfig?.logoColorSecondary || '#bc13fe'}
                                        onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
                                      />
+                                     <div className="flex items-center gap-1.5 ml-1">
+                                       <div className="w-[1px] h-4 bg-white/10" />
+                                       <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Inner</label>
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoInnerColor || '#0A0A0A'}
+                                         onChange={(e) => saveSiteConfig({ logoInnerColor: e.target.value })}
+                                       />
+                                     </div>
                                   </div>
                                </div>
                                <p className="text-[10px] text-white/20 mt-1">If Logo URL is empty, it will use Favicon URL or fallback icon.</p>
@@ -3298,6 +3308,7 @@ export default function AdminPanel() {
                                  faviconUrl={siteConfig?.faviconUrl}
                                  logoColor={siteConfig?.logoColor}
                                  logoColorSecondary={siteConfig?.logoColorSecondary}
+                                 logoInnerColor={siteConfig?.logoInnerColor}
                                  size="sm" 
                                />
                                <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>

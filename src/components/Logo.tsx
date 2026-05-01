@@ -7,12 +7,13 @@ interface LogoProps {
   faviconUrl?: string;
   logoColor?: string;
   logoColorSecondary?: string;
+  logoInnerColor?: string;
   className?: string;
   iconClassName?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondary, className, iconClassName, size = 'md' }: LogoProps) {
+export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondary, logoInnerColor, className, iconClassName, size = 'md' }: LogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -30,6 +31,7 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondar
   const displayUrl = logoUrl || faviconUrl;
   const primaryColor = logoColor || '#00f2ff'; // Default neon-blue
   const secondaryColor = logoColorSecondary || (logoColor ? `${logoColor}88` : '#bc13fe'); // Default neon-purple or faded primary
+  const innerBgColor = logoInnerColor || '#0A0A0A'; // Default dark bg
 
   return (
     <div 
@@ -44,7 +46,8 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondar
       }}
     >
       <div 
-        className="w-full h-full rounded-[11px] bg-[#0A0A0A] flex items-center justify-center overflow-hidden relative group"
+        className="w-full h-full rounded-[11px] flex items-center justify-center overflow-hidden relative group"
+        style={{ backgroundColor: innerBgColor }}
       >
         {/* Animated Glow effect */}
         <div 

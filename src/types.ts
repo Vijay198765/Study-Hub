@@ -193,6 +193,7 @@ export interface SiteConfig {
   logoUrl?: string;
   logoColor?: string;
   logoColorSecondary?: string;
+  logoInnerColor?: string;
   faviconUrl?: string;
   socialInstagram?: string;
   socialFacebook?: string;
