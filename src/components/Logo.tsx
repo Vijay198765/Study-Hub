@@ -6,12 +6,13 @@ interface LogoProps {
   logoUrl?: string;
   faviconUrl?: string;
   logoColor?: string;
+  logoColorSecondary?: string;
   className?: string;
   iconClassName?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Logo({ logoUrl, faviconUrl, logoColor, className, iconClassName, size = 'md' }: LogoProps) {
+export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondary, className, iconClassName, size = 'md' }: LogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -28,41 +29,36 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, className, iconCl
 
   const displayUrl = logoUrl || faviconUrl;
   const primaryColor = logoColor || '#00f2ff'; // Default neon-blue
+  const secondaryColor = logoColorSecondary || (logoColor ? `${logoColor}88` : '#bc13fe'); // Default neon-purple or faded primary
 
   return (
     <div 
       className={cn(
-        "rounded-xl p-[1px] transition-transform hover:scale-105",
+        "rounded-xl p-[1px] transition-transform hover:scale-110 duration-500",
         sizeClasses[size],
         className
       )}
       style={{
-        background: logoColor 
-          ? `linear-gradient(135deg, ${logoColor}, ${logoColor}88)`
-          : undefined,
-        boxShadow: `0 4px 20px -5px ${primaryColor}44`
+        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+        boxShadow: `0 8px 25px -10px ${primaryColor}66`
       }}
     >
       <div 
-        className={cn(
-          "w-full h-full rounded-[11px] bg-dark-bg flex items-center justify-center overflow-hidden relative group",
-          !logoColor && "bg-gradient-to-br from-neon-blue via-neon-purple to-neon-pink p-[1px]" ? "" : ""
-        )}
-        style={{
-          background: logoColor ? undefined : undefined // Keep default layout
-        }}
+        className="w-full h-full rounded-[11px] bg-[#0A0A0A] flex items-center justify-center overflow-hidden relative group"
       >
-        {/* Glow effect */}
+        {/* Animated Glow effect */}
         <div 
-          className="absolute inset-0 transition-colors" 
-          style={{ backgroundColor: `${primaryColor}11` }}
+          className="absolute inset-0 transition-opacity duration-1000 group-hover:opacity-100 opacity-50" 
+          style={{ 
+            background: `radial-gradient(circle at center, ${primaryColor}22 0%, transparent 70%)` 
+          }}
         />
         
         {displayUrl ? (
           <img 
             src={convertDriveUrl(displayUrl)} 
             alt="Logo" 
-            className="w-full h-full object-cover relative z-10" 
+            className="w-full h-full object-cover relative z-10 transition-transform duration-500 group-hover:scale-110" 
             referrerPolicy="no-referrer" 
             onError={(e) => {
               // Fallback if image fails to load
@@ -77,10 +73,18 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, className, iconCl
           "relative z-10 flex items-center justify-center",
           displayUrl ? "hidden group-[.show-fallback]:flex" : "flex"
         )}
-        style={{ color: logoColor || 'white' }}
         >
-          <GraduationCap size={iconSizes[size]} />
+          <GraduationCap 
+            size={iconSizes[size]} 
+            style={{ 
+              color: logoColor || 'white',
+              filter: `drop-shadow(0 0 8px ${primaryColor}44)` 
+            }} 
+          />
         </div>
+
+        {/* Glossy overlay */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-30 pointer-events-none" />
       </div>
     </div>
   );

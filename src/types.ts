@@ -192,6 +192,7 @@ export interface SiteConfig {
   emailjsPublicKey?: string;
   logoUrl?: string;
   logoColor?: string;
+  logoColorSecondary?: string;
   faviconUrl?: string;
   socialInstagram?: string;
   socialFacebook?: string;

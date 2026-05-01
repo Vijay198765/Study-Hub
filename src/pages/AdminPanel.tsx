@@ -3273,15 +3273,22 @@ export default function AdminPanel() {
                                  onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
                                  placeholder="https://..."
                                />
-                               <div className="flex items-center gap-2">
-                                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Accent Color</label>
-                                  <input 
-                                    type="color" 
-                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none"
-                                    value={siteConfig?.logoColor || '#00f2ff'}
-                                    onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
-                                  />
-                                  <span className="text-[10px] font-mono text-white/60">{siteConfig?.logoColor || '#00f2ff'}</span>
+                               <div className="flex flex-wrap items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Colors</label>
+                                     <input 
+                                       type="color" 
+                                       className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                       value={siteConfig?.logoColor || '#00f2ff'}
+                                       onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
+                                     />
+                                     <input 
+                                       type="color" 
+                                       className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                       value={siteConfig?.logoColorSecondary || '#bc13fe'}
+                                       onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
+                                     />
+                                  </div>
                                </div>
                                <p className="text-[10px] text-white/20 mt-1">If Logo URL is empty, it will use Favicon URL or fallback icon.</p>
                              </div>
@@ -3290,6 +3297,7 @@ export default function AdminPanel() {
                                  logoUrl={siteConfig?.logoUrl} 
                                  faviconUrl={siteConfig?.faviconUrl}
                                  logoColor={siteConfig?.logoColor}
+                                 logoColorSecondary={siteConfig?.logoColorSecondary}
                                  size="sm" 
                                />
                                <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>

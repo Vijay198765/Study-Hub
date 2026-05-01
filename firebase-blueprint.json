@@ -221,6 +221,7 @@
         "musicPassword": { "type": "string" },
         "logoUrl": { "type": "string" },
         "logoColor": { "type": "string" },
+        "logoColorSecondary": { "type": "string" },
         "faviconUrl": { "type": "string" },
         "socialInstagram": { "type": "string" },
         "socialFacebook": { "type": "string" },

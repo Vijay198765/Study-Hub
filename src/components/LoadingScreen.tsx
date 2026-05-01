@@ -102,6 +102,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
                 logoUrl={siteConfig?.logoUrl} 
                 faviconUrl={siteConfig?.faviconUrl}
                 logoColor={siteConfig?.logoColor}
+                logoColorSecondary={siteConfig?.logoColorSecondary}
                 size="lg" 
               />
             </motion.div>
