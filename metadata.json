@@ -1,5 +1,5 @@
 {
-  "name": "Study-hub",
+  "name": "Study Hub",
   "description": "A futuristic, student-friendly educational platform by Vijay Ninama for Class 6-10 with study materials, quizzes, and a full admin control panel.",
   "requestFramePermissions": ["geolocation"]
 }

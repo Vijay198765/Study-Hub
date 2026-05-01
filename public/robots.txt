@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /login
 
 Sitemap: https://studyhub-omega.vercel.app/sitemap.xml
