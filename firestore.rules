@@ -318,6 +318,7 @@ service cloud.firestore {
              (!('musicEnabled' in data) || data.musicEnabled is bool) &&
              (!('musicPassword' in data) || (data.musicPassword is string && data.musicPassword.size() < 100)) &&
              (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() < 1000)) &&
+             (!('logoColor' in data) || (data.logoColor is string && data.logoColor.size() < 20)) &&
              (!('faviconUrl' in data) || (data.faviconUrl is string && data.faviconUrl.size() < 1000)) &&
              (!('socialInstagram' in data) || (data.socialInstagram is string && data.socialInstagram.size() < 100)) &&
              (!('socialFacebook' in data) || (data.socialFacebook is string && data.socialFacebook.size() < 500)) &&

@@ -220,6 +220,7 @@
         "musicEnabled": { "type": "boolean" },
         "musicPassword": { "type": "string" },
         "logoUrl": { "type": "string" },
+        "logoColor": { "type": "string" },
         "faviconUrl": { "type": "string" },
         "socialInstagram": { "type": "string" },
         "socialFacebook": { "type": "string" },

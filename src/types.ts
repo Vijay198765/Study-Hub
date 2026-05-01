@@ -191,6 +191,7 @@ export interface SiteConfig {
   emailjsTemplateId?: string;
   emailjsPublicKey?: string;
   logoUrl?: string;
+  logoColor?: string;
   faviconUrl?: string;
   socialInstagram?: string;
   socialFacebook?: string;

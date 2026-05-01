@@ -3268,14 +3268,30 @@ export default function AdminPanel() {
                              <div className="flex-1">
                                <input 
                                  type="text" 
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm mb-2"
                                  value={siteConfig?.logoUrl || ''}
                                  onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
                                  placeholder="https://..."
                                />
+                               <div className="flex items-center gap-2">
+                                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Accent Color</label>
+                                  <input 
+                                    type="color" 
+                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none"
+                                    value={siteConfig?.logoColor || '#00f2ff'}
+                                    onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
+                                  />
+                                  <span className="text-[10px] font-mono text-white/60">{siteConfig?.logoColor || '#00f2ff'}</span>
+                               </div>
+                               <p className="text-[10px] text-white/20 mt-1">If Logo URL is empty, it will use Favicon URL or fallback icon.</p>
                              </div>
                              <div className="flex flex-col items-center gap-1.5">
-                               <Logo logoUrl={siteConfig?.logoUrl} size="sm" />
+                               <Logo 
+                                 logoUrl={siteConfig?.logoUrl} 
+                                 faviconUrl={siteConfig?.faviconUrl}
+                                 logoColor={siteConfig?.logoColor}
+                                 size="sm" 
+                               />
                                <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>
                              </div>
                            </div>
