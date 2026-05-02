@@ -247,7 +247,16 @@ const DataPoints = ({ count = 30 }) => {
   );
 };
 
-const Scene = ({ isMobile }: { isMobile: boolean }) => {
+const LOADING_MESSAGES = [
+  "Initializing Neural Pathways...",
+  "Architecting Knowledge Grids...",
+  "Optimizing Cognitive Engines...",
+  "Sourcing Academic Archives...",
+  "Syncing Scholastic Protocols...",
+  "Calibrating HUB Systems..."
+];
+
+const LoadingScene = ({ isMobile }: { isMobile: boolean }) => {
   return (
     <>
       <PerspectiveCamera 
@@ -255,14 +264,12 @@ const Scene = ({ isMobile }: { isMobile: boolean }) => {
         position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
         fov={isMobile ? 70 : 50} 
       />
+      <ambientLight intensity={0.8} />
+      <pointLight position={[10, 10, 10]} intensity={2} />
       <Suspense fallback={null}>
         <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
         <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
         <DataPoints />
-        <ambientLight intensity={0.8} />
-        <pointLight position={[10, 10, 10]} intensity={2} castShadow />
-        <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
-        
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
           <FloatingIsland />
           <Robot />
@@ -279,21 +286,11 @@ const Scene = ({ isMobile }: { isMobile: boolean }) => {
         <OrbitingPlanet color="#f87171" distance={5} speed={0.5} size={0.3} />
         <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
         <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
-        
         <Rig />
       </Suspense>
     </>
   );
 };
-
-const LOADING_MESSAGES = [
-  "Initializing Neural Pathways...",
-  "Architecting Knowledge Grids...",
-  "Optimizing Cognitive Engines...",
-  "Sourcing Academic Archives...",
-  "Syncing Scholastic Protocols...",
-  "Calibrating HUB Systems..."
-];
 
 export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
   const [isMobile, setIsMobile] = useState(() => {
@@ -349,7 +346,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
             setIsCanvasReady(true);
           }}
         >
-          <Scene isMobile={isMobile} />
+          <LoadingScene isMobile={isMobile} />
         </Canvas>
       </motion.div>
       

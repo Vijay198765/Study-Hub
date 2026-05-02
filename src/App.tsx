@@ -253,6 +253,9 @@ export default function App() {
       setLoading(true);
       setUser(firebaseUser);
       
+      const isMainAdmin = firebaseUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
+      const isAltAdmin = firebaseUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+
       if (unsubscribeProfile) {
         unsubscribeProfile();
         unsubscribeProfile = null;
@@ -331,14 +334,13 @@ export default function App() {
             }
 
             // Specific constraint for tagged email
-            if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
+            if (isAltAdmin) {
               if (profileData.name !== 'Hania Aamir') {
                 updates.name = 'Hania Aamir';
               }
             }
 
             // Also ensure main admin photo is always synced from Google if not overridden
-            const isMainAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
             if (isMainAdmin && firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
               updates.photoURL = convertDriveUrl(firebaseUser.photoURL);
             }

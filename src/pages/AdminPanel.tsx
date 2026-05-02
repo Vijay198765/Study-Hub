@@ -1839,7 +1839,6 @@ export default function AdminPanel() {
                   <tbody>
                     {users
                       .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
