@@ -105,7 +105,7 @@ export default function Logo({
             size={iconSizes[size]} 
             style={{ 
               color: logoColor || 'white',
-              filter: `drop-shadow(0 0 8px ${primaryColor}44)` 
+              filter: `drop-shadow(0 0 8px ${b1}44)` 
             }} 
           />
         </div>
