@@ -320,7 +320,10 @@ service cloud.firestore {
              (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() < 1000)) &&
              (!('logoColor' in data) || (data.logoColor is string && data.logoColor.size() < 20)) &&
              (!('logoColorSecondary' in data) || (data.logoColorSecondary is string && data.logoColorSecondary.size() < 20)) &&
+             (!('logoColorTertiary' in data) || (data.logoColorTertiary is string && data.logoColorTertiary.size() < 20)) &&
              (!('logoInnerColor' in data) || (data.logoInnerColor is string && data.logoInnerColor.size() < 20)) &&
+             (!('logoInnerColorSecondary' in data) || (data.logoInnerColorSecondary is string && data.logoInnerColorSecondary.size() < 20)) &&
+             (!('logoInnerColorTertiary' in data) || (data.logoInnerColorTertiary is string && data.logoInnerColorTertiary.size() < 20)) &&
              (!('faviconUrl' in data) || (data.faviconUrl is string && data.faviconUrl.size() < 1000)) &&
              (!('socialInstagram' in data) || (data.socialInstagram is string && data.socialInstagram.size() < 100)) &&
              (!('socialFacebook' in data) || (data.socialFacebook is string && data.socialFacebook.size() < 500)) &&

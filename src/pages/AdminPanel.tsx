@@ -3274,28 +3274,56 @@ export default function AdminPanel() {
                                  placeholder="https://..."
                                />
                                <div className="flex flex-wrap items-center gap-3">
-                                  <div className="flex items-center gap-2">
-                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Colors</label>
-                                     <input 
-                                       type="color" 
-                                       className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                       value={siteConfig?.logoColor || '#00f2ff'}
-                                       onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
-                                     />
-                                     <input 
-                                       type="color" 
-                                       className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                       value={siteConfig?.logoColorSecondary || '#bc13fe'}
-                                       onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
-                                     />
-                                     <div className="flex items-center gap-1.5 ml-1">
-                                       <div className="w-[1px] h-4 bg-white/10" />
-                                       <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Inner</label>
+                                  <div className="flex flex-col gap-2">
+                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Border Gradient</label>
+                                     <div className="flex items-center gap-2">
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoColor || '#00f2ff'}
+                                         onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
+                                         title="Color 1"
+                                       />
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoColorSecondary || '#bc13fe'}
+                                         onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
+                                         title="Color 2"
+                                       />
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoColorTertiary || '#ff00ff'}
+                                         onChange={(e) => saveSiteConfig({ logoColorTertiary: e.target.value })}
+                                         title="Color 3"
+                                       />
+                                     </div>
+                                  </div>
+                                  <div className="w-[1px] h-8 bg-white/10 self-end mb-1" />
+                                  <div className="flex flex-col gap-2">
+                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Inner Gradient</label>
+                                     <div className="flex items-center gap-2">
                                        <input 
                                          type="color" 
                                          className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
                                          value={siteConfig?.logoInnerColor || '#0A0A0A'}
                                          onChange={(e) => saveSiteConfig({ logoInnerColor: e.target.value })}
+                                         title="Color 1"
+                                       />
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoInnerColorSecondary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                         onChange={(e) => saveSiteConfig({ logoInnerColorSecondary: e.target.value })}
+                                         title="Color 2"
+                                       />
+                                       <input 
+                                         type="color" 
+                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                         value={siteConfig?.logoInnerColorTertiary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                         onChange={(e) => saveSiteConfig({ logoInnerColorTertiary: e.target.value })}
+                                         title="Color 3"
                                        />
                                      </div>
                                   </div>
@@ -3308,7 +3336,10 @@ export default function AdminPanel() {
                                  faviconUrl={siteConfig?.faviconUrl}
                                  logoColor={siteConfig?.logoColor}
                                  logoColorSecondary={siteConfig?.logoColorSecondary}
+                                 logoColorTertiary={siteConfig?.logoColorTertiary}
                                  logoInnerColor={siteConfig?.logoInnerColor}
+                                 logoInnerColorSecondary={siteConfig?.logoInnerColorSecondary}
+                                 logoInnerColorTertiary={siteConfig?.logoInnerColorTertiary}
                                  size="sm" 
                                />
                                <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>

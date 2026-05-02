@@ -7,13 +7,28 @@ interface LogoProps {
   faviconUrl?: string;
   logoColor?: string;
   logoColorSecondary?: string;
+  logoColorTertiary?: string;
   logoInnerColor?: string;
+  logoInnerColorSecondary?: string;
+  logoInnerColorTertiary?: string;
   className?: string;
   iconClassName?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondary, logoInnerColor, className, iconClassName, size = 'md' }: LogoProps) {
+export default function Logo({ 
+  logoUrl, 
+  faviconUrl, 
+  logoColor, 
+  logoColorSecondary, 
+  logoColorTertiary,
+  logoInnerColor, 
+  logoInnerColorSecondary,
+  logoInnerColorTertiary,
+  className, 
+  iconClassName, 
+  size = 'md' 
+}: LogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -29,9 +44,16 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondar
   };
 
   const displayUrl = logoUrl || faviconUrl;
-  const primaryColor = logoColor || '#00f2ff'; // Default neon-blue
-  const secondaryColor = logoColorSecondary || (logoColor ? `${logoColor}88` : '#bc13fe'); // Default neon-purple or faded primary
-  const innerBgColor = logoInnerColor || '#0A0A0A'; // Default dark bg
+  
+  // Border Gradient Colors
+  const b1 = logoColor || '#00f2ff';
+  const b2 = logoColorSecondary || '#bc13fe';
+  const b3 = logoColorTertiary || '#ff00ff';
+  
+  // Inner Gradient Colors (Left Top to Right Bottom)
+  const i1 = logoInnerColor || '#0A0A0A';
+  const i2 = logoInnerColorSecondary || i1;
+  const i3 = logoInnerColorTertiary || i1;
 
   return (
     <div 
@@ -41,19 +63,21 @@ export default function Logo({ logoUrl, faviconUrl, logoColor, logoColorSecondar
         className
       )}
       style={{
-        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-        boxShadow: `0 8px 25px -10px ${primaryColor}66`
+        background: `linear-gradient(135deg, ${b1} 0%, ${b2} 50%, ${b3} 100%)`,
+        boxShadow: `0 8px 25px -10px ${b1}66`
       }}
     >
       <div 
         className="w-full h-full rounded-[11px] flex items-center justify-center overflow-hidden relative group"
-        style={{ backgroundColor: innerBgColor }}
+        style={{ 
+          background: `linear-gradient(135deg, ${i1} 0%, ${i2} 50%, ${i3} 100%)`
+        }}
       >
         {/* Animated Glow effect */}
         <div 
           className="absolute inset-0 transition-opacity duration-1000 group-hover:opacity-100 opacity-50" 
           style={{ 
-            background: `radial-gradient(circle at center, ${primaryColor}22 0%, transparent 70%)` 
+            background: `radial-gradient(circle at center, ${b1}22 0%, transparent 70%)` 
           }}
         />
         
