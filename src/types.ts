@@ -93,6 +93,10 @@ export interface ActivityLog {
   };
   deviceInfo?: {
     userAgent: string;
+    platform: string;
+    language: string;
+    screenResolution: string;
+    ip?: string;
   };
   timestamp: any;
 }

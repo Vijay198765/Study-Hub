@@ -38,24 +38,48 @@ export function convertDriveUrl(url: string | undefined): string {
 
 export function safeStringify(obj: any, indent: number = 0): string {
   const cache = new Set();
-  const stringified = JSON.stringify(
-    obj,
-    (key, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (cache.has(value)) {
-          return '[Circular]';
+  
+  try {
+    const stringified = JSON.stringify(
+      obj,
+      (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          // Check for circular references
+          if (cache.has(value)) {
+            return '[Circular]';
+          }
+          
+          // Basic depth limiting or complex object handling
+          try {
+            // Handle Firebase objects specifically by names
+            const constructorName = value.constructor?.name;
+            if (constructorName && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp'].includes(constructorName)) {
+              return `[Firebase ${constructorName}]`;
+            }
+            
+            // Handle large/complex objects like DOM elements or Three.js objects
+            if (value instanceof Node || (typeof value.nodeType === 'number' && typeof value.nodeName === 'string')) {
+              return '[DOM Node]';
+            }
+            
+            if (constructorName && (constructorName.startsWith('WebGL') || constructorName === 'Scene' || constructorName === 'Camera')) {
+              return `[Three.js ${constructorName}]`;
+            }
+          } catch (e) {
+            // If constructor access fails, just continue
+          }
+
+          cache.add(value);
         }
-        cache.add(value);
-        
-        // Handle Firebase/Firestore specific objects that might cause issues or be too large
-        if (value.constructor.name === 'DocumentReference' || value.constructor.name === 'Query' || value.constructor.name === 'Firestore') {
-          return `[Firebase ${value.constructor.name}]`;
-        }
-      }
-      return value;
-    },
-    indent
-  );
-  cache.clear();
-  return stringified;
+        return value;
+      },
+      indent
+    );
+    return stringified;
+  } catch (error) {
+    console.error('safeStringify failed:', error);
+    return '[Serialization Error]';
+  } finally {
+    cache.clear();
+  }
 }

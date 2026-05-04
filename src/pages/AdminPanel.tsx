@@ -2423,22 +2423,32 @@ export default function AdminPanel() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => {
-                      const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'Location', 'User Agent'];
+                      const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Platform', 'Language', 'Path', 'Location', 'User Agent'];
                       const csvData = activityLogs
                         .filter(log => log.userEmail !== 'anonymous@studyhub.com' && !log.userName?.includes('Admin'))
                         .map(log => {
-                        const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
+                        const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : (log.timestamp instanceof Date ? log.timestamp : new Date());
+                        
+                        // Extract from nested deviceInfo if needed
+                        const resolution = log.resolution || log.deviceInfo?.screenResolution || 'N/A';
+                        const platform = log.deviceInfo?.platform || 'N/A';
+                        const language = log.deviceInfo?.language || 'N/A';
+                        const userAgent = log.userAgent || log.deviceInfo?.userAgent || 'N/A';
+                        const locationStr = log.location ? `${log.location.lat}, ${log.location.lon}` : 'N/A';
+                        
                         return [
                           dateObj.toLocaleDateString(),
                           dateObj.toLocaleTimeString(),
                           log.userName || 'Anonymous',
                           log.userEmail || 'N/A',
                           log.action,
-                          log.ip || 'N/A',
-                          log.resolution || 'N/A',
+                          log.ip || log.deviceInfo?.ip || 'N/A',
+                          resolution,
+                          platform,
+                          language,
                           log.path || 'N/A',
-                          log.location ? `"${log.location.lat}, ${log.location.lon}"` : 'N/A',
-                          `"${log.userAgent?.replace(/"/g, '""')}"` || 'N/A'
+                          `"${locationStr}"`,
+                          `"${userAgent.replace(/"/g, '""')}"`
                         ];
                       });
                       
@@ -2541,8 +2551,10 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="text-[10px] text-white/40 space-y-0.5">
-                            <p>Res: {log.resolution || 'N/A'}</p>
-                            <p className="truncate max-w-[200px]" title={log.userAgent}>UA: {log.userAgent}</p>
+                            <p>Res: {log.resolution || log.deviceInfo?.screenResolution || 'N/A'}</p>
+                            <p className="truncate max-w-[200px]" title={log.userAgent || log.deviceInfo?.userAgent}>
+                              UA: {log.userAgent || log.deviceInfo?.userAgent || 'N/A'}
+                            </p>
                           </div>
                         </td>
                       </tr>

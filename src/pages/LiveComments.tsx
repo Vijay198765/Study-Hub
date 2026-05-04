@@ -49,6 +49,7 @@ export default function LiveComments() {
   const [isGroupLocked, setIsGroupLocked] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [unlockedGroups, setUnlockedGroups] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,14 +158,19 @@ export default function LiveComments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isGuest || !newComment.trim() || !userProfile?.name || isGroupLocked) return;
+    if (isGuest || !newComment.trim() || !userProfile?.name || isGroupLocked || isSending) return;
+
+    const commentText = newComment.trim();
+    setNewComment('');
+    setReplyTo(null);
+    setIsSending(true);
 
     const commentData: any = {
       userName: userProfile.name,
       userEmail: auth.currentUser?.email || userProfile.email || '',
       userPhotoURL: auth.currentUser?.photoURL || userProfile.photoURL || '',
       userUid: auth.currentUser?.uid || userProfile.uid,
-      text: newComment.trim(),
+      text: commentText,
       likes: 0,
       likedBy: [],
       groupId: selectedGroupId,
@@ -177,10 +183,11 @@ export default function LiveComments() {
 
     try {
       await addDoc(collection(db, 'siteComments'), commentData);
-      setNewComment('');
-      setReplyTo(null);
     } catch (error) {
+      setNewComment(commentText); // Restore if failed
       handleFirestoreError(error, OperationType.CREATE, 'siteComments');
+    } finally {
+      setIsSending(false);
     }
   };
 

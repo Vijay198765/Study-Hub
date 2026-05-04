@@ -145,13 +145,24 @@ export default function App() {
 
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          async (position) => {
             const loc = {
               lat: position.coords.latitude,
               lon: position.coords.longitude,
               timestamp: new Date().toISOString()
             };
             setUserLocation(loc);
+            
+            // Also save to user profile for future fallback
+            try {
+              await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                lastLocation: loc,
+                lastLocationUpdatedAt: serverTimestamp()
+              });
+            } catch (e) {
+              // Ignore
+            }
+            
             toast.success("Location synced! Your session is now verified.");
           },
           (error) => {
