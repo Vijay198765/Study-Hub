@@ -57,6 +57,46 @@ export default function App() {
   const [messageTimer, setMessageTimer] = useState<number>(10);
   const [userLocation, setUserLocation] = useState<any>(null);
 
+  // Get IP helper function - accessible throughout the component
+  const getIp = async () => {
+    if (userIp && userIp !== 'unknown') return userIp;
+    
+    const providers = [
+      'https://api.ipify.org?format=json',
+      'https://api64.ipify.org?format=json',
+      'https://api.seeip.org?format=json',
+      'https://ipapi.co/json/',
+      'https://api.db-ip.com/v2/free/self'
+    ];
+
+    for (const url of providers) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000); 
+        
+        const res = await fetch(url, { 
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        const ip = data.ip || data.ipAddress || data.address;
+        if (ip) {
+          setUserIp(ip);
+          return ip;
+        }
+      } catch (e) {
+        // Silent
+      }
+    }
+    
+    if (!userIp) setUserIp('unknown');
+    return 'unknown';
+  };
+
   // Sync location when it changes and user is logged in
   useEffect(() => {
     if (userLocation && auth.currentUser) {
@@ -97,37 +137,6 @@ export default function App() {
     };
     checkConnection();
     
-    // Get IP with fallback
-    const getIp = async () => {
-      if (userIp) return;
-      
-      const providers = [
-        'https://api.ipify.org?format=json',
-        'https://api64.ipify.org?format=json',
-        'https://ipapi.co/json/',
-        'https://ident.me/.json'
-      ];
-
-      for (const url of providers) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-          
-          const res = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          
-          const data = await res.json();
-          if (data.ip) {
-            setUserIp(data.ip);
-            return;
-          }
-        } catch (e) {
-          console.warn(`IP fetch from ${url} failed, trying next...`);
-        }
-      }
-      console.error("All IP check providers failed");
-    };
-
     getIp();
 
     // Request Location Permission - ONLY for logged in users
@@ -266,29 +275,10 @@ export default function App() {
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
 
       if (firebaseUser) {
-        // Fetch IP address - Do it once per session with fallbacks
-        let detectedIp = 'unknown';
-        const providers = [
-          'https://api.ipify.org?format=json',
-          'https://api64.ipify.org?format=json',
-          'https://ipapi.co/json/',
-          'https://ident.me/.json'
-        ];
-
-        for (const url of providers) {
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            const data = await res.json();
-            if (data.ip) {
-              detectedIp = data.ip;
-              break;
-            }
-          } catch (e) {
-            continue;
-          }
+        // Fetch IP address - Use the shared function
+        let detectedIp = userIp || 'unknown';
+        if (detectedIp === 'unknown') {
+          detectedIp = await getIp();
         }
 
         const userRef = doc(db, 'users', firebaseUser.uid);
