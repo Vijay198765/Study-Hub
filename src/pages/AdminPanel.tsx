@@ -2425,7 +2425,7 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Path', 'Location', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !log.userName?.includes('Admin'))
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
                         return [
@@ -2491,12 +2491,13 @@ export default function AdminPanel() {
                       <th className="py-4 px-4 text-sm font-medium text-white/40">User</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Action</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">IP Address</th>
+                      <th className="py-4 px-4 text-sm font-medium text-white/40">Location</th>
                       <th className="py-4 px-4 text-sm font-medium text-white/40">Details</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && l.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && !l.isSecret)
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2527,6 +2528,16 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4 text-white/60 font-mono text-xs">
                           {log.ip || 'N/A'}
+                        </td>
+                        <td className="py-4 px-4">
+                          {log.location ? (
+                            <div className="flex flex-col text-[10px] text-white/60">
+                              <span className="text-neon-blue font-medium">{log.location.lat.toFixed(4)}, {log.location.lon.toFixed(4)}</span>
+                              {log.location.address && <span className="text-white/20 truncate max-w-[100px]">{log.location.address}</span>}
+                            </div>
+                          ) : (
+                            <span className="text-white/20 text-[10px]">N/A</span>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           <div className="text-[10px] text-white/40 space-y-0.5">

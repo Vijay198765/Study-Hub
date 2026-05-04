@@ -405,7 +405,9 @@ service cloud.firestore {
              (!('ip' in data) || data.ip is string) &&
              (!('isSecret' in data) || data.isSecret is bool) &&
              (!('resolution' in data) || data.resolution is string) &&
-             (!('userAgent' in data) || data.userAgent is string);
+             (!('userAgent' in data) || data.userAgent is string) &&
+             (!('location' in data) || data.location is map) &&
+             (!('deviceInfo' in data) || data.deviceInfo is map);
     }
 
     function isValidUserMessage(data) {

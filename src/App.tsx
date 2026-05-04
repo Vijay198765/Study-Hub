@@ -67,7 +67,7 @@ export default function App() {
       }).catch(e => console.error("Error syncing location:", e));
       
     // Log location update in activity logs (Historical record)
-    if (userLocation && auth.currentUser && userProfile && auth.currentUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
+    if (userLocation && auth.currentUser && userProfile) {
       addDoc(collection(db, 'activityLogs'), {
         userId: auth.currentUser.uid,
         userName: userProfile.name || auth.currentUser.displayName || 'Anonymous',
@@ -147,7 +147,8 @@ export default function App() {
           },
           (error) => {
             console.warn("Location access denied or failed:", error.message);
-          }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
       }
     };
@@ -416,8 +417,8 @@ export default function App() {
           // Only treat as special admin if it was a secret login session
           setIsSpecialAdmin(isSpecial || (profileData.isSecret && profileData.secretLoginLogged));
 
-          // 3. Log activity - Skip for secret logins and main admin
-          if (!isSpecial && firebaseUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
+          // 3. Log activity - Skip for secret logins
+          if (!isSpecial) {
              const deviceInfo = {
                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
                platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',
@@ -707,8 +708,14 @@ export default function App() {
       }
     };
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleGlobalKeyDown);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleGlobalKeyDown);
+      }
+    };
   }, [location.pathname, navigate]);
 
   return (

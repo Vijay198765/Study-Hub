@@ -27,6 +27,7 @@ const Robot = () => {
   const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8", metalness: 0.8 }), []);
 
   useFrame((state) => {
+    if (!state || !state.clock) return;
     const t = state.clock.elapsedTime;
     if (group.current) {
       group.current.rotation.y = Math.sin(t * 0.4) * 0.3;
@@ -97,6 +98,7 @@ const FloatingIsland = () => {
   const leafMat2 = useMemo(() => new THREE.MeshStandardMaterial({ color: "#15803d" }), []);
 
   useFrame((state) => {
+    if (!state || !state.clock) return;
     const t = state.clock.elapsedTime;
     islandMat.emissiveIntensity = 0.1 + Math.sin(t * 2) * 0.05;
   });
@@ -131,13 +133,12 @@ const OrbitingPlanet = ({ color, distance, speed, size }: { color: string, dista
   }), [color]);
   
   useFrame((state) => {
-    if (ref.current) {
-      const t = state.clock.elapsedTime * speed;
-      ref.current.position.x = Math.cos(t) * distance;
-      ref.current.position.z = Math.sin(t) * distance;
-      ref.current.position.y = Math.sin(t * 0.5) * (distance * 0.2);
-      ref.current.rotation.y += 0.02;
-    }
+    if (!state || !state.clock || !ref.current) return;
+    const t = state.clock.elapsedTime * speed;
+    ref.current.position.x = Math.cos(t) * distance;
+    ref.current.position.z = Math.sin(t) * distance;
+    ref.current.position.y = Math.sin(t * 0.5) * (distance * 0.2);
+    ref.current.rotation.y += 0.02;
   });
 
   return (
@@ -163,12 +164,11 @@ const FloatingBook = ({ position, color }: { position: [number, number, number],
   const pageMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "white" }), []);
   
   useFrame((state) => {
-    if (ref.current) {
-      const t = state.clock.elapsedTime;
-      ref.current.position.y = position[1] + Math.sin(t * 2 + position[0]) * 0.1;
-      ref.current.rotation.y += 0.01;
-      ref.current.rotation.z = Math.sin(t) * 0.1;
-    }
+    if (!state || !state.clock || !ref.current) return;
+    const t = state.clock.elapsedTime;
+    ref.current.position.y = position[1] + Math.sin(t * 2 + position[0]) * 0.1;
+    ref.current.rotation.y += 0.01;
+    ref.current.rotation.z = Math.sin(t) * 0.1;
   });
 
   return (
@@ -188,12 +188,11 @@ const BouncingIcon = ({ position, color, type }: { position: [number, number, nu
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 }), [color]);
   
   useFrame((state) => {
-    if (ref.current) {
-      const t = state.clock.elapsedTime;
-      ref.current.position.y = position[1] + Math.abs(Math.sin(t * 3 + position[0])) * 0.5;
-      ref.current.rotation.x += 0.02;
-      ref.current.rotation.z += 0.01;
-    }
+    if (!state || !state.clock || !ref.current) return;
+    const t = state.clock.elapsedTime;
+    ref.current.position.y = position[1] + Math.abs(Math.sin(t * 3 + position[0])) * 0.5;
+    ref.current.rotation.x += 0.02;
+    ref.current.rotation.z += 0.01;
   });
 
   return <mesh ref={ref} position={position} geometry={geo} material={mat} castShadow />;
@@ -201,6 +200,7 @@ const BouncingIcon = ({ position, color, type }: { position: [number, number, nu
 
 const Rig = () => {
   useFrame((state) => {
+    if (!state || !state.camera || !state.pointer) return;
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, (state.pointer.x * 2), 0.05);
     state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, (state.pointer.y * 2) + 2, 0.05);
     state.camera.lookAt(0, 0, 0);
@@ -211,11 +211,10 @@ const Rig = () => {
 const DataPoint = ({ position, speed, offset }: { position: [number, number, number], speed: number, offset: number }) => {
   const ref = useRef<THREE.Mesh>(null);
   useFrame((state) => {
-    if (ref.current) {
-      const t = state.clock.elapsedTime;
-      ref.current.position.y = position[1] + Math.sin(t * speed + offset) * 0.2;
-      ref.current.rotation.y += 0.02;
-    }
+    if (!state || !state.clock || !ref.current) return;
+    const t = state.clock.elapsedTime;
+    ref.current.position.y = position[1] + Math.sin(t * speed + offset) * 0.2;
+    ref.current.rotation.y += 0.02;
   });
   return (
     <mesh ref={ref} position={position}>
@@ -256,7 +255,7 @@ const LOADING_MESSAGES = [
   "Calibrating HUB Systems..."
 ];
 
-const LoadingScene = ({ isMobile }: { isMobile: boolean }) => {
+const SceneContent = ({ isMobile }: { isMobile: boolean }) => {
   return (
     <>
       <PerspectiveCamera 
@@ -264,12 +263,15 @@ const LoadingScene = ({ isMobile }: { isMobile: boolean }) => {
         position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
         fov={isMobile ? 70 : 50} 
       />
+      
       <ambientLight intensity={0.8} />
       <pointLight position={[10, 10, 10]} intensity={2} />
+      
       <Suspense fallback={null}>
         <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
         <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
         <DataPoints />
+        
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
           <FloatingIsland />
           <Robot />
@@ -286,6 +288,7 @@ const LoadingScene = ({ isMobile }: { isMobile: boolean }) => {
         <OrbitingPlanet color="#f87171" distance={5} speed={0.5} size={0.3} />
         <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
         <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
+        
         <Rig />
       </Suspense>
     </>
@@ -340,13 +343,47 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
         <Canvas 
           shadows
           dpr={[1, isMobile ? 1.5 : 2]} 
-          gl={{ antialias: !isMobile, alpha: true }}
+          gl={{ antialias: false, alpha: true, stencil: false, depth: true }}
+          camera={{ position: [0, 2, 8], fov: 50 }}
           onCreated={({ gl }) => {
-            gl.shadowMap.type = THREE.PCFShadowMap;
-            setIsCanvasReady(true);
+            if (gl) {
+              gl.shadowMap.enabled = true;
+              gl.shadowMap.type = THREE.PCFShadowMap;
+            }
+            requestAnimationFrame(() => setIsCanvasReady(true));
           }}
         >
-          <LoadingScene isMobile={isMobile} />
+          <PerspectiveCamera 
+            makeDefault 
+            position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
+            fov={isMobile ? 70 : 50} 
+          />
+          
+          <ambientLight intensity={0.8} />
+          <pointLight position={[10, 10, 10]} intensity={2} />
+          
+          <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
+          <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
+          <DataPoints />
+          
+          <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+            <FloatingIsland />
+            <Robot />
+            
+            <FloatingBook position={[0.8, 1.2, 0.5]} color="#ef4444" />
+            <FloatingBook position={[-0.7, 1.5, -0.3]} color="#8b5cf6" />
+            <FloatingBook position={[0.4, 1.8, -0.8]} color="#f59e0b" />
+
+            <BouncingIcon position={[-1.2, 0.8, 0.8]} color="#00f2ff" type="sphere" />
+            <BouncingIcon position={[1.5, 0.6, -0.5]} color="#ff00ff" type="box" />
+            <BouncingIcon position={[0, 2.2, 0]} color="#bc13fe" type="torus" />
+          </Float>
+
+          <OrbitingPlanet color="#f87171" distance={5} speed={0.5} size={0.3} />
+          <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
+          <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
+          
+          <Rig />
         </Canvas>
       </motion.div>
       
