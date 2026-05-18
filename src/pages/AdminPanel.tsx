@@ -15,7 +15,7 @@ import { storage, db, auth, handleFirestoreError, OperationType } from '../fireb
 import { signOut } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc, where 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp, getDocs, setDoc, updateDoc, where, limit 
 } from 'firebase/firestore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
