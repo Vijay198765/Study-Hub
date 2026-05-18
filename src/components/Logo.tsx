@@ -3,7 +3,7 @@ import { GraduationCap } from 'lucide-react';
 import { cn, convertDriveUrl } from '../lib/utils';
 
 interface LogoProps {
-  logoUrl?: string;
+  siteLogo?: string;
   faviconUrl?: string;
   logoColor?: string;
   logoColorSecondary?: string;
@@ -17,7 +17,7 @@ interface LogoProps {
 }
 
 export default function Logo({ 
-  logoUrl, 
+  siteLogo,
   faviconUrl, 
   logoColor, 
   logoColorSecondary, 
@@ -43,7 +43,7 @@ export default function Logo({
     xl: 48
   };
 
-  const displayUrl = logoUrl || faviconUrl;
+  const displayUrl = siteLogo || faviconUrl;
   
   // Border Gradient Colors
   const b1 = logoColor || '#00f2ff';
@@ -54,6 +54,19 @@ export default function Logo({
   const i1 = logoInnerColor || '#0A0A0A';
   const i2 = logoInnerColorSecondary || i1;
   const i3 = logoInnerColorTertiary || i1;
+
+  if (displayUrl) {
+    return (
+      <div className={cn("relative flex items-center justify-center overflow-hidden", sizeClasses[size], className)}>
+        <img 
+          src={convertDriveUrl(displayUrl)} 
+          alt="Logo" 
+          className="w-full h-full object-contain relative z-10" 
+          referrerPolicy="no-referrer" 
+        />
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -81,26 +94,8 @@ export default function Logo({
           }}
         />
         
-        {displayUrl ? (
-          <img 
-            src={convertDriveUrl(displayUrl)} 
-            alt="Logo" 
-            className="w-full h-full object-cover relative z-10 transition-transform duration-500 group-hover:scale-110" 
-            referrerPolicy="no-referrer" 
-            onError={(e) => {
-              // Fallback if image fails to load
-              (e.target as HTMLImageElement).style.display = 'none';
-              (e.target as HTMLImageElement).parentElement?.classList.add('show-fallback');
-            }}
-          />
-        ) : null}
-        
         {/* Fallback Icon */}
-        <div className={cn(
-          "relative z-10 flex items-center justify-center",
-          displayUrl ? "hidden group-[.show-fallback]:flex" : "flex"
-        )}
-        >
+        <div className="relative z-10 flex items-center justify-center">
           <GraduationCap 
             size={iconSizes[size]} 
             style={{ 

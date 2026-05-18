@@ -44,32 +44,37 @@ export function safeStringify(obj: any, indent: number = 0): string {
       obj,
       (key, value) => {
         if (typeof value === 'object' && value !== null) {
-          // Check for circular references
           if (cache.has(value)) {
             return '[Circular]';
           }
           
-          // Basic depth limiting or complex object handling
+          cache.add(value);
+
+          // Handle common complex objects that might cause issues
           try {
-            // Handle Firebase objects specifically by names
+            // Firebase specific checks using properties since names are minified
+            if ('firestore' in value && ('id' in value || 'path' in value)) {
+              return `[Firebase Reference]`;
+            }
+            if ('_key' in value && '_data' in value) {
+              return `[Firebase Document]`;
+            }
+            if ('uid' in value && 'email' in value && 'providerData' in value) {
+              return `[Firebase User]`;
+            }
+
+            // Fallback to constructor names if they exist and aren't minified-looking
             const constructorName = value.constructor?.name;
-            if (constructorName && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp'].includes(constructorName)) {
+            if (constructorName && constructorName.length > 3 && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp'].includes(constructorName)) {
               return `[Firebase ${constructorName}]`;
             }
             
-            // Handle large/complex objects like DOM elements or Three.js objects
             if (value instanceof Node || (typeof value.nodeType === 'number' && typeof value.nodeName === 'string')) {
               return '[DOM Node]';
             }
-            
-            if (constructorName && (constructorName.startsWith('WebGL') || constructorName === 'Scene' || constructorName === 'Camera')) {
-              return `[Three.js ${constructorName}]`;
-            }
           } catch (e) {
-            // If constructor access fails, just continue
+            // Ignore
           }
-
-          cache.add(value);
         }
         return value;
       },
@@ -77,7 +82,6 @@ export function safeStringify(obj: any, indent: number = 0): string {
     );
     return stringified;
   } catch (error) {
-    console.error('safeStringify failed:', error);
     return '[Serialization Error]';
   } finally {
     cache.clear();

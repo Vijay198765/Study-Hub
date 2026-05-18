@@ -414,7 +414,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
               className="mb-4"
             >
               <Logo 
-                logoUrl={siteConfig?.logoUrl} 
+                siteLogo={siteConfig?.siteLogo}
                 faviconUrl={siteConfig?.faviconUrl}
                 logoColor={siteConfig?.logoColor}
                 logoColorSecondary={siteConfig?.logoColorSecondary}

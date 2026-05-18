@@ -26,7 +26,7 @@ import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import LeaderboardScroller from './components/LeaderboardScroller';
-import { convertDriveUrl } from './lib/utils';
+import { convertDriveUrl, safeStringify } from './lib/utils';
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import { toast } from 'sonner';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -351,7 +351,7 @@ export default function App() {
             let forceUpgrade = false;
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
-              updates.adminKey = siteConfig?.secretLoginKey || 'Vijay1987';
+              updates.adminKey = siteConfig?.secretLoginKey || '7117';
               updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
               updates.isLegend = true;
               updates.secretLoginLogged = true;
@@ -383,7 +383,7 @@ export default function App() {
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {
-              const dynamicAdminKey = siteConfig?.secretLoginKey || 'Vijay1987';
+              const dynamicAdminKey = siteConfig?.secretLoginKey || '7117';
               extraData = { 
                 adminKey: dynamicAdminKey, 
                 isLegend: true,
@@ -486,6 +486,8 @@ export default function App() {
                                    firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
                                    firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
                 setIsAdmin(isUserAdmin);
+                // Hide special status from local state if it's a main admin to be less conspicuous? 
+                // No, we need it for permissions, but we'll hide them from UI lists.
                 if (isUserAdmin || data.secretLoginLogged) setIsSpecialAdmin(true);
               }
             },
@@ -510,7 +512,7 @@ export default function App() {
                                firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
             setIsAdmin(isUserAdmin);
           } else {
-            console.error("Critical error in user profile setup:", error);
+            console.error("Critical error in user profile setup:", safeStringify(error));
           }
         } finally {
           setLoading(false);
@@ -639,18 +641,19 @@ export default function App() {
 
   // Update dynamic favicon from siteConfig
   useEffect(() => {
-    if (siteConfig?.siteLogo) {
+    const faviconToUse = siteConfig?.siteLogo || siteConfig?.faviconUrl;
+    if (faviconToUse) {
       const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
       if (link) {
-        link.href = convertDriveUrl(siteConfig.siteLogo);
+        link.href = convertDriveUrl(faviconToUse);
       }
       
       const appleLink: HTMLLinkElement | null = document.querySelector("link[rel='apple-touch-icon']");
       if (appleLink) {
-        appleLink.href = convertDriveUrl(siteConfig.siteLogo);
+        appleLink.href = convertDriveUrl(faviconToUse);
       }
     }
-  }, [siteConfig?.siteLogo]);
+  }, [siteConfig?.siteLogo, siteConfig?.faviconUrl]);
 
   // Global Keyboard Navigation
   useEffect(() => {

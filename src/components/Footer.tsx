@@ -18,15 +18,15 @@ export default function Footer({ siteConfig }: FooterProps) {
   const [password, setPassword] = useState('');
 
   const siteName = siteConfig?.siteName || 'Study-hub';
-  const adminName = siteConfig?.adminName || 'Vijay Ninama';
-  const coOwnerName = siteConfig?.coOwnerName || 'Tilak Sahu';
-  const supportEmail = siteConfig?.supportEmail || 'vijayninama683@gmail.com';
+  const adminName = siteConfig?.adminName || 'Tagore Team';
+  const coOwnerName = siteConfig?.coOwnerName || 'Project Lead';
+  const supportEmail = siteConfig?.supportEmail || 'tagoreteam2025@gmail.com';
   const supportWhatsApp = siteConfig?.supportWhatsApp;
   const supportTelegram = siteConfig?.supportTelegram;
 
   const handleSecretLogin = async () => {
     const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
-    const legacySecretKey = siteConfig?.secretLoginKey || 'Vijay1987';
+    const legacySecretKey = siteConfig?.secretLoginKey || '7117';
     const secretProfiles = siteConfig?.secretProfiles || [];
 
     if (!isSecretEnabled) {

@@ -801,7 +801,7 @@ export default function AdminPanel() {
     { name: 'Classes', value: classes.length },
     { name: 'Chapters', value: chapters.length },
     { name: 'Tests', value: tests.length },
-    { name: 'Users', value: users.length },
+    { name: 'Users', value: users.filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com').length },
   ];
 
   const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
@@ -962,8 +962,8 @@ export default function AdminPanel() {
       const adminEmail = auth.currentUser?.email?.toLowerCase();
       const isSuperAdmin = adminEmail === 'vijayninama683@gmail.com';
       
-      const mainKey = siteConfig?.adminUnlockKey || '101987';
-      const limitedKey = siteConfig?.secretLoginKey || 'Vijay1987';
+      const mainKey = siteConfig?.adminUnlockKey || '7117';
+      const limitedKey = siteConfig?.secretLoginKey || '7117';
       const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
 
       // Check for secret profiles
@@ -1789,6 +1789,7 @@ export default function AdminPanel() {
                   onClick={() => {
                     const headers = ['Name', 'Email', 'Role', 'Natural Time (Min)', 'Bonus Time (Min)', 'Total Time (Min)', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution', 'Location'];
                     const csvData = users
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
                       .map(u => [
                         u.name || 'Anonymous',
                         u.email,
@@ -1838,7 +1839,11 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {users
-                      .filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase())))
+                      .filter(u => 
+                        (u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+                        u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && 
+                        u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com'
+                      )
                       .map((user) => (
                       <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
@@ -2274,7 +2279,7 @@ export default function AdminPanel() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com').length },
+                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com').length },
                           { name: 'Students', value: users.filter(u => u.role === 'student').length },
                         ]}
                         cx="50%"
@@ -2425,7 +2430,10 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Platform', 'Language', 'Path', 'Location', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && !log.userName?.includes('Admin'))
+                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && 
+                                      log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
+                                      log.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
+                                      !log.userName?.includes('Admin'))
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : (log.timestamp instanceof Date ? log.timestamp : new Date());
                         
@@ -2507,7 +2515,10 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && 
+                                  l.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
+                                  l.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
+                                  !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -3285,76 +3296,86 @@ export default function AdminPanel() {
                       {/* Logo & Favicon Customization */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Logo URL (Optional)</label>
-                           <div className="flex gap-4 items-start">
-                             <div className="flex-1">
-                               <input 
-                                 type="text" 
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm mb-2"
-                                 value={siteConfig?.logoUrl || ''}
-                                 onChange={(e) => saveSiteConfig({ logoUrl: e.target.value })}
-                                 placeholder="https://..."
-                               />
-                               <div className="flex flex-wrap items-center gap-3">
-                                  <div className="flex flex-col gap-2">
-                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Border Gradient</label>
-                                     <div className="flex items-center gap-2">
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoColor || '#00f2ff'}
-                                         onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
-                                         title="Color 1"
-                                       />
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoColorSecondary || '#bc13fe'}
-                                         onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
-                                         title="Color 2"
-                                       />
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoColorTertiary || '#ff00ff'}
-                                         onChange={(e) => saveSiteConfig({ logoColorTertiary: e.target.value })}
-                                         title="Color 3"
-                                       />
-                                     </div>
-                                  </div>
-                                  <div className="w-[1px] h-8 bg-white/10 self-end mb-1" />
-                                  <div className="flex flex-col gap-2">
-                                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Inner Gradient</label>
-                                     <div className="flex items-center gap-2">
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoInnerColor || '#0A0A0A'}
-                                         onChange={(e) => saveSiteConfig({ logoInnerColor: e.target.value })}
-                                         title="Color 1"
-                                       />
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoInnerColorSecondary || siteConfig?.logoInnerColor || '#0A0A0A'}
-                                         onChange={(e) => saveSiteConfig({ logoInnerColorSecondary: e.target.value })}
-                                         title="Color 2"
-                                       />
-                                       <input 
-                                         type="color" 
-                                         className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                         value={siteConfig?.logoInnerColorTertiary || siteConfig?.logoInnerColor || '#0A0A0A'}
-                                         onChange={(e) => saveSiteConfig({ logoInnerColorTertiary: e.target.value })}
-                                         title="Color 3"
-                                       />
-                                     </div>
-                                  </div>
+                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Favicon URL (Optional)</label>
+                           <input 
+                             type="text" 
+                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                             value={siteConfig?.faviconUrl || ''}
+                             onChange={(e) => saveSiteConfig({ faviconUrl: e.target.value })}
+                             placeholder="https://..."
+                           />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Main Logo URL (Site Logo)</label>
+                           <input 
+                             type="text" 
+                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
+                             value={siteConfig?.siteLogo || ''}
+                             onChange={(e) => saveSiteConfig({ siteLogo: e.target.value })}
+                             placeholder="https://..."
+                           />
+                           <p className="text-[10px] text-white/20 mt-1">This is the main logo used in Nav and Loading screen.</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/5">
+                         <div className="flex flex-wrap items-center gap-6">
+                            <div className="flex flex-col gap-2">
+                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Logo Border Gradient</label>
+                               <div className="flex items-center gap-2">
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoColor || '#00f2ff'}
+                                   onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
+                                   title="Color 1"
+                                 />
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoColorSecondary || '#bc13fe'}
+                                   onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
+                                   title="Color 2"
+                                 />
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoColorTertiary || '#ff00ff'}
+                                   onChange={(e) => saveSiteConfig({ logoColorTertiary: e.target.value })}
+                                   title="Color 3"
+                                 />
                                </div>
-                               <p className="text-[10px] text-white/20 mt-1">If Logo URL is empty, it will use Favicon URL or fallback icon.</p>
-                             </div>
-                             <div className="flex flex-col items-center gap-1.5">
+                            </div>
+                            <div className="w-[1px] h-8 bg-white/10" />
+                            <div className="flex flex-col gap-2">
+                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">Logo Inner Gradient (Fallback)</label>
+                               <div className="flex items-center gap-2">
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   onChange={(e) => saveSiteConfig({ logoInnerColor: e.target.value })}
+                                   title="Color 1"
+                                 />
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoInnerColorSecondary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   onChange={(e) => saveSiteConfig({ logoInnerColorSecondary: e.target.value })}
+                                   title="Color 2"
+                                 />
+                                 <input 
+                                   type="color" 
+                                   className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
+                                   value={siteConfig?.logoInnerColorTertiary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   onChange={(e) => saveSiteConfig({ logoInnerColorTertiary: e.target.value })}
+                                   title="Color 3"
+                                 />
+                               </div>
+                            </div>
+                            <div className="flex flex-col items-center gap-1.5 ml-auto">
                                <Logo 
-                                 logoUrl={siteConfig?.logoUrl} 
+                                 siteLogo={siteConfig?.siteLogo}
                                  faviconUrl={siteConfig?.faviconUrl}
                                  logoColor={siteConfig?.logoColor}
                                  logoColorSecondary={siteConfig?.logoColorSecondary}
@@ -3365,19 +3386,8 @@ export default function AdminPanel() {
                                  size="sm" 
                                />
                                <span className="text-[8px] uppercase tracking-wider text-white/40 font-bold">Preview</span>
-                             </div>
-                           </div>
-                        </div>
-                        <div className="space-y-2">
-                           <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Favicon URL (Optional)</label>
-                           <input 
-                             type="text" 
-                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                             value={siteConfig?.faviconUrl || ''}
-                             onChange={(e) => saveSiteConfig({ faviconUrl: e.target.value })}
-                             placeholder="https://..."
-                           />
-                        </div>
+                            </div>
+                         </div>
                       </div>
 
                       {/* System Optimization Controls */}
@@ -3547,10 +3557,21 @@ export default function AdminPanel() {
                     {isSuperAdmin && (
                       <div className="space-y-4">
                         <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-white/20">Admin Unlock Key (Dashboard Pass)</label>
+                          <input 
+                            type="text" 
+                            placeholder="Default: 7117"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
+                            value={siteConfig?.adminUnlockKey || ''}
+                            onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
                           <label className="text-[10px] uppercase font-bold text-white/20">Legacy Master Key</label>
                           <input 
                             type="text" 
-                            placeholder="Default: Vijay1987"
+                            placeholder="Default: 7117"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             value={siteConfig?.secretLoginKey || ''}
                             onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
@@ -3793,7 +3814,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Legacy Global Secret Key (Backward Compatibility)</label>
                               <input 
                                 type="text"
-                                placeholder="e.g. SecretPassword123"
+                                placeholder="e.g. 7117"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all font-mono"
                                 value={siteConfig?.secretLoginKey || ''}
                                 onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
@@ -4063,10 +4084,10 @@ export default function AdminPanel() {
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
                         {users
-                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
+                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
                           .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
-                             {u.name} ({u.email || u.uid.substring(0, 8)}) {u.email?.toLowerCase() === 'vijayninama683@gmail.com' ? '[ADMIN]' : ''}
+                             {u.name} ({u.email || u.uid.substring(0, 8)})
                           </option>
                         ))}
                       </select>
@@ -4252,52 +4273,8 @@ export default function AdminPanel() {
                         Identity Constraints
                       </h3>
                       <div className="space-y-4">
-                        <div className="p-4 bg-indigo-600/10 border border-indigo-600/20 rounded-2xl space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Hard-Locked Profile</span>
-                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">tagoreteam2025@gmail.com</p>
-                            <p className="text-xs text-white/40">Permanently locked to identity: <span className="text-indigo-400 font-bold">Hania Aamir</span></p>
-                          </div>
-                          
-                          <button 
-                            onClick={async () => {
-                              const targetEmail = 'tagoreteam2025@gmail.com';
-                              const user = users.find(u => u.email?.toLowerCase() === targetEmail);
-                              if (!user) {
-                                setToast({ message: 'User not found in list.', type: 'error' });
-                                return;
-                              }
-                              if (confirm(`AUTO-FIX TAGORE TEAM account?\n\nThis will purge all logs, test history, and reset the profile picture to fetch a fresh one from Google.`)) {
-                                setSelectedIdentityUid(user.uid);
-                                setToast({ message: 'Purging Tagore Team data...', type: 'info' });
-                                try {
-                                  await getDocs(query(collection(db, 'activityLogs'), where('userId', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
-                                  await getDocs(query(collection(db, 'testResults'), where('studentUid', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
-                                  await getDocs(query(collection(db, 'userProgress'), where('userId', '==', user.uid))).then(s => Promise.all(s.docs.map(d => deleteDoc(d.ref))));
-                                  
-                                  await saveUser({ 
-                                    ...user, 
-                                    name: 'Hania Aamir',
-                                    photoURL: '', 
-                                    photoURLOverridden: false,
-                                    totalTimeSpent: 0
-                                  });
-                                  setToast({ message: 'Tagore Team profile sanitized!', type: 'success' });
-                                } catch (e) {
-                                  console.error(e);
-                                  setToast({ message: 'Sanitization failed.', type: 'error' });
-                                }
-                              }
-                            }}
-                            className="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-indigo-600/30 transition-all"
-                          >
-                            Force Nucleus Purge & Re-Sync
-                          </button>
-                          
-                          <p className="text-[9px] text-white/20 italic">This profile identity is enforced at the system level to ensure brand consistency.</p>
+                        <div className="p-8 border-2 border-dashed border-white/5 rounded-2xl text-center">
+                           <p className="text-white/20 text-[10px] font-bold uppercase tracking-widest italic leading-relaxed">Account identity protected at the system kernel level.</p>
                         </div>
 
                         <div className="p-8 border-2 border-dashed border-white/5 rounded-2xl text-center">

@@ -3,6 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
+import { safeStringify } from './lib/utils';
 
 // For Vercel/Production, we use environment variables.
 // For local preview, we fallback to the config file.
@@ -78,9 +79,18 @@ export function handleFirestoreError(error: any, operationType: OperationType, p
     path
   };
   
-  console.error(`Firestore Error [${operationType}] on [${path}]:`, errInfo);
-  // Do not throw here to avoid crashing the internal Firestore loop or the React app
-  // The caller should ideally handle errors if they want UI feedback
+  const serialized = safeStringify(errInfo);
+  console.error(`Firestore Error [${operationType}] on [${path}]:`, serialized);
+  
+  // As per integration guidelines, throw a JSON string representing the error
+  // But we wrap it in a try-catch to be absolutely safe against circularity even in safeStringify
+  try {
+    throw new Error(serialized);
+  } catch (e) {
+    if (e instanceof Error && e.message === serialized) throw e;
+    // Fallback if somehow the above fails
+    throw new Error(`Firestore Error: ${errInfo.error}`);
+  }
 }
 
 export async function testConnection() {
@@ -94,7 +104,7 @@ export async function testConnection() {
     if (error.message?.includes('the client is offline') || error.message?.includes('unavailable')) {
       console.warn("Firebase Connection Warning: Unable to reach the backend. This might be a temporary network issue or a restricted firewall.");
     } else {
-      console.error("Firebase Configuration Error: Please verify your Firebase project settings and ensure the current domain is allowlisted.", error);
+      console.error("Firebase Configuration Error: Please verify your Firebase project settings and ensure the current domain is allowlisted.", safeStringify(error));
     }
   }
 }

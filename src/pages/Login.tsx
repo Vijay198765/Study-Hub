@@ -5,7 +5,7 @@ import { Lock, LogIn, AlertCircle, Shield, X } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { convertDriveUrl } from '../lib/utils';
+import { convertDriveUrl, safeStringify } from '../lib/utils';
 
 export default function Login() {
   const [name, setName] = useState('');
@@ -103,7 +103,7 @@ export default function Login() {
 
       navigate('/');
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.error("Login error:", safeStringify(err));
       if (err.code === 'auth/popup-blocked') {
         setError('Popup blocked! Please click the login button again or try opening the site in a new tab.');
       } else if (err.code === 'auth/network-request-failed') {

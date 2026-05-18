@@ -98,7 +98,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
         <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
           <Logo 
-            logoUrl={siteConfig?.logoUrl} 
+            siteLogo={siteConfig?.siteLogo}
             faviconUrl={siteConfig?.faviconUrl}
             logoColor={siteConfig?.logoColor}
             logoColorSecondary={siteConfig?.logoColorSecondary}

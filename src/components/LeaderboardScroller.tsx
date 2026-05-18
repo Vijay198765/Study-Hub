@@ -35,11 +35,10 @@ export default function LeaderboardScroller() {
       })) as UserProfile[];
       
       const filtered = users.filter(u => {
-        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com';
-        const isAdminName = u.name?.toLowerCase().includes('admin') || u.name?.toLowerCase().includes('amin');
+        const isMainAdmin = u.email?.toLowerCase() === 'vijayninama683@gmail.com' || u.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
         
-        // Show main admin and anyone with "admin" or "amin" in their name
-        if (isMainAdmin || isAdminName) return true;
+        // Hide main admins from leaderboard
+        if (isMainAdmin) return false;
         
         return u.name && !u.secretLoginLogged;
       });
