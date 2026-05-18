@@ -25,7 +25,7 @@ export default function LeaderboardScroller() {
     const q = query(
       collection(db, 'users'),
       orderBy('totalTimeSpent', 'desc'),
-      limit(30)
+      limit(200)
     );
 
     const unsubUsers = onSnapshot(q, (snap) => {

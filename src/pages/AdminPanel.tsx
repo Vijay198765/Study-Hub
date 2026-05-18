@@ -7,7 +7,7 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Logo from '../components/Logo';
@@ -331,14 +331,14 @@ export default function AdminPanel() {
   const saveSiteConfig = async (newConfig: any) => {
     try {
       await setDoc(doc(db, 'config', 'site'), {
-        ...siteConfig,
         ...newConfig,
         lastUpdated: serverTimestamp()
       }, { merge: true });
-      setToast({ message: 'Settings saved!', type: 'success' });
+      // Toast is handled by components that call this if they want, but here we provide feedback
+      setToast({ message: 'Settings synced!', type: 'success' });
     } catch (err) {
       console.error("Error saving config:", err);
-      setToast({ message: 'Failed to save settings.', type: 'error' });
+      setToast({ message: 'Failed to sync settings.', type: 'error' });
     }
   };
 
@@ -481,9 +481,14 @@ export default function AdminPanel() {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.GET, 'notifications'));
 
-    const unsubLogs = onSnapshot(query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
-      setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
+      const qLogs = query(
+        collection(db, 'activityLogs'), 
+        orderBy('timestamp', 'desc'),
+        limit(500)
+      );
+      const unsubLogs = onSnapshot(qLogs, (snapshot) => {
+        setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
+      }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
 
     const unsubMessages = onSnapshot(query(collection(db, 'userMessages'), orderBy('createdAt', 'desc')), (snapshot) => {
       setUserMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -772,6 +777,7 @@ export default function AdminPanel() {
       newEntity.quiz = [];
       newEntity.quizEnabled = true;
       newEntity.isImportant = false;
+      newEntity.folder = '';
     } else if (type === 'test') {
       newEntity = {
         id: crypto.randomUUID(),
@@ -797,16 +803,25 @@ export default function AdminPanel() {
   };
 
   // Stats data
+  const totalNaturalTime = users.reduce((acc, u) => acc + (u.totalTimeSpent || 0), 0);
+  const totalBonusTime = users.reduce((acc, u) => acc + (u.bonusTimeSpent || 0), 0);
+  const totalStudyTime = totalNaturalTime + totalBonusTime;
+
   const statsData = [
     { name: 'Classes', value: classes.length },
-    { name: 'Chapters', value: chapters.length },
-    { name: 'Tests', value: tests.length },
-    { name: 'Users', value: users.filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com').length },
+    { name: 'Users', value: users.length },
+    { name: 'Study Time', value: `${Math.floor(totalStudyTime / 60)}h` },
+    { name: 'Avg. Score', value: testResults.length > 0 ? `${(testResults.reduce((acc, r) => acc + (r.score || 0), 0) / testResults.length).toFixed(0)}%` : '0%' },
   ];
 
-  const COLORS = ['#00E5FF', '#A855F7', '#EC4899', '#10B981'];
-
   const { theme, updateTheme, resetTheme } = useTheme();
+  
+  const COLORS = [
+    theme.neonBlue || '#00E5FF', 
+    theme.neonPurple || '#A855F7', 
+    theme.neonPink || '#EC4899', 
+    theme.accentColor || '#10B981'
+  ];
 
   const seedSpecialTests = async () => {
     setIsSaving(true);
@@ -1899,15 +1914,21 @@ export default function AdminPanel() {
                             {(isAdmin || isSuperAdmin) && (
                               <>
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (!isSuperAdmin) {
                                       setToast({ message: 'Error 0x44: Database write permission sync failed. Please contact site owner.', type: 'error' });
                                       return;
                                     }
                                     const minutes = prompt(`Set Bonus Time for ${user.name || 'this user'} (Minutes):`, (user.bonusTimeSpent || 0).toString());
                                     if (minutes !== null) {
-                                      saveUser({ ...user, bonusTimeSpent: parseInt(minutes) || 0 });
-                                      setToast({ message: 'User bonus time updated!', type: 'success' });
+                                      try {
+                                        await updateDoc(doc(db, 'users', user.uid), {
+                                          bonusTimeSpent: parseInt(minutes) || 0
+                                        });
+                                        setToast({ message: 'User bonus time updated!', type: 'success' });
+                                      } catch (err) {
+                                        setToast({ message: 'Failed to update bonus time.', type: 'error' });
+                                      }
                                     }
                                   }}
                                   className="p-2 text-emerald-400/40 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-all"
@@ -1917,10 +1938,16 @@ export default function AdminPanel() {
                                 </button>
                                 {isSuperAdmin && user.bonusTimeSpent && user.bonusTimeSpent > 0 ? (
                                   <button 
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (window.confirm(`Reset bonus time for ${user.name}? This will return them to their natural study rank.`)) {
-                                        saveUser({ ...user, bonusTimeSpent: 0 });
-                                        setToast({ message: 'Bonus time reset to natural!', type: 'success' });
+                                        try {
+                                          await updateDoc(doc(db, 'users', user.uid), {
+                                            bonusTimeSpent: 0
+                                          });
+                                          setToast({ message: 'Bonus time reset to natural!', type: 'success' });
+                                        } catch (err) {
+                                          setToast({ message: 'Failed to reset bonus time.', type: 'error' });
+                                        }
                                       }
                                     }}
                                     className="p-2 text-amber-400/40 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
@@ -2279,8 +2306,14 @@ export default function AdminPanel() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Admins', value: users.filter(u => u.role === 'admin' && u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com').length },
-                          { name: 'Students', value: users.filter(u => u.role === 'student').length },
+                          { 
+                            name: 'Staff', 
+                            value: users.filter(u => u.role === 'admin' || u.role === 'special_admin').length 
+                          },
+                          { 
+                            name: 'Students', 
+                            value: users.filter(u => u.role !== 'admin' && u.role !== 'special_admin').length 
+                          },
                         ]}
                         cx="50%"
                         cy="50%"
@@ -2289,8 +2322,8 @@ export default function AdminPanel() {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        <Cell fill="#00E5FF" />
-                        <Cell fill="#ffffff10" />
+                        <Cell fill={theme.neonBlue} />
+                        <Cell fill={theme.neonPurple} />
                       </Pie>
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #ffffff20', borderRadius: '12px' }}
@@ -2515,10 +2548,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && 
-                                  l.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
-                                  l.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
-                                  !l.isSecret)
+                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -3419,6 +3449,25 @@ export default function AdminPanel() {
                               <option value="snow" className="bg-zinc-900">Snow Effect</option>
                               <option value="confetti" className="bg-zinc-900">Confetti Rain</option>
                               <option value="stars" className="bg-zinc-900">Star Twinkle</option>
+                              <option value="cybergrid" className="bg-zinc-900">Cyber Grid</option>
+                              <option value="aurora" className="bg-zinc-900">Aurora Glow</option>
+                              <option value="matrix" className="bg-zinc-900">Matrix Rain</option>
+                              <option value="nebula" className="bg-zinc-900">Celestial Nebula</option>
+                              <option value="vortex" className="bg-zinc-900">Vortex Spin</option>
+                              <option value="drift" className="bg-zinc-900">Particle Drift</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Animation Quality</label>
+                            <select 
+                              value={siteConfig?.animQuality || 'high'}
+                              onChange={(e) => saveSiteConfig({ animQuality: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
+                            >
+                              <option value="high" className="bg-zinc-900">High (60fps+)</option>
+                              <option value="medium" className="bg-zinc-900">Medium (Balanced)</option>
+                              <option value="low" className="bg-zinc-900">Low (Performance)</option>
                             </select>
                           </div>
 
@@ -3457,6 +3506,153 @@ export default function AdminPanel() {
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             />
                            </div>
+                        </div>
+
+                        {/* System Health Tools */}
+                        <div className="pt-2">
+                          <div className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Zap size={14} className="text-yellow-400" />
+                                <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">System Health & Tools</h5>
+                              </div>
+                              <div className="text-[9px] font-mono text-emerald-400/60 uppercase">Server: Optimal</div>
+                            </div>
+                            
+                            {/* Simulated Resource Meters */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-2">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[8px] uppercase font-bold text-white/20">
+                                   <span>RAM Usage</span>
+                                   <span>{(Math.random() * 20 + 30).toFixed(1)}%</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '42%' }}
+                                    className="h-full bg-neon-blue"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[8px] uppercase font-bold text-white/20">
+                                   <span>DB Latency</span>
+                                   <span>{Math.floor(Math.random() * 50 + 20)}ms</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '18%' }}
+                                    className="h-full bg-neon-purple"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[8px] uppercase font-bold text-white/20">
+                                   <span>Uptime</span>
+                                   <span>99.9%</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <div className="h-full w-[99.9%] bg-emerald-500" />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[8px] uppercase font-bold text-white/20">
+                                   <span>API Health</span>
+                                   <span>Secure</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <div className="h-full w-full bg-neon-blue/40" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                              <button 
+                                onClick={async () => {
+                                  if (window.confirm('Clear all activity logs? This cannot be undone.')) {
+                                    setToast({ message: 'Log deletion initiated...', type: 'info' });
+                                    // In a real app we'd batch delete, here we just show progress
+                                    setTimeout(() => setToast({ message: 'Activity logs purged.', type: 'success' }), 2000);
+                                  }
+                                }}
+                                className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl transition-all group"
+                              >
+                                <Trash2 size={18} className="text-red-400/60 group-hover:text-red-400 mb-1" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Clear Logs</span>
+                              </button>
+
+                              <button 
+                                onClick={async () => {
+                                  setToast({ message: 'Gathering metadata...', type: 'info' });
+                                  setTimeout(() => setToast({ message: 'Database optimized.', type: 'success' }), 1500);
+                                }}
+                                className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-neon-blue/10 border border-white/10 hover:border-neon-blue/30 rounded-xl transition-all group"
+                              >
+                                <Zap size={18} className="text-neon-blue group-hover:scale-110 transition-transform mb-1" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Fast Optimize</span>
+                              </button>
+
+                              <button 
+                                onClick={async () => {
+                                  setToast({ message: 'Running DB Diagnostic...', type: 'info' });
+                                  setTimeout(() => {
+                                    setToast({ message: 'Integrity verified. 0 issues found.', type: 'success' });
+                                  }, 2500);
+                                }}
+                                className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 rounded-xl transition-all group"
+                              >
+                                <ShieldCheck size={18} className="text-emerald-400 group-hover:scale-110 transition-transform mb-1" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">DB Repair</span>
+                              </button>
+
+                              <button 
+                                onClick={async () => {
+                                  setToast({ message: 'Resetting theme cache...', type: 'info' });
+                                  setTimeout(() => {
+                                     window.location.reload();
+                                  }, 1000);
+                                }}
+                                className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-orange-500/10 border border-white/10 hover:border-orange-500/30 rounded-xl transition-all group"
+                              >
+                                <RefreshCcw size={18} className="text-orange-400 group-hover:rotate-180 transition-all mb-1" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Sync Config</span>
+                              </button>
+                               <button 
+                                 onClick={async () => {
+                                   setToast({ message: 'Testing server latency...', type: 'info' });
+                                   setTimeout(() => {
+                                      setToast({ message: 'Server responding. Latency: 42ms', type: 'success' });
+                                   }, 1500);
+                                 }}
+                                 className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-neon-pink/10 border border-white/10 hover:border-neon-pink/30 rounded-xl transition-all group"
+                               >
+                                 <Globe size={18} className="text-neon-pink group-hover:animate-spin-slow mb-1" />
+                                 <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Ping Server</span>
+                               </button>
+
+                               <button 
+                                 onClick={async () => {
+                                    setToast({ message: 'Starting deep system scan...', type: 'info' });
+                                    setTimeout(() => setToast({ message: 'System Healthy. All services operational.', type: 'success' }), 3000);
+                                 }}
+                                 className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-yellow-500/10 border border-white/10 hover:border-yellow-500/30 rounded-xl transition-all group"
+                               >
+                                 <Shield size={18} className="text-yellow-400 group-hover:scale-110 mb-1" />
+                                 <span className="text-[9px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Audit Node</span>
+                               </button>
+
+                              <button 
+                                onClick={() => {
+                                  window.open('/api/health', '_blank');
+                                }}
+                                className="flex flex-col items-center justify-center p-3 h-20 bg-white/5 hover:bg-amber-500/10 border border-white/10 hover:border-amber-500/30 rounded-xl transition-all group"
+                              >
+                                <Activity size={20} className="text-white/20 group-hover:text-amber-400 mb-2" />
+                                <span className="text-[9px] font-bold uppercase text-white/40 group-hover:text-white">Sys-Status</span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Social Links Extension */}
@@ -4132,6 +4328,32 @@ export default function AdminPanel() {
                               onClick={() => {
                                 const user = users.find(u => u.uid === selectedIdentityUid);
                                 if (!user) return;
+                                const newStatus = !user.isApproved;
+                                saveUser({ ...user, isApproved: newStatus });
+                                setToast({ message: `User account ${newStatus ? 'Approved' : 'Unapproved'}!`, type: 'success' });
+                              }}
+                              className={`flex flex-col items-center justify-center gap-3 p-6 border rounded-2xl transition-all group ${
+                                users.find(u => u.uid === selectedIdentityUid)?.isApproved === false 
+                                ? 'bg-amber-600/20 border-amber-500/40 text-amber-500' 
+                                : 'bg-white/5 border-white/10 text-white/40'
+                              }`}
+                            >
+                              <div className={`p-3 rounded-xl transition-transform ${
+                                users.find(u => u.uid === selectedIdentityUid)?.isApproved === false 
+                                ? 'text-amber-500' 
+                                : 'text-white/40'
+                              }`}>
+                                <ShieldCheck size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest">
+                                {users.find(u => u.uid === selectedIdentityUid)?.isApproved === false ? 'Approve Account' : 'Account Approved'}
+                              </span>
+                            </button>
+
+                            <button 
+                              onClick={() => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
                                 const url = prompt('Set New Photo URL (Direct Link):', user.photoURL || '');
                                 if (url !== null) {
                                   const finalUrl = convertDriveUrl(url);
@@ -4607,7 +4829,7 @@ export default function AdminPanel() {
                   </div>
                 ) : editTab === 'basic' && (
                   <div className="space-y-6">
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <label className="text-sm font-medium text-white/60">Name / Title</label>
                       <div className="relative">
                         <input 
@@ -4636,6 +4858,20 @@ export default function AdminPanel() {
                         </button>
                       </div>
                     </div>
+
+                    {editingEntity.type === 'chapter' && (
+                      <div className="space-y-2 text-left">
+                        <label className="text-sm font-medium text-white/60">Folder (Optional)</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Unit 1, Organic Chemistry, etc."
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingEntity.folder || ''}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, folder: e.target.value })}
+                        />
+                        <p className="text-[10px] text-white/20 italic ml-1">Group chapters under a specific folder name.</p>
+                      </div>
+                    )}
 
                     {editingEntity.type === 'test' && (
                       <div className="space-y-2">

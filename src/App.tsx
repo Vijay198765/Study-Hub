@@ -18,9 +18,10 @@ import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import { LoadingScreen } from './components/LoadingScreen';
+import BackgroundEffects from './components/BackgroundEffects';
 import { auth, db, testConnection, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy, where, getDocFromCache, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, collection, serverTimestamp, query, orderBy, where, getDocFromCache, getDocFromServer, increment } from 'firebase/firestore';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Watermark from './components/Watermark';
 import RatingModal from './components/RatingModal';
@@ -556,24 +557,28 @@ export default function App() {
     if (!user || loading) return;
 
     const trackTime = async () => {
-      if (document.visibilityState === 'visible') {
+      // Use both visibilityState and a simple focus check for more accurate "study time"
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
         const userRef = doc(db, 'users', user.uid);
         try {
-          const docSnap = await getDoc(userRef);
-          if (docSnap.exists()) {
-            const currentTotal = docSnap.data().totalTimeSpent || 0;
-            await updateDoc(userRef, {
-              totalTimeSpent: currentTotal + 1,
-              lastActive: serverTimestamp()
-            });
-          }
+          // Use increment(1) to be more accurate and avoid unnecessary getDoc calls
+          // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
+          await updateDoc(userRef, {
+            totalTimeSpent: increment(1),
+            lastActive: serverTimestamp()
+          });
         } catch (e) {
           console.error("Error tracking time:", e);
         }
       }
     };
 
-    const interval = setInterval(trackTime, 60000); // Every minute
+    // Every minute
+    const interval = setInterval(trackTime, 60000);
+    
+    // Also track initial visibility
+    trackTime();
+
     return () => clearInterval(interval);
   }, [user, loading]);
 
@@ -760,7 +765,10 @@ export default function App() {
             {firebaseError && <FirebaseSetupGuide errorType={firebaseError} projectId={firebaseConfig.projectId} />}
             {showWelcome && <WelcomeOverlay onComplete={() => setShowWelcome(false)} siteConfig={siteConfig} />}
             <div className="flex flex-col min-h-screen relative overflow-hidden">
-              {siteConfig?.bgEffect === 'snow' && <div className="fixed inset-0 pointer-events-none z-0"><div className="absolute inset-0 bg-[url('https://picsum.photos/seed/snow/1920/1080')] opacity-5 mix-blend-overlay animate-pulse" /></div>}
+              <BackgroundEffects 
+                effect={siteConfig?.bgEffect} 
+                quality={siteConfig?.animQuality || 'high'} 
+              />
               
               <Watermark />
               
@@ -805,6 +813,34 @@ export default function App() {
                             <div key={i} className="w-2 h-2 rounded-full bg-red-500 animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
                           ))}
                         </div>
+                      </div>
+                    </motion.div>
+                  ) : (userProfile && userProfile.isApproved === false && !isAdmin) ? (
+                    <motion.div 
+                      key="pending-approval"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center"
+                    >
+                      <div className="w-20 h-20 rounded-3xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-6 border border-amber-500/20">
+                        <Shield size={40} className="animate-pulse" />
+                      </div>
+                      <h1 className="text-3xl font-display font-bold text-white mb-4 uppercase tracking-tight italic">Approval Pending</h1>
+                      <div className="max-w-md mx-auto space-y-4">
+                        <p className="text-white/60 leading-relaxed">
+                          Your account (<span className="text-amber-400 font-mono">{userProfile.email}</span>) successfully authenticated but requires administrator approval to access study materials.
+                        </p>
+                        <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 text-left">
+                          <LogIn size={18} className="text-amber-500" />
+                          <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-relaxed">System Verification Protocol: ACTIVE</p>
+                        </div>
+                        <button 
+                          onClick={() => auth.signOut()}
+                          className="text-xs text-white/20 hover:text-white underline transition-colors"
+                        >
+                          Sign out and try another account
+                        </button>
                       </div>
                     </motion.div>
                   ) : (

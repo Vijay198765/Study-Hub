@@ -421,9 +421,11 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
       </section>
 
       {/* Leaderboard Section */}
-      <section className="mt-32">
-        <LeaderboardScroller />
-      </section>
+      {siteConfig?.leaderboardVisible !== false && (
+        <section className="mt-32">
+          <LeaderboardScroller />
+        </section>
+      )}
     </div>
   </div>
 );

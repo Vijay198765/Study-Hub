@@ -42,6 +42,21 @@ export default function SubjectDetail() {
 
   const enabledChapters = chapters.filter(c => c.enabled);
 
+  // Group chapters by folder
+  const chaptersByFolder = enabledChapters.reduce((acc, chapter) => {
+    const folderName = chapter.folder || 'Default';
+    if (!acc[folderName]) acc[folderName] = [];
+    acc[folderName].push(chapter);
+    return acc;
+  }, {} as Record<string, Chapter[]>);
+
+  // Sort folder names (Default last)
+  const folderNames = Object.keys(chaptersByFolder).sort((a, b) => {
+    if (a === 'Default') return 1;
+    if (b === 'Default') return -1;
+    return a.localeCompare(b);
+  });
+
   return (
     <div className="min-h-screen pt-24 pb-12">
       <section className="bg-transparent border-b border-white/5 pt-8 pb-16 px-4 mb-16">
@@ -75,55 +90,65 @@ export default function SubjectDetail() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {enabledChapters.map((chapter, idx) => (
-            <motion.div
-              key={chapter.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              whileHover={{ y: -8 }}
-              className="group"
-            >
-              <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`} className="block h-full">
-                <div className="glass-card p-8 h-full flex flex-col group-hover:neon-border transition-all relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
-                  
-                  <div className="flex items-start justify-between mb-8">
-                    <div className="text-4xl font-display font-bold text-neon-blue/20 drop-shadow-[0_0_8px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_15px_rgba(0,242,255,0.8)] transition-all duration-300">
-                      {String(idx + 1).padStart(2, '0')}
-                    </div>
-                    {chapter.isImportant && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(188,19,254,0.4)]">
-                        <Star size={12} fill="currentColor" /> Important
-                      </span>
-                    )}
-                  </div>
+        {folderNames.map((folderName, fIdx) => (
+          <div key={folderName} className="mb-16">
+            {folderName !== 'Default' && (
+              <div className="flex items-center gap-4 mb-8">
+                <h2 className="text-2xl font-display font-bold text-white/80">{folderName}</h2>
+                <div className="h-px bg-white/5 flex-grow" />
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {chaptersByFolder[folderName].map((chapter, idx) => (
+                <motion.div
+                  key={chapter.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: (fIdx * 5 + idx) * 0.05 }}
+                  whileHover={{ y: -8 }}
+                  className="group"
+                >
+                  <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`} className="block h-full">
+                    <div className="glass-card p-8 h-full flex flex-col group-hover:neon-border transition-all relative overflow-hidden">
+                      <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
+                      
+                      <div className="flex items-start justify-between mb-8">
+                        <div className="text-4xl font-display font-bold text-neon-blue/20 drop-shadow-[0_0_8px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_15px_rgba(0,242,255,0.8)] transition-all duration-300">
+                          {String(idx + 1).padStart(2, '0')}
+                        </div>
+                        {chapter.isImportant && (
+                          <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(188,19,254,0.4)]">
+                            <Star size={12} fill="currentColor" /> Important
+                          </span>
+                        )}
+                      </div>
 
-                  <h3 className="text-2xl font-display font-bold mb-4 group-hover:neon-text transition-colors break-words">
-                    {chapter.name}
-                  </h3>
-                  
-                  <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                    <div className="text-xs text-neon-blue/40 drop-shadow-[0_0_5px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_10px_rgba(0,242,255,0.6)] uppercase tracking-widest font-bold transition-all">
-                      {chapter.resources.length} Materials
+                      <h3 className="text-2xl font-display font-bold mb-4 group-hover:neon-text transition-colors break-words">
+                        {chapter.name}
+                      </h3>
+                      
+                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                        <div className="text-xs text-neon-blue/40 drop-shadow-[0_0_5px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_10px_rgba(0,242,255,0.6)] uppercase tracking-widest font-bold transition-all">
+                          {chapter.resources.length} Materials
+                        </div>
+                        <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
+                          <ChevronRight size={20} className="group-hover:text-neon-blue" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
-                      <ChevronRight size={20} className="group-hover:text-neon-blue" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-
-          {enabledChapters.length === 0 && (
-            <div className="col-span-full text-center py-32 glass-card">
-              <BookOpen size={48} className="mx-auto mb-6 text-white/10" />
-              <p className="text-white/40 text-xl italic">No chapters available for this subject yet.</p>
+                  </Link>
+                </motion.div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        ))}
+
+        {enabledChapters.length === 0 && (
+          <div className="text-center py-32 glass-card">
+            <BookOpen size={48} className="mx-auto mb-6 text-white/10" />
+            <p className="text-white/40 text-xl italic">No chapters available for this subject yet.</p>
+          </div>
+        )}
       </div>
     </div>
   );

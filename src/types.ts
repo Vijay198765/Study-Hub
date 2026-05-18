@@ -20,6 +20,7 @@ export interface Chapter {
   subjectId: string;
   classId: string;
   name: string;
+  folder?: string;
   resources: Resource[];
   quiz: QuizQuestion[];
   quizEnabled: boolean;

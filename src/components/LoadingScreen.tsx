@@ -4,8 +4,10 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Float, PerspectiveCamera, MeshWobbleMaterial, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import Logo from './Logo';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Robot = () => {
+  const { theme } = useTheme();
   const group = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Mesh>(null);
   const rightArm = useRef<THREE.Mesh>(null);
@@ -20,11 +22,11 @@ const Robot = () => {
   const armGeo = useMemo(() => new THREE.BoxGeometry(0.15, 0.4, 0.15), []);
   const legGeo = useMemo(() => new THREE.BoxGeometry(0.15, 0.3, 0.15), []);
   
-  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6", roughness: 0.1, metalness: 0.9, emissive: "#000000" }), []);
-  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#60a5fa", roughness: 0.1, metalness: 0.9 }), []);
-  const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#00ffff" }), []);
-  const armMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b82f6", metalness: 0.8 }), []);
-  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1d4ed8", metalness: 0.8 }), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: theme.neonBlue || "#3b82f6", roughness: 0.1, metalness: 0.9, emissive: "#000000" }), [theme.neonBlue]);
+  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: theme.neonBlue || "#60a5fa", roughness: 0.1, metalness: 0.9 }), [theme.neonBlue]);
+  const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: theme.neonBlue || "#00ffff" }), [theme.neonBlue]);
+  const armMat = useMemo(() => new THREE.MeshStandardMaterial({ color: theme.neonBlue || "#3b82f6", metalness: 0.8 }), [theme.neonBlue]);
+  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: theme.neonPurple || "#1d4ed8", metalness: 0.8 }), [theme.neonPurple]);
 
   useFrame((state) => {
     if (!state || !state.clock) return;
@@ -64,7 +66,7 @@ const Robot = () => {
     <group ref={group} position={[0, 0.5, 0]}>
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.4, 0]}>
         <torusGeometry args={[0.8, 0.01, 16, 100]} />
-        <MeshWobbleMaterial color="#00ffff" speed={1} factor={0.2} transparent opacity={0.3} />
+        <MeshWobbleMaterial color={theme.neonBlue || "#00ffff"} speed={1} factor={0.2} transparent opacity={0.3} />
       </mesh>
 
       <mesh position={[0, 0.4, 0]} geometry={bodyGeo} material={bodyMat} castShadow />
@@ -73,7 +75,7 @@ const Robot = () => {
         <mesh ref={rightEye} position={[0.1, 0.05, 0.18]} geometry={eyeGeo} material={eyeMat} />
         <mesh ref={scannerRef} position={[0, 0.05, 0.19]}>
           <planeGeometry args={[0.25, 0.01]} />
-          <meshBasicMaterial color="#00ffff" transparent opacity={0.8} />
+          <meshBasicMaterial color={theme.neonBlue || "#00ffff"} transparent opacity={0.8} />
         </mesh>
       </mesh>
       <mesh ref={leftArm} position={[-0.4, 0.5, 0]} geometry={armGeo} material={armMat} castShadow />
@@ -209,6 +211,7 @@ const Rig = () => {
 };
 
 const DataPoint = ({ position, speed, offset }: { position: [number, number, number], speed: number, offset: number }) => {
+  const { theme } = useTheme();
   const ref = useRef<THREE.Mesh>(null);
   useFrame((state) => {
     if (!state || !state.clock || !ref.current) return;
@@ -219,7 +222,7 @@ const DataPoint = ({ position, speed, offset }: { position: [number, number, num
   return (
     <mesh ref={ref} position={position}>
       <boxGeometry args={[0.04, 0.04, 0.04]} />
-      <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
+      <meshBasicMaterial color={theme.neonBlue || "#00ffff"} transparent opacity={0.6} />
     </mesh>
   );
 };
@@ -296,6 +299,7 @@ const SceneContent = ({ isMobile }: { isMobile: boolean }) => {
 };
 
 export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
+  const { theme } = useTheme();
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') return window.innerWidth < 768;
     return false;
@@ -363,7 +367,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
           <pointLight position={[10, 10, 10]} intensity={2} />
           
           <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
-          <Sparkles count={100} scale={5} size={2} speed={0.4} color="#00f2ff" />
+          <Sparkles count={100} scale={5} size={2} speed={0.4} color={theme?.neonBlue || "#00f2ff"} />
           <DataPoints />
           
           <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>

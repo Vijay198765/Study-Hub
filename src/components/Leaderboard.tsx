@@ -24,7 +24,8 @@ export default function Leaderboard() {
 
     const q = query(
       collection(db, 'users'),
-      orderBy('totalTimeSpent', 'desc')
+      orderBy('totalTimeSpent', 'desc'),
+      limit(200)
     );
 
     const unsubUsers = onSnapshot(q, (snap) => {

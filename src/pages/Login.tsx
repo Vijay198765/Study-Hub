@@ -75,6 +75,14 @@ export default function Login() {
       let role = 'student';
       
       if (!userDoc.exists()) {
+        // Check if registration is disabled
+        if (siteConfig?.registrationEnabled === false) {
+          await auth.signOut();
+          setError('Public registration is currently disabled by the administrator.');
+          setLoading(false);
+          return;
+        }
+
         // Default admin check
         const adminEmails = ['vijayninama683@gmail.com'];
         if (adminEmails.includes(user.email?.toLowerCase() || '')) {
@@ -86,6 +94,7 @@ export default function Login() {
           name: name.trim(),
           photoURL: convertDriveUrl(user.photoURL || undefined),
           role: role,
+          isApproved: siteConfig?.autoApproveUsers !== false,
           createdAt: new Date().toISOString()
         });
       } else {

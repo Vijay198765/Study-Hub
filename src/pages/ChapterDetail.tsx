@@ -377,6 +377,12 @@ export default function ChapterDetail() {
             <ChevronRight size={12} />
             <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
             <ChevronRight size={12} />
+            {chapter.folder && chapter.folder !== 'Default' && (
+              <>
+                <span className="text-white/30 truncate max-w-[100px] md:max-w-none" title={chapter.folder}>{chapter.folder}</span>
+                <ChevronRight size={12} />
+              </>
+            )}
             <span className="text-white/60 break-words">{chapter.name}</span>
           </div>
 
