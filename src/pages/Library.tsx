@@ -59,7 +59,7 @@ export default function Library() {
 
   const buildTree = (parentId: string | null) => {
     return filteredFolders
-      .filter(f => f.parentId === parentId || (!parentId && !f.parentId))
+      .filter(f => f.parentId === parentId || (!parentId && (!f.parentId || f.parentId === 'root')))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 

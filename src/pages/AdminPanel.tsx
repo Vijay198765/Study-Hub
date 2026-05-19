@@ -85,7 +85,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
               </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 transition-opacity">
           <button 
                 onClick={async (e) => {
               e.stopPropagation();
@@ -106,7 +106,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 if (setToast) setToast({ message: 'Failed to add subfolder', type: 'error' });
               }
             }}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white transition-all hover:scale-110 active:scale-95"
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-all hover:scale-110 active:scale-95"
             title="Add Subfolder"
           >
             <FolderPlus size={14} />
@@ -126,7 +126,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
               });
               if (setToast) setToast({ message: 'Configure your chapter now', type: 'info' });
             }}
-            className="p-1.5 hover:bg-orange-500/20 rounded-xl text-orange-500/40 hover:text-orange-500 transition-all hover:scale-110 active:scale-95"
+            className="p-1.5 hover:bg-orange-500/20 rounded-xl text-orange-500/70 hover:text-orange-500 transition-all hover:scale-110 active:scale-95"
             title="Add Chapter to this Folder"
           >
             <PlusCircle size={14} />
@@ -140,7 +140,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 if (setToast) setToast({ message: 'Folder renamed', type: 'success' });
               }
             }}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-white/20 hover:text-white transition-all hover:scale-110 active:scale-95"
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95"
             title="Rename Folder"
           >
             <Edit2 size={12} />
@@ -171,7 +171,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 if (setToast) setToast({ message: 'Folder and all its contents deleted', type: 'success' });
               }
             }}
-            className="p-1.5 hover:bg-red-500/20 rounded-xl text-red-500/40 hover:text-red-500 transition-all hover:scale-110 active:scale-95"
+            className="p-1.5 hover:bg-red-500/20 rounded-xl text-red-500/70 hover:text-red-500 transition-all hover:scale-110 active:scale-95"
             title="Delete Folder"
           >
             <Trash2 size={14} />
@@ -210,10 +210,10 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 <div className="flex-grow text-left">
                   <span className="text-xs font-medium text-white/60">{chapter.name}</span>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover/ch:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 transition-opacity">
                   <button 
                     onClick={() => setEditingEntity({ ...chapter, type: 'chapter' })}
-                    className="p-1 text-white/20 hover:text-white"
+                    className="p-1 text-white/60 hover:text-white"
                   >
                     <Settings size={12} />
                   </button>
@@ -221,7 +221,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                     onClick={() => {
                       if (confirm('Delete chapter?')) removeChapter(chapter.id, chapter.subjectId);
                     }}
-                    className="p-1 text-red-500/40 hover:text-red-500"
+                    className="p-1 text-red-500/70 hover:text-red-500"
                   >
                     <X size={12} />
                   </button>
@@ -1768,14 +1768,14 @@ export default function AdminPanel() {
                           <button 
                             onClick={() => handleMove('class', index, 'up')}
                             disabled={index === 0}
-                            className="text-white/20 hover:text-neon-blue disabled:opacity-0"
+                            className="text-white/50 hover:text-neon-blue disabled:opacity-0"
                           >
                             <ArrowUp size={16} />
                           </button>
                           <button 
                             onClick={() => handleMove('class', index, 'down')}
                             disabled={index === classes.length - 1}
-                            className="text-white/20 hover:text-neon-blue disabled:opacity-0"
+                            className="text-white/50 hover:text-neon-blue disabled:opacity-0"
                           >
                             <ArrowDown size={16} />
                           </button>
@@ -1876,14 +1876,14 @@ export default function AdminPanel() {
                           <button 
                             onClick={() => handleMove('subject', index, 'up')}
                             disabled={index === 0}
-                            className="text-white/20 hover:text-neon-purple disabled:opacity-0"
+                            className="text-white/50 hover:text-neon-purple disabled:opacity-0"
                           >
                             <ArrowUp size={16} />
                           </button>
                           <button 
                             onClick={() => handleMove('subject', index, 'down')}
                             disabled={index === subjects.length - 1}
-                            className="text-white/20 hover:text-neon-purple disabled:opacity-0"
+                            className="text-white/50 hover:text-neon-purple disabled:opacity-0"
                           >
                             <ArrowDown size={16} />
                           </button>
@@ -1987,14 +1987,15 @@ export default function AdminPanel() {
                     const name = prompt('Folder Name:');
                     if (!name) return;
                     try {
-                      await saveFolder({
-                        id: `f_${Date.now()}`,
-                        name,
-                        classId: selectedClassId,
-                        subjectId: selectedSubjectId,
-                        enabled: true,
-                        order: folders.length
-                      });
+                    await saveFolder({
+                      id: `f_${Date.now()}`,
+                      name,
+                      classId: selectedClassId,
+                      subjectId: selectedSubjectId,
+                      enabled: true,
+                      order: folders.length,
+                      parentId: 'root'
+                    });
                       setToast({ message: 'Folder created successfully!', type: 'success' });
                     } catch (err) {
                       setToast({ message: 'Failed to create folder', type: 'error' });
@@ -2054,7 +2055,7 @@ export default function AdminPanel() {
                             folder={folder} 
                             level={0} 
                             folders={folders} 
-                            chapters={chapters} 
+                            chapters={filteredChapters} 
                             removeFolder={removeFolder}
                             saveFolder={saveFolder}
                             addNew={addNew}
@@ -2098,14 +2099,14 @@ export default function AdminPanel() {
                                   <button 
                                     onClick={() => handleMove('chapter', chapters.indexOf(chapter), 'up')}
                                     disabled={chapters.indexOf(chapter) === 0}
-                                    className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                                    className="text-white/50 hover:text-neon-pink disabled:opacity-0"
                                   >
                                     <ArrowUp size={16} />
                                   </button>
                                   <button 
                                     onClick={() => handleMove('chapter', chapters.indexOf(chapter), 'down')}
                                     disabled={chapters.indexOf(chapter) === chapters.length - 1}
-                                    className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                                    className="text-white/50 hover:text-neon-pink disabled:opacity-0"
                                   >
                                     <ArrowDown size={16} />
                                   </button>
@@ -2146,7 +2147,7 @@ export default function AdminPanel() {
                                   </button>
                                   <button 
                                     onClick={() => handleDelete('chapter', chapter.id, chapter.name)}
-                                    className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                    className="p-2 text-red-400/80 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                                     title="Delete"
                                   >
                                     <Trash2 size={18} />
@@ -2228,7 +2229,7 @@ export default function AdminPanel() {
                               subjectId: selectedSubjectId,
                               enabled: true,
                               order: (folders.filter(f => f.subjectId === selectedSubjectId && (!f.parentId || f.parentId === 'root')).length),
-                              parentId: null 
+                              parentId: 'root' 
                             };
                             await saveFolder(newFolder);
                             setToast({ message: 'Root folder added', type: 'success' });
@@ -2247,10 +2248,10 @@ export default function AdminPanel() {
     
                   <div className="grid grid-cols-1 gap-4">
                     {(() => {
-                        const buildTree = (parentId: string | null) => {
+                        const buildTree = (parentId: string | 'root') => {
                           return folders
                             .filter(f => {
-                              const matchesParent = (parentId === null)
+                              const matchesParent = (parentId === 'root')
                                 ? (!f.parentId || f.parentId === 'root')
                                 : f.parentId === parentId;
                               
@@ -2262,7 +2263,7 @@ export default function AdminPanel() {
                             .sort((a, b) => (a.order || 0) - (b.order || 0));
                         };
     
-                      const rootFolders = buildTree(null);
+                      const rootFolders = buildTree('root');
 
                   if (!selectedClassId || !selectedSubjectId) {
                     return (
