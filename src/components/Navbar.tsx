@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User, Layers } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertDriveUrl } from '../lib/utils';
 import { auth, db } from '../firebase';
@@ -85,8 +85,8 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
     { name: 'Tests', path: '/tests', icon: ClipboardList },
-    { name: 'Library', path: '/library', icon: Layers },
     { name: 'Games', path: '/games', icon: Gamepad2 },
+    { name: 'Explorer', path: '/explorer', icon: Globe },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
     ...(showDashboard ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
   ];

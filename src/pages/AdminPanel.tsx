@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Plus, Edit2, Trash2, GripVertical, Save, X, 
+  Plus, Edit2, Trash2, GripVertical, Save, X, PlusCircle,
   ChevronRight, ChevronDown, Search, Users, 
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
@@ -63,7 +63,13 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
   return (
     <div className={`space-y-2 ${level > 0 ? 'ml-6 pl-4 border-l border-white/5' : ''}`}>
       <div className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-colors group text-left">
-        <button onClick={() => setIsExpanded(!isExpanded)} className="text-white/20 hover:text-white transition-colors p-1">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }} 
+          className="text-white/20 hover:text-white transition-colors p-1"
+        >
           {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
         <FolderIcon className="text-orange-500 shrink-0" size={18} />
@@ -81,13 +87,14 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
-            onClick={async () => {
+            onClick={async (e) => {
+              e.stopPropagation();
               const name = prompt('Subfolder Name:');
-              if (!name) return;
+              if (!name || name.trim() === '') return;
               try {
                 await saveFolder({
                   id: `f_${Date.now()}`,
-                  name,
+                  name: name.trim(),
                   parentId: folder.id,
                   classId: folder.classId,
                   subjectId: folder.subjectId,
@@ -99,34 +106,55 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 if (setToast) setToast({ message: 'Failed to add subfolder', type: 'error' });
               }
             }}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white"
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white transition-all hover:scale-110 active:scale-95"
             title="Add Subfolder"
           >
             <FolderPlus size={14} />
           </button>
           <button 
-            onClick={() => addNew('chapter', { folderId: folder.id, classId: folder.classId, subjectId: folder.subjectId })}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-orange-500/40 hover:text-orange-500"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Pre-fill chapter name if the user wants
+              const name = prompt('Chapter Name:');
+              if (!name || name.trim() === '') return;
+              
+              addNew('chapter', { 
+                name: name.trim(),
+                folderId: folder.id, 
+                classId: folder.classId, 
+                subjectId: folder.subjectId 
+              });
+              if (setToast) setToast({ message: 'Configure your chapter now', type: 'info' });
+            }}
+            className="p-1.5 hover:bg-orange-500/20 rounded-xl text-orange-500/40 hover:text-orange-500 transition-all hover:scale-110 active:scale-95"
             title="Add Chapter to this Folder"
           >
-            <Plus size={14} />
+            <PlusCircle size={14} />
           </button>
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const name = prompt('Rename Folder:', folder.name);
-              if (name && name !== folder.name) saveFolder({ ...folder, name });
+              if (name && name.trim() !== '' && name.trim() !== folder.name) {
+                saveFolder({ ...folder, name: name.trim() });
+                if (setToast) setToast({ message: 'Folder renamed', type: 'success' });
+              }
             }}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-white/20 hover:text-white"
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/20 hover:text-white transition-all hover:scale-110 active:scale-95"
+            title="Rename Folder"
           >
             <Edit2 size={12} />
           </button>
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (confirm(`Delete folder "${folder.name}" and all its contents?`)) {
                 removeFolder(folder.id);
+                if (setToast) setToast({ message: 'Folder deleted', type: 'success' });
               }
             }}
-            className="p-1.5 hover:bg-white/10 rounded-xl text-red-500/40 hover:text-red-500"
+            className="p-1.5 hover:bg-red-500/20 rounded-xl text-red-500/40 hover:text-red-500 transition-all hover:scale-110 active:scale-95"
+            title="Delete Folder"
           >
             <Trash2 size={14} />
           </button>
@@ -2139,87 +2167,118 @@ export default function AdminPanel() {
 
           {activeTab === 'folders' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/40 p-6 rounded-3xl border border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20">
-                    <FolderTree size={28} className="text-orange-500" />
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-black/40 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="p-4 bg-orange-500/10 rounded-3xl border border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.1)]">
+                    <FolderTree size={36} className="text-orange-500" />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-display font-bold text-orange-500 mb-0.5">Infinite Tree Manager</h2>
-                    <p className="text-white/40 text-xs tracking-wider uppercase font-bold">Deep hierarchical organization for your content</p>
+                    <h2 className="text-4xl font-display font-bold text-orange-500 mb-1 tracking-tight">Infinite Tree Manager</h2>
+                    <div className="flex items-center gap-3">
+                      <p className="text-white/40 text-xs tracking-wider uppercase font-black">Structure your universe</p>
+                      <span className="w-1 h-1 rounded-full bg-white/10" />
+                      <p className="text-orange-500/60 text-[10px] font-bold uppercase tracking-widest">{folders.length} Total Folders</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <select 
-                    className="w-full sm:w-40 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white text-xs focus:border-orange-500 outline-none transition-all"
-                    value={selectedClassId}
-                    onChange={(e) => {
-                      setSelectedClassId(e.target.value);
-                      setSelectedSubjectId('');
-                    }}
-                  >
-                    <option value="" className="bg-dark-bg">All Classes</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
-                    ))}
-                  </select>
-                  <select 
-                    className="w-full sm:w-40 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white text-xs focus:border-orange-500 outline-none transition-all"
-                    value={selectedSubjectId}
-                    onChange={(e) => setSelectedSubjectId(e.target.value)}
-                    disabled={!selectedClassId}
-                  >
-                    <option value="" className="bg-dark-bg">All Subjects</option>
-                    {subjects.filter(s => s.classId === selectedClassId).map(s => (
-                      <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
-                    ))}
-                  </select>
-                  <button 
-                    onClick={async () => {
-                      if (!selectedClassId || !selectedSubjectId) {
-                        setToast({ message: 'Select Class & Subject first', type: 'info' });
-                        return;
-                      }
-                      const name = prompt('Root Folder Name:');
-                      if (!name) return;
-                      try {
-                        await saveFolder({
-                          id: `f_${Date.now()}`,
-                          name,
-                          classId: selectedClassId,
-                          subjectId: selectedSubjectId,
-                          enabled: true,
-                          order: folders.length
-                        });
-                        setToast({ message: 'Root folder added', type: 'success' });
-                      } catch (err) {
-                        setToast({ message: 'Failed to create folder', type: 'error' });
-                      }
-                    }}
-                    className="btn-neon bg-orange-600 text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto text-sm"
-                  >
-                    <FolderPlus size={18} />
-                    Add Root Folder
-                  </button>
-                </div>
-              </div>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10 w-full lg:w-auto">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <select 
+                      className="flex-1 sm:w-44 bg-white/5 border border-white/10 rounded-2xl py-3 px-5 text-white text-sm focus:border-orange-500 outline-none transition-all hover:bg-white/10"
+                      value={selectedClassId}
+                      onChange={(e) => {
+                        setSelectedClassId(e.target.value);
+                        setSelectedSubjectId('');
+                      }}
+                    >
+                      <option value="" className="bg-dark-bg">Classes</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                      ))}
+                    </select>
+                    <select 
+                      className="flex-1 sm:w-44 bg-white/5 border border-white/10 rounded-2xl py-3 px-5 text-white text-sm focus:border-orange-500 outline-none transition-all hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                      value={selectedSubjectId}
+                      onChange={(e) => setSelectedSubjectId(e.target.value)}
+                      disabled={!selectedClassId}
+                    >
+                      <option value="" className="bg-dark-bg">Subjects</option>
+                      {subjects.filter(s => s.classId === selectedClassId).map(s => (
+                        <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                {(() => {
-                  const buildTree = (parentId: string | null) => {
-                    return folders
-                      .filter(f => f.parentId === parentId || (!parentId && !f.parentId))
-                      .filter(f => (!selectedClassId || f.classId === selectedClassId) && (!selectedSubjectId || f.subjectId === selectedSubjectId))
-                      .sort((a, b) => (a.order || 0) - (b.order || 0));
-                  };
+                      <button 
+                        onClick={async () => {
+                          if (!selectedClassId || !selectedSubjectId) {
+                            setToast({ message: 'Select Class & Subject first', type: 'info' });
+                            return;
+                          }
+                          const name = prompt('Root Folder Name:');
+                          if (!name || name.trim() === '') return;
+                          
+                          try {
+                            const newFolder: Folder = {
+                              id: `f_${Date.now()}`,
+                              name: name.trim(),
+                              classId: selectedClassId,
+                              subjectId: selectedSubjectId,
+                              enabled: true,
+                              order: (folders.filter(f => f.subjectId === selectedSubjectId && (!f.parentId || f.parentId === 'root')).length),
+                              parentId: 'root' 
+                            };
+                            await saveFolder(newFolder);
+                            setToast({ message: 'Root folder added', type: 'success' });
+                          } catch (err) {
+                            console.error("Failed to create folder:", err);
+                            setToast({ message: 'Failed to create folder', type: 'error' });
+                          }
+                        }}
+                        className="btn-neon bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 flex items-center justify-center gap-3 w-full sm:w-auto font-bold rounded-2xl shadow-lg active:scale-95 transition-all text-sm"
+                      >
+                        <FolderPlus size={20} />
+                        Add Root
+                      </button>
+                    </div>
+                  </div>
+    
+                  <div className="grid grid-cols-1 gap-4">
+                    {(() => {
+                        const buildTree = (parentId: string | null | 'root') => {
+                          return folders
+                            .filter(f => {
+                              const matchesParent = (parentId === null || parentId === 'root')
+                                ? (!f.parentId || f.parentId === 'root')
+                                : f.parentId === parentId;
+                              
+                              const matchesContext = (!selectedClassId || f.classId === selectedClassId) && 
+                                                   (!selectedSubjectId || f.subjectId === selectedSubjectId);
+                              
+                              return matchesParent && matchesContext;
+                            })
+                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+                        };
+    
+                      const rootFolders = buildTree('root');
 
-                  const rootFolders = buildTree(null);
+                  if (!selectedClassId || !selectedSubjectId) {
+                    return (
+                      <div className="py-24 text-center glass-card border-dashed">
+                        <Info size={48} className="mx-auto text-white/5 mb-4" />
+                        <p className="text-white/20 italic font-medium">Select class and subject to view folder tree</p>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="space-y-4">
                       {rootFolders.length === 0 ? (
-                        <div className="py-20 text-center glass-card">
-                          <FolderIcon size={48} className="mx-auto text-white/5 mb-4" />
-                          <p className="text-white/20 italic">Select class and subject to view folder tree</p>
+                        <div className="py-20 text-center glass-card bg-orange-500/5 border-orange-500/10">
+                          <FolderIcon size={48} className="mx-auto text-orange-500/10 mb-4" />
+                          <p className="text-orange-500/40 italic font-medium">No root folders found for this context.</p>
                         </div>
                       ) : (
                         rootFolders.map(f => (
@@ -2765,13 +2824,13 @@ export default function AdminPanel() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl min-h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">Content Distribution</h3>
-                  <ResponsiveContainer width="99%" height={300} minHeight={300}>
+                  <ResponsiveContainer width="100%" height={300} minWidth={0} aspect={1.5} key={`bar-${activeTab}`}>
                     <BarChart data={statsData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                      <XAxis dataKey="name" stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="name" stroke="#ffffff40" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#ffffff40" fontSize={10} tickLine={false} axisLine={false} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #ffffff20', borderRadius: '12px' }}
                         itemStyle={{ color: '#fff' }}
@@ -2793,9 +2852,9 @@ export default function AdminPanel() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
+                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl min-h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">User Roles</h3>
-                  <ResponsiveContainer width="99%" height={300} minHeight={300}>
+                  <ResponsiveContainer width="100%" height={300} minWidth={0} aspect={1.5} key={`pie-${activeTab}`}>
                     <PieChart>
                       <Pie
                         data={[
