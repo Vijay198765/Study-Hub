@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
 interface BackgroundEffectsProps {
-  effect?: 'snow' | 'confetti' | 'stars' | 'cybergrid' | 'aurora' | 'matrix' | 'nebula' | 'none';
+  effect?: 'snow' | 'confetti' | 'stars' | 'cybergrid' | 'aurora' | 'matrix' | 'nebula' | 'vortex' | 'drift' | 'none';
   quality?: 'high' | 'medium' | 'low';
 }
 

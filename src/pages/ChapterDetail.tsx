@@ -5,14 +5,14 @@ import {
   ArrowLeft, FileText, Download, Eye, HelpCircle, 
   CheckCircle2, AlertCircle, Timer, Trophy, RefreshCcw, Clock,
   Book, FileQuestion, ClipboardList, PenTool, X, Bookmark, BookmarkCheck,
-  ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History, Lock
+  ExternalLink, ChevronRight, MessageSquare, Send, Trash2, History, Lock, Folder
 } from 'lucide-react';
 import UserName from '../components/UserName';
 import StudyTimer from '../components/StudyTimer';
 
 // Utility for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
-import { Class, Subject, Chapter, QuizQuestion } from '../types';
+import { Class, Subject, Chapter, QuizQuestion, Resource } from '../types';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 import { safeStringify } from '../lib/utils';
 import { DEFAULT_MCQS } from '../constants/mcqs';
@@ -365,6 +365,20 @@ export default function ChapterDetail() {
   };
 
   const enabledResources = chapter.resources.filter(r => r.enabled);
+  
+  // Group resources by folder
+  const resourcesByFolder = enabledResources.reduce((acc, res) => {
+    const folderName = res.folder || 'Chapter Resources';
+    if (!acc[folderName]) acc[folderName] = [];
+    acc[folderName].push(res);
+    return acc;
+  }, {} as Record<string, Resource[]>);
+
+  const folderNames = Object.keys(resourcesByFolder).sort((a, b) => {
+    if (a === 'Chapter Resources') return 1;
+    if (b === 'Chapter Resources') return -1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="min-h-screen pt-24 pb-12">
@@ -448,52 +462,64 @@ export default function ChapterDetail() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              className="space-y-8"
             >
-              {enabledResources.map((res) => (
-                <div 
-                  key={res.id} 
-                  onClick={() => handlePreview(res.url)}
-                  className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
-                >
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
-                      {getResourceIcon(res.type)}
+              {folderNames.map(folderName => (
+                <div key={folderName} className="space-y-4">
+                  {folderName !== 'Chapter Resources' && (
+                    <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
+                      <Folder size={18} className="text-neon-blue" />
+                      <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                      <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
-                        {res.type}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      onClick={() => handlePreview(res.url)}
-                      className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
-                      title="Preview"
-                    >
-                      <Eye size={16} />
-                      <span className="text-xs font-bold">Preview</span>
-                    </button>
-                    <a 
-                      href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
-                      title="Open in New Tab"
-                    >
-                      <ExternalLink size={16} />
-                      <span className="text-xs font-bold hidden sm:inline">Open</span>
-                    </a>
-                    <button 
-                      onClick={() => handleDownload(res.url, res.title)}
-                      className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
-                      title="Download"
-                    >
-                      <Download size={16} />
-                      <span className="text-xs font-bold hidden sm:inline">Save</span>
-                    </button>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {resourcesByFolder[folderName].map((res) => (
+                      <div 
+                        key={res.id} 
+                        onClick={() => handlePreview(res.url)}
+                        className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
+                      >
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
+                            {getResourceIcon(res.type)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
+                            <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
+                              {res.type}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            onClick={() => handlePreview(res.url)}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
+                            title="Preview"
+                          >
+                            <Eye size={16} />
+                            <span className="text-xs font-bold">Preview</span>
+                          </button>
+                          <a 
+                            href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
+                            title="Open in New Tab"
+                          >
+                            <ExternalLink size={16} />
+                            <span className="text-xs font-bold hidden sm:inline">Open</span>
+                          </a>
+                          <button 
+                            onClick={() => handleDownload(res.url, res.title)}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
+                            title="Download"
+                          >
+                            <Download size={16} />
+                            <span className="text-xs font-bold hidden sm:inline">Save</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

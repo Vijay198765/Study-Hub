@@ -65,7 +65,7 @@ export function safeStringify(obj: any, indent: number = 0): string {
 
             // Fallback to constructor names if they exist and aren't minified-looking
             const constructorName = value.constructor?.name;
-            if (constructorName && constructorName.length > 3 && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp'].includes(constructorName)) {
+            if (constructorName && constructorName.length >= 1 && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp', 'Y2', 'Ka'].includes(constructorName)) {
               return `[Firebase ${constructorName}]`;
             }
             

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, limit } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
 import { cn, convertDriveUrl } from '../lib/utils';
 

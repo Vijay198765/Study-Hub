@@ -6,6 +6,7 @@ export interface Resource {
   title: string;
   url: string;
   enabled: boolean;
+  folder?: string;
 }
 
 export interface QuizQuestion {
@@ -47,12 +48,13 @@ export interface Class {
 export interface User {
   uid: string;
   email: string;
-  role: 'admin' | 'student';
+  role: 'admin' | 'student' | 'special_admin';
   name?: string;
   photoURL?: string;
   photoURLOverridden?: boolean;
   createdAt: any;
   isLegend?: boolean;
+  isApproved?: boolean;
   secretLoginLogged?: boolean;
   showOnLeaderboard?: boolean;
   pinnedToTop?: boolean;
@@ -179,7 +181,8 @@ export interface SiteConfig {
   searchEnabled?: boolean;
   gamesEnabled?: boolean;
   liveClubEnabled?: boolean;
-  bgEffect?: 'none' | 'snow' | 'confetti' | 'stars';
+  bgEffect?: 'none' | 'snow' | 'confetti' | 'stars' | 'cybergrid' | 'aurora' | 'matrix' | 'nebula' | 'vortex' | 'drift';
+  animQuality?: 'high' | 'medium' | 'low';
   secretLoginEnabled?: boolean;
   showSecretLoginEntry?: boolean;
   showDashboardLinkForSecret?: boolean;

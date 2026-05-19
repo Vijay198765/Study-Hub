@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus,
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder, FolderPlus,
   Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -47,9 +47,15 @@ interface ResourceItemProps {
   onUpdate: (updates: Partial<Resource>) => void;
   onDelete: () => void;
   onToast: (msg: string, type: 'success' | 'error') => void;
+  onUpload?: (file: File) => void;
+  isUploading?: boolean;
+  uploadProgress?: number;
+  existingFolders?: string[];
 }
 
-const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: ResourceItemProps) => {
+const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast, onUpload, isUploading, uploadProgress, existingFolders }: ResourceItemProps) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   return (
     <DraggableAny draggableId={resource.id} index={index}>
       {(provided: any, snapshot: any) => (
@@ -107,10 +113,60 @@ const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: Resource
               </select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Folder / Subfolder (Optional)</label>
+              <input 
+                type="text" 
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-white/30 transition-all font-mono"
+                value={resource.folder || ''}
+                onChange={(e) => onUpdate({ folder: e.target.value })}
+                placeholder="e.g. Worksheets, Answers..."
+              />
+              {existingFolders && existingFolders.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {existingFolders.map(f => (
+                    <button 
+                      key={f}
+                      onClick={() => onUpdate({ folder: f })}
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[8px] font-bold uppercase transition-all",
+                        resource.folder === f 
+                          ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30" 
+                          : "bg-white/5 text-white/30 border border-white/5 hover:bg-white/10"
+                      )}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="md:col-span-2 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Resource URL / Drive Link</label>
                 <div className="flex items-center gap-3">
+                  {onUpload && (
+                    <>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        className="hidden" 
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) onUpload(file);
+                        }}
+                      />
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="text-[10px] text-neon-pink hover:underline flex items-center gap-1 disabled:opacity-50"
+                      >
+                        <Upload size={10} /> {isUploading ? 'Uploading...' : 'Direct Upload PDF'}
+                      </button>
+                    </>
+                  )}
                   <button 
                     onClick={async () => {
                       try {
@@ -148,10 +204,13 @@ const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast }: Resource
                     "w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 pr-32 text-xs text-white outline-none transition-all font-mono",
                     resource.url ? "border-neon-blue/30" : "focus:border-white/30"
                   )}
-                  value={resource.url}
+                  value={resource.url || ''}
                   onChange={(e) => onUpdate({ url: e.target.value })}
                   placeholder="Paste Google Drive link or direct URL..."
                 />
+                {isUploading && (
+                  <div className="absolute left-0 bottom-0 h-0.5 bg-neon-pink transition-all duration-300 shadow-[0_0_10px_rgba(236,72,153,0.5)]" style={{ width: `${uploadProgress}%` }} />
+                )}
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {resource.url && (
                     <div className="flex items-center gap-2">
@@ -423,9 +482,14 @@ export default function AdminPanel() {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
           const newResources = [...editingEntity.resources];
           newResources[index].url = downloadURL;
+          // Set default title if empty or placeholder
+          if (!newResources[index].title || newResources[index].title === 'New Resource') {
+            newResources[index].title = file.name.replace(/\.[^/.]+$/, "");
+          }
           setEditingEntity({ ...editingEntity, resources: newResources });
           setUploadingResource(null);
           console.log("Upload successful! URL:", downloadURL);
+          setToast({ message: "PDF uploaded successfully!", type: 'success' });
         }
       );
     } catch (err) {
@@ -1699,6 +1763,40 @@ export default function AdminPanel() {
                   />
                 </div>
                 <button 
+                  onClick={() => {
+                    if (!selectedSubjectId) {
+                      setToast({ message: 'Please select a subject first', type: 'error' });
+                      return;
+                    }
+                    const folderName = prompt('Enter folder name:');
+                    if (folderName) {
+                      const newId = `ch_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                      const newChapter: any = {
+                        id: newId,
+                        name: 'New Chapter',
+                        folder: folderName,
+                        enabled: true,
+                        resources: [],
+                        isImportant: false,
+                        order: chapters.length,
+                        subjectId: selectedSubjectId,
+                        classId: selectedClassId,
+                        quizEnabled: true,
+                        quiz: []
+                      };
+                      saveChapter(newChapter);
+                      setEditingEntity({ ...newChapter, type: 'chapter' });
+                      setEditTab('basic');
+                      setToast({ message: `Folder "${folderName}" created and opening new chapter...`, type: 'success' });
+                    }
+                  }}
+                  className="btn-neon bg-white/5 text-white/60 hover:text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                  disabled={!selectedSubjectId}
+                >
+                  <FolderPlus size={20} />
+                  Add Folder
+                </button>
+                <button 
                   onClick={() => addNew('chapter')}
                   className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
@@ -1713,75 +1811,118 @@ export default function AdminPanel() {
                   <p>Select a class and subject to manage chapters</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {chapters.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((chapter, index) => (
-                    <motion.div 
-                      key={chapter.id}
-                      layout
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
-                    >
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className="flex flex-col gap-1 shrink-0">
-                          <button 
-                            onClick={() => handleMove('chapter', index, 'up')}
-                            disabled={index === 0}
-                            className="text-white/20 hover:text-neon-pink disabled:opacity-0"
-                          >
-                            <ArrowUp size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleMove('chapter', index, 'down')}
-                            disabled={index === chapters.length - 1}
-                            className="text-white/20 hover:text-neon-pink disabled:opacity-0"
-                          >
-                            <ArrowDown size={16} />
-                          </button>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
-                            {chapter.isImportant && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink uppercase tracking-wider shrink-0">Important</span>
-                            )}
+                <div className="space-y-8">
+                  {(() => {
+                    const filteredChapters = chapters.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                    const chaptersByFolder = filteredChapters.reduce((acc, chapter) => {
+                      const folderName = chapter.folder || 'Default Chapters';
+                      if (!acc[folderName]) acc[folderName] = [];
+                      acc[folderName].push(chapter);
+                      return acc;
+                    }, {} as Record<string, Chapter[]>);
+
+                    const folderNames = Object.keys(chaptersByFolder).sort((a, b) => {
+                      if (a === 'Default Chapters') return 1;
+                      if (b === 'Default Chapters') return -1;
+                      return a.localeCompare(b);
+                    });
+
+                    return folderNames.map(folderName => (
+                      <div key={folderName} className="space-y-4">
+                        {folderName !== 'Default Chapters' && (
+                          <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
+                             <Folder size={18} className="text-neon-pink" />
+                             <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
+                             <div className="flex-grow" />
+                             <button 
+                               onClick={() => {
+                                 const newName = prompt('Enter new folder name:', folderName);
+                                 if (newName && newName !== folderName) {
+                                   chaptersByFolder[folderName].forEach(chapter => {
+                                     saveChapter({ ...chapter, folder: newName });
+                                   });
+                                   setToast({ message: `Folder renamed to ${newName}`, type: 'success' });
+                                 }
+                               }}
+                               className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
+                             >
+                               Rename
+                             </button>
                           </div>
-                          <p className="text-xs text-white/40 truncate">{chapter.resources?.length || 0} Resources • {chapter.quiz?.length || 0} Quiz Questions</p>
+                        )}
+                        <div className="grid gap-3">
+                          {chaptersByFolder[folderName].map((chapter, index) => (
+                            <motion.div 
+                              key={chapter.id}
+                              layout
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
+                            >
+                              <div className="flex items-center gap-4 min-w-0 flex-1">
+                                <div className="flex flex-col gap-1 shrink-0">
+                                  <button 
+                                    onClick={() => handleMove('chapter', chapters.indexOf(chapter), 'up')}
+                                    disabled={chapters.indexOf(chapter) === 0}
+                                    className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                                  >
+                                    <ArrowUp size={16} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleMove('chapter', chapters.indexOf(chapter), 'down')}
+                                    disabled={chapters.indexOf(chapter) === chapters.length - 1}
+                                    className="text-white/20 hover:text-neon-pink disabled:opacity-0"
+                                  >
+                                    <ArrowDown size={16} />
+                                  </button>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
+                                    {chapter.isImportant && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink uppercase tracking-wider shrink-0">Important</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-white/40 truncate">{chapter.resources?.length || 0} Resources • {chapter.quiz?.length || 0} Quiz Questions</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                                <button 
+                                  onClick={() => saveChapter({ ...chapter, enabled: !chapter.enabled })}
+                                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${chapter.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
+                                >
+                                  {chapter.enabled ? 'Enabled' : 'Disabled'}
+                                </button>
+                                <div className="flex items-center gap-2 transition-all">
+                                  <a 
+                                    href={`/class/${selectedClassId}/subject/${selectedSubjectId}/chapter/${chapter.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
+                                    title="View Page"
+                                  >
+                                    <ExternalLink size={18} />
+                                  </a>
+                                  <button 
+                                    onClick={() => handleEdit(chapter, 'chapter')}
+                                    className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
+                                    title="Edit"
+                                  >
+                                    <Edit2 size={18} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete('chapter', chapter.id, chapter.name)}
+                                    className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                        <button 
-                          onClick={() => saveChapter({ ...chapter, enabled: !chapter.enabled })}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${chapter.enabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/40'}`}
-                        >
-                          {chapter.enabled ? 'Enabled' : 'Disabled'}
-                        </button>
-                        <div className="flex items-center gap-2 transition-all">
-                          <a 
-                            href={`/class/${selectedClassId}/subject/${selectedSubjectId}/chapter/${chapter.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
-                            title="View Page"
-                          >
-                            <ExternalLink size={18} />
-                          </a>
-                          <button 
-                            onClick={() => handleEdit(chapter, 'chapter')}
-                            className="p-2 text-white/60 hover:text-neon-pink hover:bg-neon-pink/10 rounded-lg transition-all"
-                            title="Edit"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete('chapter', chapter.id, chapter.name)}
-                            className="p-2 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               )}
             </div>
@@ -4860,15 +5001,34 @@ export default function AdminPanel() {
                     </div>
 
                     {editingEntity.type === 'chapter' && (
-                      <div className="space-y-2 text-left">
+                      <div className="space-y-3 text-left">
                         <label className="text-sm font-medium text-white/60">Folder (Optional)</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. Unit 1, Organic Chemistry, etc."
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                          value={editingEntity.folder || ''}
-                          onChange={(e) => setEditingEntity({ ...editingEntity, folder: e.target.value })}
-                        />
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Unit 1, Organic Chemistry, etc."
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
+                            value={editingEntity.folder || ''}
+                            onChange={(e) => setEditingEntity({ ...editingEntity, folder: e.target.value })}
+                          />
+                          <Folder size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20" />
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {Array.from(new Set(chapters.map(c => c.folder).filter(Boolean) as string[])).map(folder => (
+                            <button 
+                              key={folder}
+                              onClick={() => setEditingEntity({ ...editingEntity, folder })}
+                              className={cn(
+                                "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                                editingEntity.folder === folder 
+                                  ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30" 
+                                  : "bg-white/5 text-white/30 border border-white/5 hover:bg-white/10 hover:text-white/60"
+                              )}
+                            >
+                              {folder}
+                            </button>
+                          ))}
+                        </div>
                         <p className="text-[10px] text-white/20 italic ml-1">Group chapters under a specific folder name.</p>
                       </div>
                     )}
@@ -5064,14 +5224,20 @@ export default function AdminPanel() {
                       setEditingEntity({ ...editingEntity, resources: items });
                     }}>
                       <Droppable droppableId="resources">
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                            {(editingEntity.resources || []).map((resource: Resource, index: number) => (
-                              <ResourceItem
-                                key={resource.id}
-                                resource={resource}
-                                index={index}
-                                onUpdate={(updates) => {
+                        {(provided) => {
+                          const existingResourceFolders = Array.from(new Set((editingEntity.resources || []).map((r: any) => r.folder).filter(Boolean) as string[]));
+                          return (
+                            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                              {(editingEntity.resources || []).map((resource: Resource, index: number) => (
+                                <ResourceItem
+                                  key={resource.id}
+                                  resource={resource}
+                                  index={index}
+                                  isUploading={uploadingResource === resource.id}
+                                  uploadProgress={uploadProgress[resource.id] || 0}
+                                  onUpload={(file) => handleFileUpload(file, resource.id, index)}
+                                  existingFolders={existingResourceFolders}
+                                  onUpdate={(updates) => {
                                   const newResources = [...editingEntity.resources];
                                   newResources[index] = { ...newResources[index], ...updates };
                                   setEditingEntity({ ...editingEntity, resources: newResources });
@@ -5085,8 +5251,9 @@ export default function AdminPanel() {
                             ))}
                             {provided.placeholder}
                           </div>
-                        )}
-                      </Droppable>
+                        );
+                      }}
+                    </Droppable>
                     </DragDropContext>
                   </div>
                 )}

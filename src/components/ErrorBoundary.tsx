@@ -1,4 +1,5 @@
 import React from "react";
+import { safeStringify } from "../lib/utils";
 
 interface Props {
   children: React.ReactNode;
@@ -23,7 +24,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("Uncaught error:", error.message, safeStringify(errorInfo));
   }
 
   public render() {
