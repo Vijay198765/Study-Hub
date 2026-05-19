@@ -55,7 +55,7 @@ interface ResourceItemProps {
   existingFolders?: Folder[];
 }
 
-const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, saveFolder, addNew, setEditingEntity, removeChapter, setToast }: any) => {
+const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, saveFolder, addNew, setEditingEntity, removeChapter, setToast, selectedClassId, selectedSubjectId }: any) => {
   const children = folders.filter((f: any) => f.parentId === folder.id);
   const folderChapters = chapters.filter((c: any) => c.folderId === folder.id);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -87,7 +87,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
-            onClick={async (e) => {
+                onClick={async (e) => {
               e.stopPropagation();
               const name = prompt('Subfolder Name:');
               if (!name || name.trim() === '') return;
@@ -96,8 +96,8 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                   id: `f_${Date.now()}`,
                   name: name.trim(),
                   parentId: folder.id,
-                  classId: folder.classId,
-                  subjectId: folder.subjectId,
+                  classId: folder.classId || selectedClassId,
+                  subjectId: folder.subjectId || selectedSubjectId,
                   enabled: true,
                   order: children.length
                 });
@@ -146,11 +146,29 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
             <Edit2 size={12} />
           </button>
           <button 
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              if (confirm(`Delete folder "${folder.name}" and all its contents?`)) {
-                removeFolder(folder.id);
-                if (setToast) setToast({ message: 'Folder deleted', type: 'success' });
+              if (confirm(`Delete folder "${folder.name}" and all its contents (including chapters)?`)) {
+                // Recursive delete helper for folders and their chapters
+                const deleteRecursively = async (targetId: string) => {
+                  // Finalize subfolders first
+                  const subFolders = folders.filter((f: any) => f.parentId === targetId);
+                  for (const sub of subFolders) {
+                    await deleteRecursively(sub.id);
+                  }
+                  
+                  // Delete chapters in this specific folder
+                  const folderChaptersLocal = chapters.filter((c: any) => c.folderId === targetId);
+                  for (const ch of folderChaptersLocal) {
+                    await removeChapter(ch.id);
+                  }
+                  
+                  // Delete the folder itself
+                  await removeFolder(targetId);
+                };
+                
+                await deleteRecursively(folder.id);
+                if (setToast) setToast({ message: 'Folder and all its contents deleted', type: 'success' });
               }
             }}
             className="p-1.5 hover:bg-red-500/20 rounded-xl text-red-500/40 hover:text-red-500 transition-all hover:scale-110 active:scale-95"
@@ -182,6 +200,8 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 setEditingEntity={setEditingEntity}
                 removeChapter={removeChapter}
                 setToast={setToast}
+                selectedClassId={selectedClassId}
+                selectedSubjectId={selectedSubjectId}
               />
             ))}
             {folderChapters.map((chapter: any) => (
@@ -2000,93 +2020,73 @@ export default function AdminPanel() {
                     // Get all folders for this subject to show them even if empty
                     const subjectFolders = folders.filter(f => f.subjectId === selectedSubjectId);
                     
+                    // Root folders are those with no parentId OR parentId of 'root' OR whose parent doesn't exist in the subject
+                    const rootFolders = subjectFolders.filter(f => !f.parentId || f.parentId === 'root' || !subjectFolders.find(pf => pf.id === f.parentId));
+                    
+                    const rootFolderIds = [
+                      'root',
+                      ...rootFolders.map(f => f.id)
+                    ];
+
                     const chaptersByFolderId = filteredChapters.reduce((acc, chapter) => {
                       const fId = chapter.folderId || 'root';
                       if (!acc[fId]) acc[fId] = [];
                       acc[fId].push(chapter);
                       return acc;
                     }, {} as Record<string, Chapter[]>);
-
-                    // Combine folder IDs from existing folders and chapters
-                    const allFolderIds = new Set([
-                      'root',
-                      ...subjectFolders.map(f => f.id)
-                    ]);
                     
-                    // Also add folders that have chapters but might not be in subjectFolders (fallback)
-                    Object.keys(chaptersByFolderId).forEach(fId => allFolderIds.add(fId));
-
-                    const folderIds = Array.from(allFolderIds).sort((a, b) => {
+                    const folderIds = Array.from(new Set(rootFolderIds)).sort((a, b) => {
                       if (a === 'root') return 1;
                       if (b === 'root') return -1;
                       const fA = folders.find(f => f.id === a);
                       const fB = folders.find(f => f.id === b);
-                      return (fA?.name || '').localeCompare(fB?.name || '');
+                      return (fA?.order || 0) - (fB?.order || 0);
                     });
 
                     return folderIds.map(fId => {
                       const folder = folders.find(f => f.id === fId);
                       const folderName = folder ? folder.name : 'Ungrouped Chapters';
+
+                      if (fId !== 'root' && folder) {
+                        return (
+                          <FolderTreeItem 
+                            key={fId} 
+                            folder={folder} 
+                            level={0} 
+                            folders={folders} 
+                            chapters={chapters} 
+                            removeFolder={removeFolder}
+                            saveFolder={saveFolder}
+                            addNew={addNew}
+                            setEditingEntity={setEditingEntity}
+                            removeChapter={removeChapter}
+                            setToast={setToast}
+                            selectedClassId={selectedClassId}
+                            selectedSubjectId={selectedSubjectId}
+                          />
+                        );
+                      }
+
                       const folderChapters = chaptersByFolderId[fId] || [];
-                      
                       return (
                         <div key={fId} className="space-y-4">
-                          {fId !== 'root' && (
-                            <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
-                               <FolderIcon size={18} className="text-orange-500" />
-                               <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
-                               <div className="flex-grow" />
-                               <div className="flex items-center gap-2">
-                                 <button 
-                                   onClick={() => addNew('chapter', { folderId: fId })}
-                                   className="text-[10px] font-bold text-neon-pink/60 hover:text-neon-pink uppercase tracking-widest transition-colors flex items-center gap-1"
-                                   title="Add Chapter to this Folder"
-                                 >
-                                   <Plus size={12} />
-                                   Add Chapter
-                                 </button>
-                                 <button 
-                                   onClick={async () => {
-                                     const name = prompt('Subfolder Name:');
-                                     if (!name) return;
-                                     try {
-                                       await saveFolder({
-                                         id: `f_${Date.now()}`,
-                                         name,
-                                         parentId: fId,
-                                         classId: selectedClassId,
-                                         subjectId: selectedSubjectId,
-                                         enabled: true,
-                                         order: 0
-                                       });
-                                       setToast({ message: 'Subfolder added!', type: 'success' });
-                                     } catch (err) {
-                                       setToast({ message: 'Failed to add subfolder', type: 'error' });
-                                     }
-                                   }}
-                                   className="text-[10px] font-bold text-white/40 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-1"
-                                   title="Add Subfolder"
-                                 >
-                                   <FolderPlus size={12} />
-                                   Add Sub
-                                 </button>
-                                 <button 
-                                   onClick={() => setActiveTab('folders')}
-                                   className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
-                                 >
-                                   Manage Folders
-                                 </button>
-                               </div>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
+                             <BookOpen size={18} className="text-neon-pink" />
+                             <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
+                             <div className="flex-grow" />
+                             <button 
+                               onClick={() => addNew('chapter', { folderId: 'root' })}
+                               className="text-[10px] font-bold text-neon-pink hover:text-white uppercase tracking-widest transition-colors flex items-center gap-1"
+                             >
+                               <Plus size={12} />
+                               Add Chapter
+                             </button>
+                          </div>
                           <div className="grid gap-3">
                             {folderChapters.length === 0 ? (
-                               fId !== 'root' && (
-                                 <div className="py-8 px-6 border border-dashed border-white/5 rounded-2xl text-center bg-white/[0.02]">
-                                   <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">Empty Folder</p>
-                                   <p className="text-[9px] text-white/10 mt-1 uppercase tracking-tighter">Add chapters to this folder in the "Edit Chapter" settings</p>
-                                 </div>
-                               )
+                               <div className="py-8 px-6 border border-dashed border-white/5 rounded-2xl text-center bg-white/[0.02]">
+                                 <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">No ungrouped chapters</p>
+                               </div>
                             ) : folderChapters.map((chapter, index) => (
                             <motion.div 
                               key={chapter.id}
@@ -2228,7 +2228,7 @@ export default function AdminPanel() {
                               subjectId: selectedSubjectId,
                               enabled: true,
                               order: (folders.filter(f => f.subjectId === selectedSubjectId && (!f.parentId || f.parentId === 'root')).length),
-                              parentId: 'root' 
+                              parentId: null 
                             };
                             await saveFolder(newFolder);
                             setToast({ message: 'Root folder added', type: 'success' });
@@ -2247,10 +2247,10 @@ export default function AdminPanel() {
     
                   <div className="grid grid-cols-1 gap-4">
                     {(() => {
-                        const buildTree = (parentId: string | null | 'root') => {
+                        const buildTree = (parentId: string | null) => {
                           return folders
                             .filter(f => {
-                              const matchesParent = (parentId === null || parentId === 'root')
+                              const matchesParent = (parentId === null)
                                 ? (!f.parentId || f.parentId === 'root')
                                 : f.parentId === parentId;
                               
@@ -2262,7 +2262,7 @@ export default function AdminPanel() {
                             .sort((a, b) => (a.order || 0) - (b.order || 0));
                         };
     
-                      const rootFolders = buildTree('root');
+                      const rootFolders = buildTree(null);
 
                   if (!selectedClassId || !selectedSubjectId) {
                     return (
@@ -2294,6 +2294,8 @@ export default function AdminPanel() {
                             setEditingEntity={setEditingEntity}
                             removeChapter={removeChapter}
                             setToast={setToast}
+                            selectedClassId={selectedClassId}
+                            selectedSubjectId={selectedSubjectId}
                           />
                         ))
                       )}

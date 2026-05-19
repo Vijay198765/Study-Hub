@@ -382,7 +382,7 @@ export default function ChapterDetail() {
     const rootNodes: FolderNode[] = [];
 
     // All folders in this class/subject
-    const relevantFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId);
+    const relevantFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId && f.enabled !== false);
 
     relevantFolders.forEach(f => {
       nodeMap[f.id] = { id: f.id, name: f.name, resources: [], subfolders: [] };
@@ -401,9 +401,9 @@ export default function ChapterDetail() {
     });
 
     relevantFolders.forEach(f => {
-      if (f.parentId && nodeMap[f.parentId]) {
+      if (f.parentId && f.parentId !== 'root' && nodeMap[f.parentId]) {
         nodeMap[f.parentId].subfolders.push(nodeMap[f.id]);
-      } else if (!f.parentId) {
+      } else {
         rootNodes.push(nodeMap[f.id]);
       }
     });

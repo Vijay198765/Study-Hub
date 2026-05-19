@@ -45,7 +45,7 @@ export default function SubjectDetail() {
   if (!subject) return <div className="pt-32 text-center text-white/40">Subject not found</div>;
 
   const enabledChapters = chapters.filter(c => c.enabled);
-  const subjectFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId && f.enabled);
+  const subjectFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId && f.enabled !== false);
 
   // Group chapters hierarchies
   interface ChapterFolderNode {
@@ -89,9 +89,12 @@ export default function SubjectDetail() {
 
     // Build subfolder relations
     subjectFolders.forEach(folder => {
-      if (folder.parentId && nodeMap[folder.parentId]) {
-        nodeMap[folder.parentId].subfolders.push(nodeMap[folder.id]);
-      } else if (!folder.parentId) {
+      const parentId = folder.parentId;
+      const hasValidParent = parentId && parentId !== 'root' && nodeMap[parentId];
+      
+      if (hasValidParent) {
+        nodeMap[parentId!].subfolders.push(nodeMap[folder.id]);
+      } else {
         rootNodes.push(nodeMap[folder.id]);
       }
     });
