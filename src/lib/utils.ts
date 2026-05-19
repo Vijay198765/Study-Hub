@@ -37,7 +37,7 @@ export function convertDriveUrl(url: string | undefined): string {
 }
 
 export function safeStringify(obj: any, indent: number = 0): string {
-  const cache = new Set();
+  const cache = new WeakSet();
   
   try {
     const stringified = JSON.stringify(
@@ -52,28 +52,17 @@ export function safeStringify(obj: any, indent: number = 0): string {
 
           // Handle common complex objects that might cause issues
           try {
-            // Firebase specific checks using properties since names are minified
-            if ('firestore' in value && ('id' in value || 'path' in value)) {
-              return `[Firebase Reference]`;
-            }
-            if ('_key' in value && '_data' in value) {
-              return `[Firebase Document]`;
-            }
-            if ('uid' in value && 'email' in value && 'providerData' in value) {
-              return `[Firebase User]`;
+            // Check for potential circularity or complex objects by property presence
+            if ('_firestore' in value || 'firestore' in value || '_delegate' in value) {
+              const constructorName = value.constructor?.name;
+              return `[Firebase ${constructorName || 'Object'}]`;
             }
 
-            // Fallback to constructor names if they exist and aren't minified-looking
-            const constructorName = value.constructor?.name;
-            if (constructorName && constructorName.length >= 1 && ['DocumentReference', 'Query', 'Firestore', 'Auth', 'UserImpl', 'Timestamp', 'Y2', 'Ka'].includes(constructorName)) {
-              return `[Firebase ${constructorName}]`;
-            }
-            
             if (value instanceof Node || (typeof value.nodeType === 'number' && typeof value.nodeName === 'string')) {
               return '[DOM Node]';
             }
           } catch (e) {
-            // Ignore
+            return '[Object]';
           }
         }
         return value;
@@ -82,8 +71,11 @@ export function safeStringify(obj: any, indent: number = 0): string {
     );
     return stringified;
   } catch (error) {
-    return '[Serialization Error]';
-  } finally {
-    cache.clear();
+    try {
+      // Fallback for extreme cases: just return a simplified string
+      return String(obj);
+    } catch (e) {
+      return '[Serialization Error]';
+    }
   }
 }

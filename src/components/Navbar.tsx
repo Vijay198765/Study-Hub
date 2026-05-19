@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User } from 'lucide-react';
+import { Menu, X, GraduationCap, LayoutDashboard, Lightbulb, Home, LogIn, LogOut, Gamepad2, Search, MessageSquare, ClipboardList, Trophy, User, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertDriveUrl } from '../lib/utils';
 import { auth, db } from '../firebase';
@@ -85,6 +85,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
     { name: 'Home', path: '/', icon: Home },
     { name: 'Classes', path: '/classes', icon: GraduationCap },
     { name: 'Tests', path: '/tests', icon: ClipboardList },
+    { name: 'Library', path: '/library', icon: Layers },
     { name: 'Games', path: '/games', icon: Gamepad2 },
     { name: 'Live Club', path: '/live-club', icon: MessageSquare },
     ...(showDashboard ? [{ name: 'Dashboard', path: '/admin', icon: LayoutDashboard }] : []),
@@ -96,7 +97,7 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
       isScrolled ? "bg-dark-card/95 backdrop-blur-md border-b border-white/10" : "bg-transparent"
     )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-        <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
           <Logo 
             siteLogo={siteConfig?.siteLogo}
             faviconUrl={siteConfig?.faviconUrl}
@@ -108,8 +109,8 @@ export default function Navbar({ isAdmin, isSpecialAdmin, user, siteConfig }: Na
             logoInnerColorTertiary={siteConfig?.logoInnerColorTertiary}
             size="md" 
           />
-          <div className="flex flex-col">
-            <span className="text-xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none">
+          <div className="flex flex-col items-start">
+            <span className="text-xl sm:text-2xl font-display font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-t from-white/90 to-white leading-none group-hover:neon-text transition-all duration-300">
               {siteConfig?.siteName || 'Study-hub'}
             </span>
             <span className="text-[8px] text-neon-blue font-bold uppercase tracking-[0.2em] mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">

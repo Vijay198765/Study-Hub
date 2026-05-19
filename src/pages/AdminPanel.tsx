@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder as FolderIcon, FolderPlus,
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder as FolderIcon, FolderPlus, FolderTree,
   Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -54,6 +54,132 @@ interface ResourceItemProps {
   folders: Folder[];
   existingFolders?: Folder[];
 }
+
+const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, saveFolder, addNew, setEditingEntity, removeChapter }: any) => {
+  const children = folders.filter((f: any) => f.parentId === folder.id);
+  const folderChapters = chapters.filter((c: any) => c.folderId === folder.id);
+  const [isExpanded, setIsExpanded] = React.useState(true);
+
+  return (
+    <div className={`space-y-2 ${level > 0 ? 'ml-6 pl-4 border-l border-white/5' : ''}`}>
+      <div className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-colors group text-left">
+        <button onClick={() => setIsExpanded(!isExpanded)} className="text-white/20 hover:text-white transition-colors p-1">
+          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+        <FolderIcon className="text-orange-500 shrink-0" size={18} />
+        <div className="flex-grow">
+          <h4 className="text-sm font-bold text-white leading-none text-left">{folder.name}</h4>
+          <div className="flex items-center gap-2 mt-1">
+              <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">
+                {children.length} Folders
+              </span>
+              <span className="text-[9px] text-white/10">•</span>
+              <span className="text-[9px] text-orange-500/40 uppercase tracking-widest font-black">
+                {folderChapters.length} Chapters
+              </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={() => {
+              const name = prompt('Subfolder Name:');
+              if (!name) return;
+              saveFolder({
+                id: `f_${Date.now()}`,
+                name,
+                parentId: folder.id,
+                classId: folder.classId,
+                subjectId: folder.subjectId,
+                enabled: true,
+                order: children.length
+              });
+            }}
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white"
+            title="Add Subfolder"
+          >
+            <FolderPlus size={14} />
+          </button>
+          <button 
+            onClick={() => addNew('chapter', { folderId: folder.id, classId: folder.classId, subjectId: folder.subjectId })}
+            className="p-1.5 hover:bg-white/10 rounded-xl text-orange-500/40 hover:text-orange-500"
+            title="Add Chapter to this Folder"
+          >
+            <Plus size={14} />
+          </button>
+          <button 
+            onClick={() => {
+              const name = prompt('Rename Folder:', folder.name);
+              if (name && name !== folder.name) saveFolder({ ...folder, name });
+            }}
+            className="p-1.5 hover:bg-white/10 rounded-xl text-white/20 hover:text-white"
+          >
+            <Edit2 size={12} />
+          </button>
+          <button 
+            onClick={() => {
+              if (confirm(`Delete folder "${folder.name}" and all its contents?`)) {
+                removeFolder(folder.id);
+              }
+            }}
+            className="p-1.5 hover:bg-white/10 rounded-xl text-red-500/40 hover:text-red-500"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <AnimatePresence>
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="space-y-2 overflow-hidden"
+          >
+            {children.map((child: any) => (
+              <FolderTreeItem 
+                key={child.id} 
+                folder={child} 
+                level={level + 1} 
+                folders={folders} 
+                chapters={chapters} 
+                removeFolder={removeFolder}
+                saveFolder={saveFolder}
+                addNew={addNew}
+                setEditingEntity={setEditingEntity}
+                removeChapter={removeChapter}
+              />
+            ))}
+            {folderChapters.map((chapter: any) => (
+              <div key={chapter.id} className="ml-8 flex items-center gap-3 p-2 bg-orange-500/5 border border-orange-500/10 rounded-xl group/ch">
+                <FileText size={12} className="text-orange-500 shrink-0" />
+                <div className="flex-grow text-left">
+                  <span className="text-xs font-medium text-white/60">{chapter.name}</span>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover/ch:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => setEditingEntity({ ...chapter, type: 'chapter' })}
+                    className="p-1 text-white/20 hover:text-white"
+                  >
+                    <Settings size={12} />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (confirm('Delete chapter?')) removeChapter(chapter.id, chapter.subjectId);
+                    }}
+                    className="p-1 text-red-500/40 hover:text-red-500"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </div>
+  );
+};
 
 const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast, onUpload, isUploading, uploadProgress, folders, existingFolders }: ResourceItemProps) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -837,11 +963,11 @@ export default function AdminPanel() {
     }
   };
 
-  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group') => {
+  const addNew = (type: 'class' | 'subject' | 'chapter' | 'test' | 'group', defaults: any = {}) => {
     const id = Date.now().toString();
     const order = type === 'class' ? classes.length : (type === 'subject' ? subjects.length : (type === 'chapter' ? chapters.length : 0));
     
-    let newEntity: any = { id, name: 'New ' + type, enabled: true, order };
+    let newEntity: any = { id, name: 'New ' + type, enabled: true, order, ...defaults };
     
     if (type === 'subject') {
       if (!selectedClassId) {
@@ -860,7 +986,7 @@ export default function AdminPanel() {
       newEntity.quiz = [];
       newEntity.quizEnabled = true;
       newEntity.isImportant = false;
-      newEntity.folder = '';
+      newEntity.folderId = defaults.folderId || '';
     } else if (type === 'test') {
       newEntity = {
         id: crypto.randomUUID(),
@@ -1271,6 +1397,16 @@ export default function AdminPanel() {
               >
                 <BookOpen size={16} className="inline-block mr-1.5" />
                 Subjects
+              </button>
+            )}
+
+            {shouldShowTab('folders') && (
+              <button 
+                onClick={() => setActiveTab('folders')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'folders' ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'text-white/60 hover:text-white'}`}
+              >
+                <FolderTree size={16} className="inline-block mr-1.5" />
+                Tree Manager
               </button>
             )}
 
@@ -1783,10 +1919,37 @@ export default function AdminPanel() {
                 </div>
                 <button 
                   onClick={() => addNew('chapter')}
-                  className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                  className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
                 >
                   <Plus size={20} />
                   Add Chapter
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (!selectedClassId || !selectedSubjectId) {
+                      setToast({ message: 'Please select a Class and Subject first!', type: 'info' });
+                      return;
+                    }
+                    const name = prompt('Folder Name:');
+                    if (!name) return;
+                    try {
+                      await saveFolder({
+                        id: `f_${Date.now()}`,
+                        name,
+                        classId: selectedClassId,
+                        subjectId: selectedSubjectId,
+                        enabled: true,
+                        order: folders.length
+                      });
+                      setToast({ message: 'Folder created successfully!', type: 'success' });
+                    } catch (err) {
+                      setToast({ message: 'Failed to create folder', type: 'error' });
+                    }
+                  }}
+                  className={`btn-neon bg-orange-500 text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto shrink-0 ${(!selectedClassId || !selectedSubjectId) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <FolderPlus size={20} />
+                  Add Folder
                 </button>
               </div>
 
@@ -1799,6 +1962,10 @@ export default function AdminPanel() {
                 <div className="space-y-8">
                   {(() => {
                     const filteredChapters = chapters.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                    
+                    // Get all folders for this subject to show them even if empty
+                    const subjectFolders = folders.filter(f => f.subjectId === selectedSubjectId);
+                    
                     const chaptersByFolderId = filteredChapters.reduce((acc, chapter) => {
                       const fId = chapter.folderId || 'root';
                       if (!acc[fId]) acc[fId] = [];
@@ -1806,7 +1973,16 @@ export default function AdminPanel() {
                       return acc;
                     }, {} as Record<string, Chapter[]>);
 
-                    const folderIds = Object.keys(chaptersByFolderId).sort((a, b) => {
+                    // Combine folder IDs from existing folders and chapters
+                    const allFolderIds = new Set([
+                      'root',
+                      ...subjectFolders.map(f => f.id)
+                    ]);
+                    
+                    // Also add folders that have chapters but might not be in subjectFolders (fallback)
+                    Object.keys(chaptersByFolderId).forEach(fId => allFolderIds.add(fId));
+
+                    const folderIds = Array.from(allFolderIds).sort((a, b) => {
                       if (a === 'root') return 1;
                       if (b === 'root') return -1;
                       const fA = folders.find(f => f.id === a);
@@ -1817,6 +1993,7 @@ export default function AdminPanel() {
                     return folderIds.map(fId => {
                       const folder = folders.find(f => f.id === fId);
                       const folderName = folder ? folder.name : 'Ungrouped Chapters';
+                      const folderChapters = chaptersByFolderId[fId] || [];
                       
                       return (
                         <div key={fId} className="space-y-4">
@@ -1825,16 +2002,58 @@ export default function AdminPanel() {
                                <FolderIcon size={18} className="text-orange-500" />
                                <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
                                <div className="flex-grow" />
-                               <button 
-                                 onClick={() => setActiveTab('folders')}
-                                 className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
-                               >
-                                 Manage Folders
-                               </button>
+                               <div className="flex items-center gap-2">
+                                 <button 
+                                   onClick={() => addNew('chapter', { folderId: fId })}
+                                   className="text-[10px] font-bold text-neon-pink/60 hover:text-neon-pink uppercase tracking-widest transition-colors flex items-center gap-1"
+                                   title="Add Chapter to this Folder"
+                                 >
+                                   <Plus size={12} />
+                                   Add Chapter
+                                 </button>
+                                 <button 
+                                   onClick={async () => {
+                                     const name = prompt('Subfolder Name:');
+                                     if (!name) return;
+                                     try {
+                                       await saveFolder({
+                                         id: `f_${Date.now()}`,
+                                         name,
+                                         parentId: fId,
+                                         classId: selectedClassId,
+                                         subjectId: selectedSubjectId,
+                                         enabled: true,
+                                         order: 0
+                                       });
+                                       setToast({ message: 'Subfolder added!', type: 'success' });
+                                     } catch (err) {
+                                       setToast({ message: 'Failed to add subfolder', type: 'error' });
+                                     }
+                                   }}
+                                   className="text-[10px] font-bold text-white/40 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-1"
+                                   title="Add Subfolder"
+                                 >
+                                   <FolderPlus size={12} />
+                                   Add Sub
+                                 </button>
+                                 <button 
+                                   onClick={() => setActiveTab('folders')}
+                                   className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
+                                 >
+                                   Manage Folders
+                                 </button>
+                               </div>
                             </div>
                           )}
                           <div className="grid gap-3">
-                            {chaptersByFolderId[fId].map((chapter, index) => (
+                            {folderChapters.length === 0 ? (
+                               fId !== 'root' && (
+                                 <div className="py-8 px-6 border border-dashed border-white/5 rounded-2xl text-center bg-white/[0.02]">
+                                   <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">Empty Folder</p>
+                                   <p className="text-[9px] text-white/10 mt-1 uppercase tracking-tighter">Add chapters to this folder in the "Edit Chapter" settings</p>
+                                 </div>
+                               )
+                            ) : folderChapters.map((chapter, index) => (
                             <motion.div 
                               key={chapter.id}
                               layout
@@ -1914,113 +2133,107 @@ export default function AdminPanel() {
 
           {activeTab === 'folders' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="w-full sm:w-48">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/40 p-6 rounded-3xl border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                    <FolderTree size={28} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-orange-500 mb-0.5">Infinite Tree Manager</h2>
+                    <p className="text-white/40 text-xs tracking-wider uppercase font-bold">Deep hierarchical organization for your content</p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
                   <select 
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    className="w-full sm:w-40 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white text-xs focus:border-orange-500 outline-none transition-all"
                     value={selectedClassId}
-                    onChange={(e) => setSelectedClassId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedClassId(e.target.value);
+                      setSelectedSubjectId('');
+                    }}
                   >
-                    <option value="" className="bg-dark-bg">Select Class</option>
+                    <option value="" className="bg-dark-bg">All Classes</option>
                     {classes.map(c => (
                       <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
                     ))}
                   </select>
-                </div>
-                <div className="w-full sm:w-48">
                   <select 
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    className="w-full sm:w-40 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white text-xs focus:border-orange-500 outline-none transition-all"
                     value={selectedSubjectId}
                     onChange={(e) => setSelectedSubjectId(e.target.value)}
                     disabled={!selectedClassId}
                   >
-                    <option value="" className="bg-dark-bg">Select Subject</option>
-                    {subjects.map(s => (
+                    <option value="" className="bg-dark-bg">All Subjects</option>
+                    {subjects.filter(s => s.classId === selectedClassId).map(s => (
                       <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
                     ))}
                   </select>
+                  <button 
+                    onClick={async () => {
+                      if (!selectedClassId || !selectedSubjectId) {
+                        setToast({ message: 'Select Class & Subject first', type: 'info' });
+                        return;
+                      }
+                      const name = prompt('Root Folder Name:');
+                      if (!name) return;
+                      try {
+                        await saveFolder({
+                          id: `f_${Date.now()}`,
+                          name,
+                          classId: selectedClassId,
+                          subjectId: selectedSubjectId,
+                          enabled: true,
+                          order: folders.length
+                        });
+                        setToast({ message: 'Root folder added', type: 'success' });
+                      } catch (err) {
+                        setToast({ message: 'Failed to create folder', type: 'error' });
+                      }
+                    }}
+                    className="btn-neon bg-orange-600 text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto text-sm"
+                  >
+                    <FolderPlus size={18} />
+                    Add Root Folder
+                  </button>
                 </div>
-                <button 
-                  onClick={() => {
-                    const name = prompt('Folder Name:');
-                    if (!name) return;
-                    const id = `f_${Date.now()}`;
-                    saveFolder({
-                      id,
-                      name,
-                      classId: selectedClassId,
-                      subjectId: selectedSubjectId,
-                      enabled: true,
-                      order: folders.length
-                    });
-                  }}
-                  className="btn-neon bg-orange-500 text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
-                >
-                  <Plus size={20} />
-                  Add Root Folder
-                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(folders.length === 0 || !folders.some(f => !f.parentId)) && (
-                   <div className="col-span-full py-20 text-center glass-card">
-                     <p className="text-white/20 italic">No folders created yet.</p>
-                   </div>
-                )}
-                {folders
-                  .filter(f => !f.parentId && (!selectedClassId || f.classId === selectedClassId) && (!selectedSubjectId || f.subjectId === selectedSubjectId))
-                  .map(folder => (
-                    <div key={folder.id} className="glass-card p-6 space-y-4">
-                       <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-3">
-                           <FolderIcon className="text-orange-500" size={20} />
-                           <h3 className="font-bold text-white">{folder.name}</h3>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <button onClick={() => {
-                             const name = prompt('New Subfolder Name:');
-                             if (!name) return;
-                             saveFolder({
-                               id: `f_${Date.now()}`,
-                               name,
-                               parentId: folder.id,
-                               classId: folder.classId,
-                               subjectId: folder.subjectId,
-                               enabled: true,
-                               order: 0
-                             });
-                           }} className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white" title="Add Subfolder">
-                             <FolderPlus size={16} />
-                           </button>
-                           <button onClick={() => removeFolder(folder.id)} className="p-1.5 hover:bg-white/10 rounded-lg text-red-500/40 hover:text-red-500">
-                             <Trash2 size={16} />
-                           </button>
-                         </div>
-                       </div>
-                       <div className="pl-4 border-l border-white/5 space-y-2">
-                         {folders.filter(f => f.parentId === folder.id).map(sub => (
-                           <div key={sub.id} className="flex items-center justify-between group">
-                             <div className="flex items-center gap-2">
-                               <FolderIcon size={12} className="text-orange-500/60" />
-                               <span className="text-xs text-white/60">{sub.name}</span>
-                             </div>
-                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                               <button onClick={() => {
-                                 const name = prompt('New Subfolder Name:', sub.name);
-                                 if (name) saveFolder({...sub, name});
-                               }} className="p-1 text-white/20 hover:text-white">
-                                 <Edit2 size={10} />
-                               </button>
-                               <button onClick={() => removeFolder(sub.id)} className="p-1 text-red-500/40 hover:text-red-500">
-                                 <X size={12} />
-                               </button>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
+              <div className="grid grid-cols-1 gap-4">
+                {(() => {
+                  const buildTree = (parentId: string | null) => {
+                    return folders
+                      .filter(f => f.parentId === parentId || (!parentId && !f.parentId))
+                      .filter(f => (!selectedClassId || f.classId === selectedClassId) && (!selectedSubjectId || f.subjectId === selectedSubjectId))
+                      .sort((a, b) => (a.order || 0) - (b.order || 0));
+                  };
+
+                  const rootFolders = buildTree(null);
+                  return (
+                    <div className="space-y-4">
+                      {rootFolders.length === 0 ? (
+                        <div className="py-20 text-center glass-card">
+                          <FolderIcon size={48} className="mx-auto text-white/5 mb-4" />
+                          <p className="text-white/20 italic">Select class and subject to view folder tree</p>
+                        </div>
+                      ) : (
+                        rootFolders.map(f => (
+                          <FolderTreeItem 
+                            key={f.id} 
+                            folder={f} 
+                            level={0} 
+                            folders={folders} 
+                            chapters={chapters} 
+                            removeFolder={removeFolder}
+                            saveFolder={saveFolder}
+                            addNew={addNew}
+                            setEditingEntity={setEditingEntity}
+                            removeChapter={removeChapter}
+                          />
+                        ))
+                      )}
                     </div>
-                  ))
-                }
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -2547,7 +2760,7 @@ export default function AdminPanel() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">Content Distribution</h3>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={statsData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                       <XAxis dataKey="name" stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
@@ -2567,7 +2780,7 @@ export default function AdminPanel() {
 
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">User Roles</h3>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={[

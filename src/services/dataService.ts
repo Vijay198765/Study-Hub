@@ -13,12 +13,29 @@ import { db, handleFirestoreError, OperationType } from '../firebase';
 import { convertDriveUrl } from '../lib/utils';
 import { Class, Subject, Chapter, User, Test, TestResult, Folder } from '../types';
 
-// Helper to remove undefined fields before saving to Firestore
-const cleanData = (data: any) => {
+// Helper to remove undefined fields recursively and prevent circularity
+const cleanData = (data: any, seen = new WeakSet()) => {
+  if (data === null || typeof data !== 'object') return data;
+  
+  if (seen.has(data)) return undefined; // Avoid circularity
+  seen.add(data);
+
+  if (Array.isArray(data)) {
+    return data.map(item => cleanData(item, seen)).filter(item => item !== undefined);
+  }
+
   const clean: any = {};
   Object.keys(data).forEach(key => {
-    if (data[key] !== undefined) {
-      clean[key] = data[key];
+    const value = data[key];
+    if (value !== undefined) {
+      // Basic circularity check for specific firebase/internal objects
+      if (value && typeof value === 'object' && ('_firestore' in value || 'firestore' in value || 'nodeType' in value)) {
+        return; // Skip these
+      }
+      const cleanedValue = cleanData(value, seen);
+      if (cleanedValue !== undefined) {
+        clean[key] = cleanedValue;
+      }
     }
   });
   return clean;

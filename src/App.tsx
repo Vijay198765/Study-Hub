@@ -14,6 +14,7 @@ import AdminPanel from './pages/AdminPanel';
 import Games from './pages/Games';
 import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
+import Library from './pages/Library';
 import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
@@ -857,6 +858,7 @@ export default function App() {
                       <Route path="/games" element={<Games />} />
                       <Route path="/live-club" element={<LiveComments />} />
                       <Route path="/tests" element={<Tests />} />
+                      <Route path="/library" element={<Library />} />
                       <Route path="/login" element={<Login />} />
                       <Route 
                         path="/admin" 

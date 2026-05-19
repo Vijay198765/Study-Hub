@@ -399,17 +399,15 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 mt-auto mb-4 sm:mb-8 flex flex-col items-center gap-8 px-6 text-center w-full max-w-lg"
+        className="relative z-10 flex flex-col items-center gap-8 px-6 text-center w-full max-w-lg translate-y-32"
       >
-        <div className="space-y-2">
+        <div className="space-y-4 flex flex-col items-center">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 1 }}
-            className="flex flex-col items-center gap-1"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="flex flex-col items-center gap-6"
           >
-            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mb-4" />
-            
             <motion.h1
               animate={{ 
                 opacity: [0.7, 1, 0.7],
@@ -424,12 +422,13 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
               {siteConfig?.siteName || 'STUDY HUB'}
             </motion.h1>
 
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+            
             {/* Logo in Loading Screen */}
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.8 }}
-              className="mt-6 mb-4"
             >
               <Logo 
                 siteLogo={siteConfig?.siteLogo}
@@ -443,7 +442,8 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
                 size="lg" 
               />
             </motion.div>
-            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mt-4" />
+
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           </motion.div>
         </div>
 
