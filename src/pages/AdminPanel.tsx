@@ -55,10 +55,10 @@ interface ResourceItemProps {
   existingFolders?: Folder[];
 }
 
-const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, saveFolder, addNew, setEditingEntity, removeChapter }: any) => {
+const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, saveFolder, addNew, setEditingEntity, removeChapter, setToast }: any) => {
   const children = folders.filter((f: any) => f.parentId === folder.id);
   const folderChapters = chapters.filter((c: any) => c.folderId === folder.id);
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <div className={`space-y-2 ${level > 0 ? 'ml-6 pl-4 border-l border-white/5' : ''}`}>
@@ -81,18 +81,23 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
-            onClick={() => {
+            onClick={async () => {
               const name = prompt('Subfolder Name:');
               if (!name) return;
-              saveFolder({
-                id: `f_${Date.now()}`,
-                name,
-                parentId: folder.id,
-                classId: folder.classId,
-                subjectId: folder.subjectId,
-                enabled: true,
-                order: children.length
-              });
+              try {
+                await saveFolder({
+                  id: `f_${Date.now()}`,
+                  name,
+                  parentId: folder.id,
+                  classId: folder.classId,
+                  subjectId: folder.subjectId,
+                  enabled: true,
+                  order: children.length
+                });
+                if (setToast) setToast({ message: 'Subfolder added!', type: 'success' });
+              } catch (err) {
+                if (setToast) setToast({ message: 'Failed to add subfolder', type: 'error' });
+              }
             }}
             className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white"
             title="Add Subfolder"
@@ -148,6 +153,7 @@ const FolderTreeItem = ({ folder, level = 0, folders, chapters, removeFolder, sa
                 addNew={addNew}
                 setEditingEntity={setEditingEntity}
                 removeChapter={removeChapter}
+                setToast={setToast}
               />
             ))}
             {folderChapters.map((chapter: any) => (
@@ -1019,8 +1025,8 @@ export default function AdminPanel() {
   const statsData = [
     { name: 'Classes', value: classes.length },
     { name: 'Users', value: users.length },
-    { name: 'Study Time', value: `${Math.floor(totalStudyTime / 60)}h` },
-    { name: 'Avg. Score', value: testResults.length > 0 ? `${(testResults.reduce((acc, r) => acc + (r.score || 0), 0) / testResults.length).toFixed(0)}%` : '0%' },
+    { name: 'Study Time', value: Math.floor(totalStudyTime / 60) },
+    { name: 'Avg. Score', value: testResults.length > 0 ? Math.round(testResults.reduce((acc, r) => acc + (r.score || 0), 0) / testResults.length) : 0 },
   ];
 
   const { theme, updateTheme, resetTheme } = useTheme();
@@ -2228,6 +2234,7 @@ export default function AdminPanel() {
                             addNew={addNew}
                             setEditingEntity={setEditingEntity}
                             removeChapter={removeChapter}
+                            setToast={setToast}
                           />
                         ))
                       )}
@@ -2760,7 +2767,7 @@ export default function AdminPanel() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">Content Distribution</h3>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <ResponsiveContainer width="99%" height={300} minHeight={300}>
                     <BarChart data={statsData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                       <XAxis dataKey="name" stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
@@ -2768,6 +2775,14 @@ export default function AdminPanel() {
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #ffffff20', borderRadius: '12px' }}
                         itemStyle={{ color: '#fff' }}
+                        formatter={(value: any, name: string) => {
+                          if (name === 'value') {
+                            const statIndex = statsData.findIndex(s => s.value === value);
+                            if (statIndex === 2) return [`${value} hours`, 'Study Time'];
+                            if (statIndex === 3) return [`${value}%`, 'Avg. Score'];
+                          }
+                          return [value, name];
+                        }}
                       />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                         {statsData.map((entry, index) => (
@@ -2780,7 +2795,7 @@ export default function AdminPanel() {
 
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl h-[400px]">
                   <h3 className="text-lg font-medium text-white mb-6">User Roles</h3>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <ResponsiveContainer width="99%" height={300} minHeight={300}>
                     <PieChart>
                       <Pie
                         data={[
@@ -2796,7 +2811,7 @@ export default function AdminPanel() {
                         cx="50%"
                         cy="50%"
                         innerRadius={80}
-                        outerRadius={120}
+                        outerRadius={100}
                         paddingAngle={5}
                         dataKey="value"
                       >
