@@ -12,8 +12,8 @@ import StudyTimer from '../components/StudyTimer';
 
 // Utility for conditional classes
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
-import { Class, Subject, Chapter, QuizQuestion, Resource } from '../types';
-import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { Class, Subject, Chapter, QuizQuestion, Resource, Folder as FolderType } from '../types';
+import { getClasses, getSubjectsByClass, getChaptersBySubject, getFolders } from '../services/dataService';
 import { safeStringify } from '../lib/utils';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
@@ -28,6 +28,7 @@ export default function ChapterDetail() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [folders, setFolders] = useState<FolderType[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'resources' | 'quiz'>('resources');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export default function ChapterDetail() {
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
+    const unsubscribeFolders = getFolders(setFolders);
     let unsubscribeSubjects: () => void = () => {};
     let unsubscribeChapters: () => void = () => {};
 
@@ -135,6 +137,7 @@ export default function ChapterDetail() {
 
     return () => {
       unsubscribeClasses();
+      unsubscribeFolders();
       unsubscribeSubjects();
       unsubscribeChapters();
     };
@@ -363,20 +366,128 @@ export default function ChapterDetail() {
     link.click();
     document.body.removeChild(link);
   };
-
-  const enabledResources = chapter.resources.filter(r => r.enabled);
   
-  // Group resources by folder
-  const resourcesByFolder = enabledResources.reduce((acc, res) => {
-    const folderName = res.folder || 'Chapter Resources';
-    if (!acc[folderName]) acc[folderName] = [];
-    acc[folderName].push(res);
-    return acc;
-  }, {} as Record<string, Resource[]>);
+  const enabledResources = chapter.resources.filter(r => r.enabled);
 
-  const folderNames = Object.keys(resourcesByFolder).sort((a, b) => {
-    if (a === 'Chapter Resources') return 1;
-    if (b === 'Chapter Resources') return -1;
+  // Group resources hierarchies
+  interface FolderNode {
+    id: string;
+    name: string;
+    resources: Resource[];
+    subfolders: FolderNode[];
+  }
+
+  const buildResourceTree = () => {
+    const nodeMap: Record<string, FolderNode> = {};
+    const rootNodes: FolderNode[] = [];
+
+    // All folders in this class/subject
+    const relevantFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId);
+
+    relevantFolders.forEach(f => {
+      nodeMap[f.id] = { id: f.id, name: f.name, resources: [], subfolders: [] };
+    });
+
+    enabledResources.forEach(res => {
+      if (res.folderId && nodeMap[res.folderId]) {
+        nodeMap[res.folderId].resources.push(res);
+      } else {
+        if (!nodeMap['ungrouped']) {
+          nodeMap['ungrouped'] = { id: 'ungrouped', name: 'Chapter Resources', resources: [], subfolders: [] };
+          rootNodes.push(nodeMap['ungrouped']);
+        }
+        nodeMap['ungrouped'].resources.push(res);
+      }
+    });
+
+    relevantFolders.forEach(f => {
+      if (f.parentId && nodeMap[f.parentId]) {
+        nodeMap[f.parentId].subfolders.push(nodeMap[f.id]);
+      } else if (!f.parentId) {
+        rootNodes.push(nodeMap[f.id]);
+      }
+    });
+
+    return rootNodes;
+  };
+
+  const resourceTree = buildResourceTree();
+
+  const renderFolder = (node: FolderNode, depth: number = 0) => {
+    return (
+      <div key={node.id} className={cn("space-y-4", depth > 0 && "ml-4 pl-4 border-l border-white/5 mt-4")}>
+        {node.name !== 'Chapter Resources' && (node.resources.length > 0 || node.subfolders.length > 0) && (
+          <div className="flex items-center gap-3 px-2 py-2">
+            <Folder size={18 - depth} className="text-neon-blue shrink-0" />
+            <h3 className={cn(
+              "font-black uppercase tracking-widest text-white/60",
+              depth === 0 ? "text-xs" : "text-[10px]"
+            )}>
+              {node.name}
+            </h3>
+          </div>
+        )}
+        
+        {node.resources.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {node.resources.map((res) => (
+              <div 
+                key={res.id} 
+                onClick={() => handlePreview(res.url)}
+                className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
+              >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
+                    {getResourceIcon(res.type)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
+                    <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
+                      {res.type}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={() => handlePreview(res.url)}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
+                    title="Preview"
+                  >
+                    <Eye size={16} />
+                    <span className="text-xs font-bold">Preview</span>
+                  </button>
+                  <a 
+                    href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
+                    title="Open in New Tab"
+                  >
+                    <ExternalLink size={16} />
+                    <span className="text-xs font-bold hidden sm:inline">Open</span>
+                  </a>
+                  <button 
+                    onClick={() => handleDownload(res.url, res.title)}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
+                    title="Download"
+                  >
+                    <Download size={16} />
+                    <span className="text-xs font-bold hidden sm:inline">Save</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {node.subfolders.map(subNode => renderFolder(subNode, depth + 1))}
+      </div>
+    );
+  };
+
+  const rootNodes = Object.keys(resourceTree).sort((a, b) => {
+    if (a === 'Default') return 1;
+    if (b === 'Default') return -1;
     return a.localeCompare(b);
   });
 
@@ -391,9 +502,11 @@ export default function ChapterDetail() {
             <ChevronRight size={12} />
             <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
             <ChevronRight size={12} />
-            {chapter.folder && chapter.folder !== 'Default' && (
+            {folders.find(f => f.id === chapter.folderId) && (
               <>
-                <span className="text-white/30 truncate max-w-[100px] md:max-w-none" title={chapter.folder}>{chapter.folder}</span>
+                <span className="text-white/30 truncate max-w-[100px] md:max-w-none" title={folders.find(f => f.id === chapter.folderId)?.name}>
+                  {folders.find(f => f.id === chapter.folderId)?.name}
+                </span>
                 <ChevronRight size={12} />
               </>
             )}
@@ -462,67 +575,9 @@ export default function ChapterDetail() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="space-y-12"
             >
-              {folderNames.map(folderName => (
-                <div key={folderName} className="space-y-4">
-                  {folderName !== 'Chapter Resources' && (
-                    <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
-                      <Folder size={18} className="text-neon-blue" />
-                      <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {resourcesByFolder[folderName].map((res) => (
-                      <div 
-                        key={res.id} 
-                        onClick={() => handlePreview(res.url)}
-                        className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
-                      >
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
-                            {getResourceIcon(res.type)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                            <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
-                              {res.type}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            onClick={() => handlePreview(res.url)}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
-                            title="Preview"
-                          >
-                            <Eye size={16} />
-                            <span className="text-xs font-bold">Preview</span>
-                          </button>
-                          <a 
-                            href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
-                            title="Open in New Tab"
-                          >
-                            <ExternalLink size={16} />
-                            <span className="text-xs font-bold hidden sm:inline">Open</span>
-                          </a>
-                          <button 
-                            onClick={() => handleDownload(res.url, res.title)}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
-                            title="Download"
-                          >
-                            <Download size={16} />
-                            <span className="text-xs font-bold hidden sm:inline">Save</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {resourceTree.map(node => renderFolder(node))}
               {enabledResources.length === 0 && (
                 <div className="col-span-full text-center py-20 glass-card">
                   <p className="text-white/30 italic">No resources uploaded for this chapter yet.</p>

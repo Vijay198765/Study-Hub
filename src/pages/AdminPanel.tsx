@@ -6,7 +6,7 @@ import {
   BookOpen, Layers, BarChart3, CheckCircle2, 
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
-  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder, FolderPlus,
+  MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder as FolderIcon, FolderPlus,
   Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -25,18 +25,19 @@ import {
   getClasses, saveClass, removeClass, 
   getSubjectsByClass, saveSubject, removeSubject, 
   getChaptersBySubject, saveChapter, removeChapter, 
+  getFolders, saveFolder, removeFolder,
   getUsers, saveUser, removeUser,
   getTests, saveTest, removeTest,
   saveTestResult, saveSiteComment
 } from '../services/dataService';
 import { cn, convertDriveUrl, safeStringify } from '../lib/utils';
-import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, News, SiteConfig, SecretProfile } from '../types';
+import { Class, Subject, Chapter, User, Resource, QuizQuestion, Test, TestQuestion, TestResult, ActivityLog, Notification, News, SiteConfig, SecretProfile, Folder } from '../types';
 import { DEFAULT_MCQS } from '../constants/mcqs';
 import { useTheme } from '../contexts/ThemeContext';
 
 import { SST_TEST_QUESTIONS, SCIENCE_TEST_QUESTIONS } from '../constants/mcqData';
 
-type AdminTab = 'classes' | 'subjects' | 'chapters' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'userMessages' | 'identity';
+type AdminTab = 'classes' | 'subjects' | 'chapters' | 'folders' | 'users' | 'comments' | 'tests' | 'stats' | 'chapterTests' | 'results' | 'theme' | 'groups' | 'ratings' | 'logs' | 'site' | 'notifications' | 'news' | 'userMessages' | 'identity';
 type EditTab = 'basic' | 'resources' | 'quiz' | 'questions';
 
 const DraggableAny = Draggable as any;
@@ -50,10 +51,11 @@ interface ResourceItemProps {
   onUpload?: (file: File) => void;
   isUploading?: boolean;
   uploadProgress?: number;
-  existingFolders?: string[];
+  folders: Folder[];
+  existingFolders?: Folder[];
 }
 
-const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast, onUpload, isUploading, uploadProgress, existingFolders }: ResourceItemProps) => {
+const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast, onUpload, isUploading, uploadProgress, folders, existingFolders }: ResourceItemProps) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
@@ -114,32 +116,19 @@ const ResourceItem = ({ resource, index, onUpdate, onDelete, onToast, onUpload, 
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Folder / Subfolder (Optional)</label>
-              <input 
-                type="text" 
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-white/30 transition-all font-mono"
-                value={resource.folder || ''}
-                onChange={(e) => onUpdate({ folder: e.target.value })}
-                placeholder="e.g. Worksheets, Answers..."
-              />
-              {existingFolders && existingFolders.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {existingFolders.map(f => (
-                    <button 
-                      key={f}
-                      onClick={() => onUpdate({ folder: f })}
-                      className={cn(
-                        "px-2 py-0.5 rounded text-[8px] font-bold uppercase transition-all",
-                        resource.folder === f 
-                          ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30" 
-                          : "bg-white/5 text-white/30 border border-white/5 hover:bg-white/10"
-                      )}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <label className="text-[10px] uppercase tracking-wider font-bold text-white/40">Assigned Folder</label>
+              <select 
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white outline-none focus:border-white/30 transition-all"
+                value={resource.folderId || ''}
+                onChange={(e) => onUpdate({ folderId: e.target.value })}
+              >
+                <option value="" className="bg-dark-bg">No Folder (Ungrouped)</option>
+                {existingFolders && existingFolders.map(f => (
+                  <option key={f.id} value={f.id} className="bg-dark-bg">
+                    {f.parentId ? `└─ ${f.name}` : f.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="md:col-span-2 space-y-2">
@@ -268,6 +257,8 @@ export default function AdminPanel() {
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
 
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [editingConfig, setEditingConfig] = useState<Partial<SiteConfig>>({});
+  const [hasUnsavedSiteChanges, setHasUnsavedSiteChanges] = useState(false);
 
   const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
 
@@ -347,6 +338,7 @@ export default function AdminPanel() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -387,18 +379,30 @@ export default function AdminPanel() {
 
   const [isBackingUp, setIsBackingUp] = useState(false);
 
-  const saveSiteConfig = async (newConfig: any) => {
+  const saveSiteConfigToFirebase = async (newConfig: any) => {
     try {
       await setDoc(doc(db, 'config', 'site'), {
         ...newConfig,
         lastUpdated: serverTimestamp()
       }, { merge: true });
-      // Toast is handled by components that call this if they want, but here we provide feedback
-      setToast({ message: 'Settings synced!', type: 'success' });
+      setToast({ message: 'Settings saved to cloud!', type: 'success' });
+      setHasUnsavedSiteChanges(false);
     } catch (err) {
       console.error("Error saving config:", err);
-      setToast({ message: 'Failed to sync settings.', type: 'error' });
+      setToast({ message: 'Failed to save settings.', type: 'error' });
     }
+  };
+
+  const updateEditingConfig = (updates: Partial<SiteConfig>) => {
+    setEditingConfig(prev => ({ ...prev, ...updates }));
+    setHasUnsavedSiteChanges(true);
+  };
+
+  const saveSiteConfig = updateEditingConfig;
+
+  const saveImmediate = (updates: Partial<SiteConfig>) => {
+    updateEditingConfig(updates);
+    saveSiteConfigToFirebase({ ...editingConfig, ...updates });
   };
 
   const downloadBackup = async () => {
@@ -561,7 +565,7 @@ export default function AdminPanel() {
     const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setSiteConfig({ 
+        const fullConfig = { 
           id: snap.id, 
           welcomeEmailSubject: '',
           welcomeEmailTemplate: '',
@@ -571,6 +575,14 @@ export default function AdminPanel() {
           emailjsPublicKey: '',
           isRatingEnabled: true,
           ...data 
+        };
+        setSiteConfig(fullConfig);
+        // Also update editing config if no unsaved changes
+        setEditingConfig(prev => {
+          if (Object.keys(prev).length === 0) {
+            return fullConfig;
+          }
+          return prev;
         });
       } else {
         // Initialize default config
@@ -622,6 +634,13 @@ export default function AdminPanel() {
       setChapters([]);
     }
   }, [selectedSubjectId]);
+
+  // Load folders
+  useEffect(() => {
+    if (!isAdmin && !isSpecialAdmin) return;
+    const unsubFolders = getFolders(setFolders);
+    return () => unsubFolders();
+  }, [isAdmin, isSpecialAdmin]);
 
   // Reordering functions
   const handleMove = async (type: 'class' | 'subject' | 'chapter', index: number, direction: 'up' | 'down') => {
@@ -1763,40 +1782,6 @@ export default function AdminPanel() {
                   />
                 </div>
                 <button 
-                  onClick={() => {
-                    if (!selectedSubjectId) {
-                      setToast({ message: 'Please select a subject first', type: 'error' });
-                      return;
-                    }
-                    const folderName = prompt('Enter folder name:');
-                    if (folderName) {
-                      const newId = `ch_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-                      const newChapter: any = {
-                        id: newId,
-                        name: 'New Chapter',
-                        folder: folderName,
-                        enabled: true,
-                        resources: [],
-                        isImportant: false,
-                        order: chapters.length,
-                        subjectId: selectedSubjectId,
-                        classId: selectedClassId,
-                        quizEnabled: true,
-                        quiz: []
-                      };
-                      saveChapter(newChapter);
-                      setEditingEntity({ ...newChapter, type: 'chapter' });
-                      setEditTab('basic');
-                      setToast({ message: `Folder "${folderName}" created and opening new chapter...`, type: 'success' });
-                    }
-                  }}
-                  className="btn-neon bg-white/5 text-white/60 hover:text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
-                  disabled={!selectedSubjectId}
-                >
-                  <FolderPlus size={20} />
-                  Add Folder
-                </button>
-                <button 
                   onClick={() => addNew('chapter')}
                   className="btn-neon bg-neon-pink text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
@@ -1814,44 +1799,42 @@ export default function AdminPanel() {
                 <div className="space-y-8">
                   {(() => {
                     const filteredChapters = chapters.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-                    const chaptersByFolder = filteredChapters.reduce((acc, chapter) => {
-                      const folderName = chapter.folder || 'Default Chapters';
-                      if (!acc[folderName]) acc[folderName] = [];
-                      acc[folderName].push(chapter);
+                    const chaptersByFolderId = filteredChapters.reduce((acc, chapter) => {
+                      const fId = chapter.folderId || 'root';
+                      if (!acc[fId]) acc[fId] = [];
+                      acc[fId].push(chapter);
                       return acc;
                     }, {} as Record<string, Chapter[]>);
 
-                    const folderNames = Object.keys(chaptersByFolder).sort((a, b) => {
-                      if (a === 'Default Chapters') return 1;
-                      if (b === 'Default Chapters') return -1;
-                      return a.localeCompare(b);
+                    const folderIds = Object.keys(chaptersByFolderId).sort((a, b) => {
+                      if (a === 'root') return 1;
+                      if (b === 'root') return -1;
+                      const fA = folders.find(f => f.id === a);
+                      const fB = folders.find(f => f.id === b);
+                      return (fA?.name || '').localeCompare(fB?.name || '');
                     });
 
-                    return folderNames.map(folderName => (
-                      <div key={folderName} className="space-y-4">
-                        {folderName !== 'Default Chapters' && (
-                          <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
-                             <Folder size={18} className="text-neon-pink" />
-                             <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
-                             <div className="flex-grow" />
-                             <button 
-                               onClick={() => {
-                                 const newName = prompt('Enter new folder name:', folderName);
-                                 if (newName && newName !== folderName) {
-                                   chaptersByFolder[folderName].forEach(chapter => {
-                                     saveChapter({ ...chapter, folder: newName });
-                                   });
-                                   setToast({ message: `Folder renamed to ${newName}`, type: 'success' });
-                                 }
-                               }}
-                               className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
-                             >
-                               Rename
-                             </button>
-                          </div>
-                        )}
-                        <div className="grid gap-3">
-                          {chaptersByFolder[folderName].map((chapter, index) => (
+                    return folderIds.map(fId => {
+                      const folder = folders.find(f => f.id === fId);
+                      const folderName = folder ? folder.name : 'Ungrouped Chapters';
+                      
+                      return (
+                        <div key={fId} className="space-y-4">
+                          {fId !== 'root' && (
+                            <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
+                               <FolderIcon size={18} className="text-orange-500" />
+                               <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
+                               <div className="flex-grow" />
+                               <button 
+                                 onClick={() => setActiveTab('folders')}
+                                 className="text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors"
+                               >
+                                 Manage Folders
+                               </button>
+                            </div>
+                          )}
+                          <div className="grid gap-3">
+                            {chaptersByFolderId[fId].map((chapter, index) => (
                             <motion.div 
                               key={chapter.id}
                               layout
@@ -1921,10 +1904,124 @@ export default function AdminPanel() {
                           ))}
                         </div>
                       </div>
-                    ));
-                  })()}
+                    );
+                  });
+                })()}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'folders' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-full sm:w-48">
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
+                  >
+                    <option value="" className="bg-dark-bg">Select Class</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id} className="bg-dark-bg">{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-full sm:w-48">
+                  <select 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    disabled={!selectedClassId}
+                  >
+                    <option value="" className="bg-dark-bg">Select Subject</option>
+                    {subjects.map(s => (
+                      <option key={s.id} value={s.id} className="bg-dark-bg">{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button 
+                  onClick={() => {
+                    const name = prompt('Folder Name:');
+                    if (!name) return;
+                    const id = `f_${Date.now()}`;
+                    saveFolder({
+                      id,
+                      name,
+                      classId: selectedClassId,
+                      subjectId: selectedSubjectId,
+                      enabled: true,
+                      order: folders.length
+                    });
+                  }}
+                  className="btn-neon bg-orange-500 text-white px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus size={20} />
+                  Add Root Folder
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(folders.length === 0 || !folders.some(f => !f.parentId)) && (
+                   <div className="col-span-full py-20 text-center glass-card">
+                     <p className="text-white/20 italic">No folders created yet.</p>
+                   </div>
+                )}
+                {folders
+                  .filter(f => !f.parentId && (!selectedClassId || f.classId === selectedClassId) && (!selectedSubjectId || f.subjectId === selectedSubjectId))
+                  .map(folder => (
+                    <div key={folder.id} className="glass-card p-6 space-y-4">
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <FolderIcon className="text-orange-500" size={20} />
+                           <h3 className="font-bold text-white">{folder.name}</h3>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <button onClick={() => {
+                             const name = prompt('New Subfolder Name:');
+                             if (!name) return;
+                             saveFolder({
+                               id: `f_${Date.now()}`,
+                               name,
+                               parentId: folder.id,
+                               classId: folder.classId,
+                               subjectId: folder.subjectId,
+                               enabled: true,
+                               order: 0
+                             });
+                           }} className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white" title="Add Subfolder">
+                             <FolderPlus size={16} />
+                           </button>
+                           <button onClick={() => removeFolder(folder.id)} className="p-1.5 hover:bg-white/10 rounded-lg text-red-500/40 hover:text-red-500">
+                             <Trash2 size={16} />
+                           </button>
+                         </div>
+                       </div>
+                       <div className="pl-4 border-l border-white/5 space-y-2">
+                         {folders.filter(f => f.parentId === folder.id).map(sub => (
+                           <div key={sub.id} className="flex items-center justify-between group">
+                             <div className="flex items-center gap-2">
+                               <FolderIcon size={12} className="text-orange-500/60" />
+                               <span className="text-xs text-white/60">{sub.name}</span>
+                             </div>
+                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                               <button onClick={() => {
+                                 const name = prompt('New Subfolder Name:', sub.name);
+                                 if (name) saveFolder({...sub, name});
+                               }} className="p-1 text-white/20 hover:text-white">
+                                 <Edit2 size={10} />
+                               </button>
+                               <button onClick={() => removeFolder(sub.id)} className="p-1 text-red-500/40 hover:text-red-500">
+                                 <X size={12} />
+                               </button>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                    </div>
+                  ))
+                }
+              </div>
             </div>
           )}
 
@@ -1947,7 +2044,7 @@ export default function AdminPanel() {
                     const csvData = users
                       .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
                       .map(u => [
-                        u.name || 'Anonymous',
+                        u.name || 'Special Student',
                         u.email,
                         u.role,
                         u.totalTimeSpent || 0,
@@ -1978,6 +2075,33 @@ export default function AdminPanel() {
                 >
                   <Download size={20} />
                   Download Data (CSV)
+                </button>
+                <button 
+                  onClick={() => {
+                    setConfirmAction({
+                      title: 'Purge Anonymous Users',
+                      message: 'Are you sure you want to delete ALL users with the email anonymous@studyhub.com? This will remove guest profiles from the dashboard.',
+                      onConfirm: async () => {
+                        try {
+                          const anonymousUsers = users.filter(u => u.email === 'anonymous@studyhub.com');
+                          if (anonymousUsers.length === 0) {
+                            setToast({ message: 'No anonymous users found to delete.', type: 'info' });
+                          } else {
+                            const promises = anonymousUsers.map(u => removeUser(u.uid));
+                            await Promise.all(promises);
+                            setToast({ message: `Purged ${anonymousUsers.length} anonymous accounts!`, type: 'success' });
+                          }
+                        } catch (err) {
+                          setToast({ message: 'Failed to purge users.', type: 'error' });
+                        }
+                        setConfirmAction(null);
+                      }
+                    });
+                  }}
+                  className="btn-neon bg-red-500/10 text-red-500 border border-red-500/20 px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-red-500/20"
+                >
+                  <Trash2 size={20} />
+                  Clear Anonymous Data
                 </button>
               </div>
 
@@ -2020,7 +2144,7 @@ export default function AdminPanel() {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-white font-medium">
-                                {user.name || 'Anonymous'}
+                                {user.name || 'Special Student'}
                               </span>
                             </div>
                           </div>
@@ -2520,56 +2644,98 @@ export default function AdminPanel() {
               </div>
 
               <div className="grid gap-4">
-                {chapters
-                  .filter(ch => ch.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((chapter) => (
-                    <div 
-                      key={chapter.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
-                    >
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-lg bg-neon-pink/10 flex items-center justify-center text-neon-pink shrink-0">
-                          <Trophy size={20} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
-                          <p className="text-xs text-white/40 truncate">
-                            {classes.find(c => c.id === chapter.classId)?.name} • {subjects.find(s => s.id === chapter.subjectId)?.name}
-                          </p>
+                {(() => {
+                  const filteredChapters = chapters.filter(ch => ch.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                  const chaptersByFolderId = filteredChapters.reduce((acc, chapter) => {
+                    const fId = chapter.folderId || 'root';
+                    if (!acc[fId]) acc[fId] = [];
+                    acc[fId].push(chapter);
+                    return acc;
+                  }, {} as Record<string, Chapter[]>);
+
+                  const folderIds = Object.keys(chaptersByFolderId).sort((a, b) => {
+                    if (a === 'root') return 1;
+                    if (b === 'root') return -1;
+                    const fA = folders.find(f => f.id === a);
+                    const fB = folders.find(f => f.id === b);
+                    return (fA?.name || '').localeCompare(fB?.name || '');
+                  });
+
+                  if (filteredChapters.length === 0 && selectedSubjectId) {
+                    return (
+                      <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                        <Trophy size={48} className="mx-auto text-white/10 mb-4" />
+                        <p className="text-white/30 italic">No chapters found for this subject.</p>
+                      </div>
+                    );
+                  }
+
+                  return folderIds.map(fId => {
+                    const folder = folders.find(f => f.id === fId);
+                    const folderName = folder ? folder.name : 'Ungrouped Chapters';
+                    
+                    return (
+                      <div key={fId} className="space-y-4 mb-4">
+                        {fId !== 'root' && (
+                          <div className="flex items-center gap-3 px-2 py-2 border-b border-white/5">
+                            <FolderIcon size={18} className="text-orange-500" />
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white/60">{folderName}</h3>
+                          </div>
+                        )}
+                        <div className="grid gap-4">
+                          {chaptersByFolderId[fId].map((chapter) => (
+                            <div 
+                              key={chapter.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-neon-pink/50 transition-all group gap-4"
+                            >
+                              <div className="flex items-center gap-4 min-w-0 flex-1">
+                                <div className="w-10 h-10 rounded-lg bg-neon-pink/10 flex items-center justify-center text-neon-pink shrink-0">
+                                  <Trophy size={20} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-lg font-medium text-white break-words">{chapter.name}</h3>
+                                  <p className="text-xs text-white/40 truncate">
+                                    {classes.find(c => c.id === chapter.classId)?.name} • {subjects.find(s => s.id === chapter.subjectId)?.name}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 mr-2">
+                                  <input 
+                                    type="checkbox" 
+                                    id={`quiz-enabled-${chapter.id}`}
+                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
+                                    checked={chapter.quizEnabled !== false}
+                                    onChange={async (e) => {
+                                      const updatedChapter = { ...chapter, quizEnabled: e.target.checked };
+                                      await saveChapter(updatedChapter);
+                                    }}
+                                  />
+                                  <label htmlFor={`quiz-enabled-${chapter.id}`} className="text-[10px] font-bold text-white/40 uppercase tracking-wider cursor-pointer">
+                                    {chapter.quizEnabled !== false ? 'Quiz On' : 'Quiz Off'}
+                                  </label>
+                                </div>
+                                <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/60">
+                                  {chapter.quiz?.length || 0} MCQs
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    setEditingEntity({ ...chapter, type: 'chapter' });
+                                    setEditTab('quiz');
+                                  }}
+                                  className="btn-neon bg-neon-pink text-white px-4 py-1.5 text-xs flex items-center gap-2"
+                                >
+                                  <Edit2 size={14} />
+                                  Edit MCQs
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 mr-2">
-                          <input 
-                            type="checkbox" 
-                            id={`quiz-enabled-${chapter.id}`}
-                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue"
-                            checked={chapter.quizEnabled !== false}
-                            onChange={async (e) => {
-                              const updatedChapter = { ...chapter, quizEnabled: e.target.checked };
-                              await saveChapter(updatedChapter);
-                            }}
-                          />
-                          <label htmlFor={`quiz-enabled-${chapter.id}`} className="text-[10px] font-bold text-white/40 uppercase tracking-wider cursor-pointer">
-                            {chapter.quizEnabled !== false ? 'Quiz On' : 'Quiz Off'}
-                          </label>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/60">
-                          {chapter.quiz?.length || 0} MCQs
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setEditingEntity({ ...chapter, type: 'chapter' });
-                            setEditTab('quiz');
-                          }}
-                          className="btn-neon bg-neon-pink text-white px-4 py-1.5 text-xs flex items-center gap-2"
-                        >
-                          <Edit2 size={14} />
-                          Edit MCQs
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  });
+                })()}
                 {chapters.length === 0 && selectedSubjectId && (
                   <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
                     <Trophy size={48} className="mx-auto text-white/10 mb-4" />
@@ -2604,10 +2770,11 @@ export default function AdminPanel() {
                     onClick={() => {
                       const headers = ['Date', 'Time', 'User', 'Email', 'Action', 'IP Address', 'Resolution', 'Platform', 'Language', 'Path', 'Location', 'User Agent'];
                       const csvData = activityLogs
-                        .filter(log => log.userEmail !== 'anonymous@studyhub.com' && 
-                                      log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
-                                      log.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
-                                      !log.userName?.includes('Admin'))
+                        .filter(log => 
+                          log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
+                          log.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
+                          !log.userName?.includes('Admin')
+                        )
                         .map(log => {
                         const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : (log.timestamp instanceof Date ? log.timestamp : new Date());
                         
@@ -2621,7 +2788,7 @@ export default function AdminPanel() {
                         return [
                           dateObj.toLocaleDateString(),
                           dateObj.toLocaleTimeString(),
-                          log.userName || 'Anonymous',
+                          log.userName || 'Special Student',
                           log.userEmail || 'N/A',
                           log.action,
                           log.ip || log.deviceInfo?.ip || 'N/A',
@@ -2689,7 +2856,7 @@ export default function AdminPanel() {
                   </thead>
                   <tbody>
                     {activityLogs
-                      .filter(l => l.userEmail !== 'anonymous@studyhub.com' && !l.isSecret)
+                      .filter(l => !l.isSecret)
                       .filter(l => 
                         (l.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (l.userEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2710,7 +2877,7 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-col">
-                            <span className="text-white text-xs font-medium">{log.userName || 'Anonymous'}</span>
+                            <span className="text-white text-xs font-medium">{log.userName || 'Special Student'}</span>
                             <span className="text-[10px] text-white/40 truncate max-w-[150px]">{log.userEmail || 'N/A'}</span>
                           </div>
                         </td>
@@ -2870,7 +3037,16 @@ export default function AdminPanel() {
                     </div>
                   ))}
 
-                  <div className="pt-10">
+                  <div className="pt-10 flex gap-4">
+                    <button 
+                      onClick={() => {
+                        setToast({ message: 'Theme settings synced and saved!', type: 'success' });
+                      }}
+                      className="flex-grow py-3 rounded-xl bg-neon-blue text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,242,255,0.3)]"
+                    >
+                      <Save size={14} />
+                      Save Theme
+                    </button>
                     <button 
                       onClick={() => {
                         setConfirmAction({
@@ -2883,10 +3059,9 @@ export default function AdminPanel() {
                           }
                         });
                       }}
-                      className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                      className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
                     >
                       <RefreshCcw size={14} />
-                      Reset to Defaults
                     </button>
                   </div>
                 </div>
@@ -3036,7 +3211,7 @@ export default function AdminPanel() {
                         type="text" 
                         placeholder="e.g. Study-hub"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={siteConfig?.siteName || ''}
+                        value={editingConfig?.siteName || ''}
                         onChange={(e) => saveSiteConfig({ siteName: e.target.value })}
                       />
                     </div>
@@ -3047,7 +3222,7 @@ export default function AdminPanel() {
                         type="text" 
                         placeholder="e.g. Vijay Ninama"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={siteConfig?.adminName || ''}
+                        value={editingConfig?.adminName || ''}
                         onChange={(e) => saveSiteConfig({ adminName: e.target.value })}
                       />
                     </div>
@@ -3058,7 +3233,7 @@ export default function AdminPanel() {
                         type="text" 
                         placeholder="e.g. Tilak Sahu"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={siteConfig?.coOwnerName || ''}
+                        value={editingConfig?.coOwnerName || ''}
                         onChange={(e) => saveSiteConfig({ coOwnerName: e.target.value })}
                       />
                     </div>
@@ -3069,7 +3244,7 @@ export default function AdminPanel() {
                         rows={2}
                         placeholder="The Future of Learning is Here."
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all resize-none"
-                        value={siteConfig?.siteSubtitle || ''}
+                        value={editingConfig?.siteSubtitle || ''}
                         onChange={(e) => saveSiteConfig({ siteSubtitle: e.target.value })}
                       />
                     </div>
@@ -3199,14 +3374,14 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ maintenanceMode: !editingConfig?.maintenanceMode })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.maintenanceMode ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
                         
-                        {siteConfig?.maintenanceMode && (
+                        {editingConfig?.maintenanceMode && (
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
@@ -3215,7 +3390,7 @@ export default function AdminPanel() {
                             <div>
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Maintenance Message</label>
                               <textarea 
-                                value={siteConfig?.maintenanceMessage || ''}
+                                value={editingConfig?.maintenanceMessage || ''}
                                 onChange={(e) => saveSiteConfig({ maintenanceMessage: e.target.value })}
                                 placeholder="Website is under maintenance. We will be back soon!"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500 transition-all min-h-[60px]"
@@ -3238,14 +3413,14 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ showAnnouncement: !siteConfig?.showAnnouncement })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showAnnouncement ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,229,255,0.4)]' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ showAnnouncement: !editingConfig?.showAnnouncement })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.showAnnouncement ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,229,255,0.4)]' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showAnnouncement ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.showAnnouncement ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
                         
-                        {siteConfig?.showAnnouncement && (
+                        {editingConfig?.showAnnouncement && (
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
@@ -3255,7 +3430,7 @@ export default function AdminPanel() {
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Announcement Text</label>
                                 <textarea 
-                                  value={siteConfig?.announcementText || ''}
+                                  value={editingConfig?.announcementText || ''}
                                   onChange={(e) => saveSiteConfig({ announcementText: e.target.value })}
                                   placeholder="Important: Website is now live!"
                                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all min-h-[60px]"
@@ -3266,13 +3441,13 @@ export default function AdminPanel() {
                                 <div className="flex gap-2">
                                   <input 
                                     type="text"
-                                    value={siteConfig?.announcementColor || '#00E5FF'}
+                                    value={editingConfig?.announcementColor || '#00E5FF'}
                                     onChange={(e) => saveSiteConfig({ announcementColor: e.target.value })}
                                     className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-neon-blue transition-all"
                                   />
                                   <div 
                                     className="w-12 h-12 rounded-xl border border-white/10"
-                                    style={{ backgroundColor: siteConfig?.announcementColor || '#00E5FF' }}
+                                    style={{ backgroundColor: editingConfig?.announcementColor || '#00E5FF' }}
                                   />
                                 </div>
                               </div>
@@ -3290,10 +3465,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Search Bar</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ searchEnabled: siteConfig?.searchEnabled === false ? true : false })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.searchEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ searchEnabled: editingConfig?.searchEnabled === false ? true : false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.searchEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.searchEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.searchEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3304,10 +3479,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Games Tab</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ gamesEnabled: siteConfig?.gamesEnabled === false ? true : false })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.gamesEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ gamesEnabled: editingConfig?.gamesEnabled === false ? true : false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.gamesEnabled !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.gamesEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.gamesEnabled !== false ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3318,10 +3493,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Study Timer</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ studyTimerEnabled: !siteConfig?.studyTimerEnabled })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.studyTimerEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ studyTimerEnabled: !editingConfig?.studyTimerEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.studyTimerEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.studyTimerEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.studyTimerEnabled ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3332,10 +3507,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Global Leaderboard</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ globalLeaderboardEnabled: !siteConfig?.globalLeaderboardEnabled })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.globalLeaderboardEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ globalLeaderboardEnabled: !editingConfig?.globalLeaderboardEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.globalLeaderboardEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.globalLeaderboardEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.globalLeaderboardEnabled ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3346,10 +3521,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Guest Mode</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ guestModeEnabled: !siteConfig?.guestModeEnabled })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.guestModeEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ guestModeEnabled: !editingConfig?.guestModeEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.guestModeEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.guestModeEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.guestModeEnabled ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3360,10 +3535,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Verify Email</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ verifyUserEmail: !siteConfig?.verifyUserEmail })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.verifyUserEmail ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ verifyUserEmail: !editingConfig?.verifyUserEmail })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.verifyUserEmail ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.verifyUserEmail ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.verifyUserEmail ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 
@@ -3374,10 +3549,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">PDF Watermark</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ watermarkEnabled: !siteConfig?.watermarkEnabled })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.watermarkEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ watermarkEnabled: !editingConfig?.watermarkEnabled })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.watermarkEnabled ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.watermarkEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.watermarkEnabled ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3388,10 +3563,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">WA Support</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ supportWhatsApp: siteConfig?.supportWhatsApp ? '' : '910000000000' })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.supportWhatsApp ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ supportWhatsApp: editingConfig?.supportWhatsApp ? '' : '910000000000' })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.supportWhatsApp ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.supportWhatsApp ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.supportWhatsApp ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3402,10 +3577,10 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Footer Credit</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ showFooterCredit: siteConfig?.showFooterCredit !== false })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.showFooterCredit !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ showFooterCredit: editingConfig?.showFooterCredit !== false })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.showFooterCredit !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showFooterCredit !== false ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.showFooterCredit !== false ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
 
@@ -3416,34 +3591,34 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Auto-Approve</span>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ autoApproveUsers: siteConfig?.autoApproveUsers === true })}
-                            className={`w-10 h-5 rounded-full relative transition-all ${siteConfig?.autoApproveUsers === true ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ autoApproveUsers: editingConfig?.autoApproveUsers === true })}
+                            className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.autoApproveUsers === true ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
                           </button>
                         </div>
                       </div>
 
                       {/* Custom Watermark & WA Support Fields */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {siteConfig?.watermarkEnabled && (
+                        {editingConfig?.watermarkEnabled && (
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Watermark Text</label>
                             <input 
                               type="text" 
-                              value={siteConfig?.watermarkText || 'Study-Hub'}
+                              value={editingConfig?.watermarkText || 'Study-Hub'}
                               onChange={(e) => saveSiteConfig({ watermarkText: e.target.value })}
                               placeholder="Overlay text..."
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             />
                           </div>
                         )}
-                        {siteConfig?.supportWhatsApp && (
+                        {editingConfig?.supportWhatsApp && (
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">WhatsApp Number</label>
                             <input 
                               type="text" 
-                              value={siteConfig?.supportWhatsApp || ''}
+                              value={editingConfig?.supportWhatsApp || ''}
                               onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
                               placeholder="91xxxxxxxxxx"
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
@@ -3457,7 +3632,7 @@ export default function AdminPanel() {
                         <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Custom Footer Message</label>
                         <input 
                           type="text" 
-                          value={siteConfig?.customFooterText || ''}
+                          value={editingConfig?.customFooterText || ''}
                           onChange={(e) => saveSiteConfig({ customFooterText: e.target.value })}
                           placeholder="Proudly made by Tagore Team..."
                           className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
@@ -3471,7 +3646,7 @@ export default function AdminPanel() {
                            <input 
                              type="text" 
                              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                             value={siteConfig?.faviconUrl || ''}
+                             value={editingConfig?.faviconUrl || ''}
                              onChange={(e) => saveSiteConfig({ faviconUrl: e.target.value })}
                              placeholder="https://..."
                            />
@@ -3481,7 +3656,7 @@ export default function AdminPanel() {
                            <input 
                              type="text" 
                              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all text-sm"
-                             value={siteConfig?.siteLogo || ''}
+                             value={editingConfig?.siteLogo || ''}
                              onChange={(e) => saveSiteConfig({ siteLogo: e.target.value })}
                              placeholder="https://..."
                            />
@@ -3497,21 +3672,21 @@ export default function AdminPanel() {
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoColor || '#00f2ff'}
+                                   value={editingConfig?.logoColor || '#00f2ff'}
                                    onChange={(e) => saveSiteConfig({ logoColor: e.target.value })}
                                    title="Color 1"
                                  />
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoColorSecondary || '#bc13fe'}
+                                   value={editingConfig?.logoColorSecondary || '#bc13fe'}
                                    onChange={(e) => saveSiteConfig({ logoColorSecondary: e.target.value })}
                                    title="Color 2"
                                  />
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoColorTertiary || '#ff00ff'}
+                                   value={editingConfig?.logoColorTertiary || '#ff00ff'}
                                    onChange={(e) => saveSiteConfig({ logoColorTertiary: e.target.value })}
                                    title="Color 3"
                                  />
@@ -3524,21 +3699,21 @@ export default function AdminPanel() {
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   value={editingConfig?.logoInnerColor || '#0A0A0A'}
                                    onChange={(e) => saveSiteConfig({ logoInnerColor: e.target.value })}
                                    title="Color 1"
                                  />
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoInnerColorSecondary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   value={editingConfig?.logoInnerColorSecondary || editingConfig?.logoInnerColor || '#0A0A0A'}
                                    onChange={(e) => saveSiteConfig({ logoInnerColorSecondary: e.target.value })}
                                    title="Color 2"
                                  />
                                  <input 
                                    type="color" 
                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-none p-0"
-                                   value={siteConfig?.logoInnerColorTertiary || siteConfig?.logoInnerColor || '#0A0A0A'}
+                                   value={editingConfig?.logoInnerColorTertiary || editingConfig?.logoInnerColor || '#0A0A0A'}
                                    onChange={(e) => saveSiteConfig({ logoInnerColorTertiary: e.target.value })}
                                    title="Color 3"
                                  />
@@ -3569,8 +3744,8 @@ export default function AdminPanel() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Theme Mode</label>
                             <select 
-                              value={siteConfig?.defaultThemeMode || 'dark'}
-                              onChange={(e) => saveSiteConfig({ defaultThemeMode: e.target.value })}
+                              value={editingConfig?.defaultThemeMode || 'dark'}
+                              onChange={(e) => saveSiteConfig({ defaultThemeMode: e.target.value as 'light' | 'dark' | 'auto' })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="dark" className="bg-zinc-900">Always Dark</option>
@@ -3582,8 +3757,8 @@ export default function AdminPanel() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">BG Effect</label>
                             <select 
-                              value={siteConfig?.bgEffect || 'none'}
-                              onChange={(e) => saveSiteConfig({ bgEffect: e.target.value })}
+                              value={editingConfig?.bgEffect || 'none'}
+                              onChange={(e) => saveSiteConfig({ bgEffect: e.target.value as any })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="none" className="bg-zinc-900">None</option>
@@ -3602,8 +3777,8 @@ export default function AdminPanel() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Animation Quality</label>
                             <select 
-                              value={siteConfig?.animQuality || 'high'}
-                              onChange={(e) => saveSiteConfig({ animQuality: e.target.value })}
+                              value={editingConfig?.animQuality || 'high'}
+                              onChange={(e) => saveSiteConfig({ animQuality: e.target.value as 'high' | 'medium' | 'low' })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="high" className="bg-zinc-900">High (60fps+)</option>
@@ -3619,7 +3794,7 @@ export default function AdminPanel() {
                               step="0.1"
                               min="0.5"
                               max="2.0"
-                              value={siteConfig?.testTimeMultiplier || 1.0}
+                              value={editingConfig?.testTimeMultiplier || 1.0}
                               onChange={(e) => saveSiteConfig({ testTimeMultiplier: parseFloat(e.target.value) })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             />
@@ -3631,7 +3806,7 @@ export default function AdminPanel() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Terms URL</label>
                             <input 
                               type="text" 
-                              value={siteConfig?.termsUrl || ''}
+                              value={editingConfig?.termsUrl || ''}
                               onChange={(e) => saveSiteConfig({ termsUrl: e.target.value })}
                               placeholder="https://example.com/terms"
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
@@ -3641,7 +3816,7 @@ export default function AdminPanel() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Privacy URL</label>
                             <input 
                               type="text" 
-                              value={siteConfig?.privacyUrl || ''}
+                              value={editingConfig?.privacyUrl || ''}
                               onChange={(e) => saveSiteConfig({ privacyUrl: e.target.value })}
                               placeholder="https://example.com/privacy"
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
@@ -3804,7 +3979,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Instagram</label>
                               <input 
                                 type="text" 
-                                value={siteConfig?.socialInstagram || ''}
+                                value={editingConfig?.socialInstagram || ''}
                                 onChange={(e) => saveSiteConfig({ socialInstagram: e.target.value })}
                                 placeholder="@username"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-pink"
@@ -3814,7 +3989,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Facebook</label>
                               <input 
                                 type="text" 
-                                value={siteConfig?.socialFacebook || ''}
+                                value={editingConfig?.socialFacebook || ''}
                                 onChange={(e) => saveSiteConfig({ socialFacebook: e.target.value })}
                                 placeholder="fb.com/page"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-blue-500"
@@ -3824,7 +3999,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Support WhatsApp</label>
                               <input 
                                 type="text" 
-                                value={siteConfig?.supportWhatsApp || ''}
+                                value={editingConfig?.supportWhatsApp || ''}
                                 onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
                                 placeholder="+91 00000 00000"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-emerald-500"
@@ -3834,7 +4009,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Support Telegram</label>
                               <input 
                                 type="text" 
-                                value={siteConfig?.supportTelegram || ''}
+                                value={editingConfig?.supportTelegram || ''}
                                 onChange={(e) => saveSiteConfig({ supportTelegram: e.target.value })}
                                 placeholder="@channel"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
@@ -3854,21 +4029,21 @@ export default function AdminPanel() {
                                   type="text" 
                                   placeholder="Service ID"
                                   className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                                  value={siteConfig?.emailjsServiceId || ''}
+                                  value={editingConfig?.emailjsServiceId || ''}
                                   onChange={(e) => saveSiteConfig({ emailjsServiceId: e.target.value })}
                                 />
                                 <input 
                                   type="text" 
                                   placeholder="Template ID"
                                   className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                                  value={siteConfig?.emailjsTemplateId || ''}
+                                  value={editingConfig?.emailjsTemplateId || ''}
                                   onChange={(e) => saveSiteConfig({ emailjsTemplateId: e.target.value })}
                                 />
                                 <input 
                                   type="password" 
                                   placeholder="Public Key"
                                   className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                                  value={siteConfig?.emailjsPublicKey || ''}
+                                  value={editingConfig?.emailjsPublicKey || ''}
                                   onChange={(e) => saveSiteConfig({ emailjsPublicKey: e.target.value })}
                                 />
                               </div>
@@ -3881,7 +4056,7 @@ export default function AdminPanel() {
                                 <textarea 
                                   className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-red-500 min-h-[60px]"
                                   placeholder="192.168.1.1, 10.0.0.1"
-                                  value={siteConfig?.bannedIps?.join(', ') || ''}
+                                  value={editingConfig?.bannedIps?.join(', ') || ''}
                                   onChange={(e) => saveSiteConfig({ bannedIps: e.target.value.split(',').map(ip => ip.trim()).filter(Boolean) })}
                                 />
                               </div>
@@ -3899,7 +4074,7 @@ export default function AdminPanel() {
                             type="text" 
                             placeholder="Default: 7117"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                            value={siteConfig?.adminUnlockKey || ''}
+                            value={editingConfig?.adminUnlockKey || ''}
                             onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
                           />
                         </div>
@@ -3910,7 +4085,7 @@ export default function AdminPanel() {
                             type="text" 
                             placeholder="Default: 7117"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                            value={siteConfig?.secretLoginKey || ''}
+                            value={editingConfig?.secretLoginKey || ''}
                             onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
                           />
                         </div>
@@ -3921,7 +4096,7 @@ export default function AdminPanel() {
                             type="text" 
                             placeholder="Add pass for legacy key"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
-                            value={siteConfig?.secretLoginPassword || ''}
+                            value={editingConfig?.secretLoginPassword || ''}
                             onChange={(e) => saveSiteConfig({ secretLoginPassword: e.target.value })}
                           />
                         </div>
@@ -3941,10 +4116,10 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ secretLoginEnabled: !siteConfig?.secretLoginEnabled })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.secretLoginEnabled !== false ? 'bg-neon-pink' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ secretLoginEnabled: !editingConfig?.secretLoginEnabled })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.secretLoginEnabled !== false ? 'bg-neon-pink' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.secretLoginEnabled !== false ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.secretLoginEnabled !== false ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 
@@ -3959,10 +4134,10 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ showSecretLoginEntry: !siteConfig?.showSecretLoginEntry })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showSecretLoginEntry !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ showSecretLoginEntry: !editingConfig?.showSecretLoginEntry })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.showSecretLoginEntry !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showSecretLoginEntry !== false ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.showSecretLoginEntry !== false ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 
@@ -3977,10 +4152,10 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => saveSiteConfig({ showDashboardLinkForSecret: !siteConfig?.showDashboardLinkForSecret })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.showDashboardLinkForSecret !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
+                            onClick={() => saveImmediate({ showDashboardLinkForSecret: !editingConfig?.showDashboardLinkForSecret })}
+                            className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.showDashboardLinkForSecret !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.showDashboardLinkForSecret !== false ? 'right-1' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.showDashboardLinkForSecret !== false ? 'right-1' : 'left-1'}`} />
                           </button>
                         </div>
 
@@ -3996,7 +4171,7 @@ export default function AdminPanel() {
                                 <h4 className="text-xs font-bold uppercase tracking-widest text-white/60">Access Profiles</h4>
                                 <button 
                                   onClick={() => {
-                                    const next = [...(siteConfig?.secretProfiles || [])];
+                                    const next = [...(editingConfig?.secretProfiles || [])];
                                     next.push({ 
                                       id: Date.now().toString(), 
                                       label: 'New Code', 
@@ -4013,7 +4188,7 @@ export default function AdminPanel() {
                                 </button>
                               </div>
                               <div className="space-y-3">
-                                    {(siteConfig?.secretProfiles || []).map((profile: any, pIdx: number) => (
+                                    {(editingConfig?.secretProfiles || []).map((profile: any, pIdx: number) => (
                                       <div key={profile.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                           <div className="space-y-1">
@@ -4059,7 +4234,7 @@ export default function AdminPanel() {
                                           <div className="flex-grow pt-4">
                                              <button 
                                                onClick={() => {
-                                                 const next = [...siteConfig.secretProfiles];
+                                                 const next = [...editingConfig.secretProfiles];
                                                  next[pIdx].showDashboardLink = !next[pIdx].showDashboardLink;
                                                  saveSiteConfig({ secretProfiles: next });
                                                }}
@@ -4139,7 +4314,7 @@ export default function AdminPanel() {
                                       </div>
                                     ))}
 
-                                {(siteConfig?.secretProfiles || []).length === 0 && (
+                                {(editingConfig?.secretProfiles || []).length === 0 && (
                                   <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
                                     <p className="text-white/20 text-xs italic">No secondary codes created yet.</p>
                                   </div>
@@ -4153,7 +4328,7 @@ export default function AdminPanel() {
                                 type="text"
                                 placeholder="e.g. 7117"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all font-mono"
-                                value={siteConfig?.secretLoginKey || ''}
+                                value={editingConfig?.secretLoginKey || ''}
                                 onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
                               />
                             </div>
@@ -4183,9 +4358,9 @@ export default function AdminPanel() {
                                     <input 
                                       type="checkbox"
                                       className="hidden"
-                                      checked={siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)}
+                                      checked={editingConfig?.limitedAdminTabs ? editingConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)}
                                       onChange={() => {
-                                        const current = siteConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
+                                        const current = editingConfig?.limitedAdminTabs || ['chapters', 'chapterTests'];
                                         const next = current.includes(tab.id) 
                                           ? current.filter((t: string) => t !== tab.id)
                                           : [...current, tab.id];
@@ -4193,11 +4368,11 @@ export default function AdminPanel() {
                                       }}
                                     />
                                     <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${
-                                      (siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id))
+                                      (editingConfig?.limitedAdminTabs ? editingConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id))
                                       ? 'bg-neon-pink border-neon-pink' 
                                       : 'border-white/20 group-hover:border-white/40'
                                     }`}>
-                                      {(siteConfig?.limitedAdminTabs ? siteConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)) && <CheckCircle2 size={10} />}
+                                      {(editingConfig?.limitedAdminTabs ? editingConfig.limitedAdminTabs.includes(tab.id) : ['chapters', 'chapterTests'].includes(tab.id)) && <CheckCircle2 size={10} />}
                                     </div>
                                     <span className="text-xs text-white/40 group-hover:text-white transition-colors">{tab.label}</span>
                                   </label>
@@ -4225,7 +4400,7 @@ export default function AdminPanel() {
                         type="text" 
                         placeholder="e.g. +91 9876543210"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500 outline-none transition-all"
-                        value={siteConfig?.supportWhatsApp || ''}
+                        value={editingConfig?.supportWhatsApp || ''}
                         onChange={(e) => saveSiteConfig({ supportWhatsApp: e.target.value })}
                       />
                     </div>
@@ -4235,7 +4410,7 @@ export default function AdminPanel() {
                         type="text" 
                         placeholder="https://t.me/yourgroup"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
-                        value={siteConfig?.supportTelegram || ''}
+                        value={editingConfig?.supportTelegram || ''}
                         onChange={(e) => saveSiteConfig({ supportTelegram: e.target.value })}
                       />
                     </div>
@@ -4245,10 +4420,31 @@ export default function AdminPanel() {
                         type="email" 
                         placeholder="support@example.com"
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-pink outline-none transition-all"
-                        value={siteConfig?.supportEmail || ''}
+                        value={editingConfig?.supportEmail || ''}
                         onChange={(e) => saveSiteConfig({ supportEmail: e.target.value })}
                       />
                     </div>
+                  </div>
+
+                  <div className="flex justify-end gap-4 mt-8 pt-8 border-t border-white/10">
+                    {hasUnsavedSiteChanges && (
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest animate-pulse">
+                        <AlertCircle size={14} />
+                        Unsaved Changes
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => {
+                        saveSiteConfigToFirebase(editingConfig);
+                      }}
+                      className={cn(
+                        "px-8 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center gap-2",
+                        hasUnsavedSiteChanges ? "bg-white text-black hover:scale-[1.02]" : "bg-white/10 text-white/40 cursor-default"
+                      )}
+                    >
+                      <Save size={16} />
+                      Save Site Settings
+                    </button>
                   </div>
                 </div>
               </div>
@@ -4421,7 +4617,7 @@ export default function AdminPanel() {
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
                         {users
-                          .filter(u => u.name && u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
+                          .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
                           .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
                              {u.name} ({u.email || u.uid.substring(0, 8)})
@@ -5002,34 +5198,23 @@ export default function AdminPanel() {
 
                     {editingEntity.type === 'chapter' && (
                       <div className="space-y-3 text-left">
-                        <label className="text-sm font-medium text-white/60">Folder (Optional)</label>
-                        <div className="relative">
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Unit 1, Organic Chemistry, etc."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white focus:border-neon-blue outline-none transition-all"
-                            value={editingEntity.folder || ''}
-                            onChange={(e) => setEditingEntity({ ...editingEntity, folder: e.target.value })}
-                          />
-                          <Folder size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20" />
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Array.from(new Set(chapters.map(c => c.folder).filter(Boolean) as string[])).map(folder => (
-                            <button 
-                              key={folder}
-                              onClick={() => setEditingEntity({ ...editingEntity, folder })}
-                              className={cn(
-                                "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                editingEntity.folder === folder 
-                                  ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30" 
-                                  : "bg-white/5 text-white/30 border border-white/5 hover:bg-white/10 hover:text-white/60"
-                              )}
-                            >
-                              {folder}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-white/20 italic ml-1">Group chapters under a specific folder name.</p>
+                        <label className="text-sm font-medium text-white/60">Assigned Folder</label>
+                        <select 
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-pink outline-none transition-all"
+                          value={editingEntity.folderId || ''}
+                          onChange={(e) => setEditingEntity({ ...editingEntity, folderId: e.target.value })}
+                        >
+                          <option value="" className="bg-dark-bg">No Folder (Ungrouped)</option>
+                          {folders
+                            .filter(f => f.classId === editingEntity.classId && f.subjectId === editingEntity.subjectId)
+                            .map(f => (
+                              <option key={f.id} value={f.id} className="bg-dark-bg">
+                                {f.parentId ? `└─ ${f.name}` : f.name}
+                              </option>
+                            ))
+                          }
+                        </select>
+                        <p className="text-[10px] text-white/20 italic ml-1">Group chapters under a hierarchical folder.</p>
                       </div>
                     )}
 
@@ -5225,7 +5410,6 @@ export default function AdminPanel() {
                     }}>
                       <Droppable droppableId="resources">
                         {(provided) => {
-                          const existingResourceFolders = Array.from(new Set((editingEntity.resources || []).map((r: any) => r.folder).filter(Boolean) as string[]));
                           return (
                             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                               {(editingEntity.resources || []).map((resource: Resource, index: number) => (
@@ -5236,7 +5420,8 @@ export default function AdminPanel() {
                                   isUploading={uploadingResource === resource.id}
                                   uploadProgress={uploadProgress[resource.id] || 0}
                                   onUpload={(file) => handleFileUpload(file, resource.id, index)}
-                                  existingFolders={existingResourceFolders}
+                                  folders={folders}
+                                  existingFolders={folders.filter(f => f.classId === editingEntity.classId && f.subjectId === editingEntity.subjectId)}
                                   onUpdate={(updates) => {
                                   const newResources = [...editingEntity.resources];
                                   newResources[index] = { ...newResources[index], ...updates };

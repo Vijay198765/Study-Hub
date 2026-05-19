@@ -235,6 +235,22 @@
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
     },
+    "Folder": {
+      "title": "Folder",
+      "description": "Folders for grouping chapters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "order": { "type": "number" },
+        "parentId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "classId": { "type": "string" }
+      },
+      "required": ["id", "name", "enabled"]
+    },
     "Music": {
       "title": "Music",
       "description": "A track in the secret music player",
@@ -351,6 +367,10 @@
     "/news/{newsId}": {
       "schema": "News",
       "description": "Site news"
+    },
+    "/folders/{folderId}": {
+      "schema": "Folder",
+      "description": "Folders for organization"
     },
     "/notifications/{notifId}": {
       "schema": "Notification",

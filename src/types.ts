@@ -6,7 +6,18 @@ export interface Resource {
   title: string;
   url: string;
   enabled: boolean;
-  folder?: string;
+  folderId?: string; // Reference to Folder entity
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  parentId?: string; // For nesting
+  chapterId?: string; // Root folders belong to a chapter
+  subjectId?: string; // Maybe folders can belong to subjects directly? User said "folder inside class 10"
+  classId?: string;
+  enabled: boolean;
+  order?: number;
 }
 
 export interface QuizQuestion {
@@ -21,7 +32,7 @@ export interface Chapter {
   subjectId: string;
   classId: string;
   name: string;
-  folder?: string;
+  folderId?: string; // Reference to Folder entity (if we want to group chapters by folders)
   resources: Resource[];
   quiz: QuizQuestion[];
   quizEnabled: boolean;

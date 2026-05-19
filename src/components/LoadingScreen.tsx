@@ -399,7 +399,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 mt-auto mb-10 sm:mb-16 flex flex-col items-center gap-8 px-6 text-center w-full max-w-lg"
+        className="relative z-10 mt-auto mb-4 sm:mb-8 flex flex-col items-center gap-8 px-6 text-center w-full max-w-lg"
       >
         <div className="space-y-2">
           <motion.div
@@ -410,26 +410,6 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
           >
             <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mb-4" />
             
-            {/* Logo in Loading Screen */}
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              className="mb-4"
-            >
-              <Logo 
-                siteLogo={siteConfig?.siteLogo}
-                faviconUrl={siteConfig?.faviconUrl}
-                logoColor={siteConfig?.logoColor}
-                logoColorSecondary={siteConfig?.logoColorSecondary}
-                logoColorTertiary={siteConfig?.logoColorTertiary}
-                logoInnerColor={siteConfig?.logoInnerColor}
-                logoInnerColorSecondary={siteConfig?.logoInnerColorSecondary}
-                logoInnerColorTertiary={siteConfig?.logoInnerColorTertiary}
-                size="lg" 
-              />
-            </motion.div>
-
             <motion.h1
               animate={{ 
                 opacity: [0.7, 1, 0.7],
@@ -443,6 +423,26 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
             >
               {siteConfig?.siteName || 'STUDY HUB'}
             </motion.h1>
+
+            {/* Logo in Loading Screen */}
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="mt-6 mb-4"
+            >
+              <Logo 
+                siteLogo={siteConfig?.siteLogo}
+                faviconUrl={siteConfig?.faviconUrl}
+                logoColor={siteConfig?.logoColor}
+                logoColorSecondary={siteConfig?.logoColorSecondary}
+                logoColorTertiary={siteConfig?.logoColorTertiary}
+                logoInnerColor={siteConfig?.logoInnerColor}
+                logoInnerColorSecondary={siteConfig?.logoInnerColorSecondary}
+                logoInnerColorTertiary={siteConfig?.logoInnerColorTertiary}
+                size="lg" 
+              />
+            </motion.div>
             <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent mt-4" />
           </motion.div>
         </div>

@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { convertDriveUrl } from '../lib/utils';
-import { Class, Subject, Chapter, User, Test, TestResult } from '../types';
+import { Class, Subject, Chapter, User, Test, TestResult, Folder } from '../types';
 
 // Helper to remove undefined fields before saving to Firestore
 const cleanData = (data: any) => {
@@ -175,6 +175,55 @@ export const removeChapter = async (id: string) => {
   }
 };
 
+// Folders
+export const getFolders = (callback: (folders: Folder[]) => void) => {
+  const path = 'folders';
+  const q = query(collection(db, path));
+  return onSnapshot(q, (snapshot) => {
+    const folders = snapshot.docs.map(doc => doc.data() as Folder);
+    const sorted = folders.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+    callback(sorted);
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
+
+export const getFoldersByParent = (parentId: string | null, contextId: { chapterId?: string, subjectId?: string, classId?: string }, callback: (folders: Folder[]) => void) => {
+  const path = 'folders';
+  let q = query(collection(db, path));
+  
+  if (parentId) {
+    q = query(q, where('parentId', '==', parentId));
+  } else {
+    // If no parent, it must be a root folder for a specific context
+    if (contextId.chapterId) q = query(q, where('chapterId', '==', contextId.chapterId), where('parentId', '==', null));
+    else if (contextId.subjectId) q = query(q, where('subjectId', '==', contextId.subjectId), where('parentId', '==', null));
+    else if (contextId.classId) q = query(q, where('classId', '==', contextId.classId), where('parentId', '==', null));
+  }
+  
+  return onSnapshot(q, (snapshot) => {
+    const folders = snapshot.docs.map(doc => doc.data() as Folder);
+    const sorted = folders.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+    callback(sorted);
+  }, (error) => handleFirestoreError(error, OperationType.GET, path));
+};
+
+export const saveFolder = async (folder: Folder) => {
+  const path = `folders/${folder.id}`;
+  try {
+    await setDoc(doc(db, 'folders', folder.id), cleanData(folder));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const removeFolder = async (id: string) => {
+  const path = `folders/${id}`;
+  try {
+    await deleteDoc(doc(db, 'folders', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
 // Users
 export const getUsers = (callback: (users: User[]) => void) => {
   const path = 'users';
@@ -195,6 +244,10 @@ export const saveUser = async (user: User) => {
   // Specific constraint for tagged email
   if (user.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
     user.name = 'Hania Aamir';
+  }
+
+  if (user.email?.toLowerCase() === 'anonymous@studyhub.com' && !user.name) {
+    user.name = 'Special Student';
   }
 
   try {

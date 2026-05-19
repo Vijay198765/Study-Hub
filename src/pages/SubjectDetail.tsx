@@ -2,18 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, BookOpen, Star, ChevronRight, Info } from 'lucide-react';
-import { Class, Subject, Chapter } from '../types';
-import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
+import { Class, Subject, Chapter, Folder } from '../types';
+import { getClasses, getSubjectsByClass, getChaptersBySubject, getFolders } from '../services/dataService';
+import { cn } from '../lib/utils';
 
 export default function SubjectDetail() {
   const { classId, subjectId } = useParams();
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
+    const unsubscribeFolders = getFolders(setFolders);
     let unsubscribeSubjects: () => void = () => {};
     let unsubscribeChapters: () => void = () => {};
 
@@ -29,6 +32,7 @@ export default function SubjectDetail() {
 
     return () => {
       unsubscribeClasses();
+      unsubscribeFolders();
       unsubscribeSubjects();
       unsubscribeChapters();
     };
@@ -41,21 +45,123 @@ export default function SubjectDetail() {
   if (!subject) return <div className="pt-32 text-center text-white/40">Subject not found</div>;
 
   const enabledChapters = chapters.filter(c => c.enabled);
+  const subjectFolders = folders.filter(f => f.classId === classId && f.subjectId === subjectId && f.enabled);
 
-  // Group chapters by folder
-  const chaptersByFolder = enabledChapters.reduce((acc, chapter) => {
-    const folderName = chapter.folder || 'Default';
-    if (!acc[folderName]) acc[folderName] = [];
-    acc[folderName].push(chapter);
-    return acc;
-  }, {} as Record<string, Chapter[]>);
+  // Group chapters hierarchies
+  interface ChapterFolderNode {
+    id: string;
+    name: string;
+    chapters: Chapter[];
+    subfolders: ChapterFolderNode[];
+  }
 
-  // Sort folder names (Default last)
-  const folderNames = Object.keys(chaptersByFolder).sort((a, b) => {
-    if (a === 'Default') return 1;
-    if (b === 'Default') return -1;
-    return a.localeCompare(b);
-  });
+  // Helper to build the tree
+  const buildTree = (): ChapterFolderNode[] => {
+    const nodeMap: Record<string, ChapterFolderNode> = {};
+    const rootNodes: ChapterFolderNode[] = [];
+
+    // Create nodes for all subject folders
+    subjectFolders.forEach(folder => {
+      nodeMap[folder.id] = {
+        id: folder.id,
+        name: folder.name,
+        chapters: [],
+        subfolders: []
+      };
+    });
+
+    // Handle legacy string folders (for backward compatibility if needed)
+    // but the user wants the new system. We'll only support DB folders for now to satisfy the request.
+
+    // Associate chapters with folders
+    enabledChapters.forEach(chapter => {
+      if (chapter.folderId && nodeMap[chapter.folderId]) {
+        nodeMap[chapter.folderId].chapters.push(chapter);
+      } else {
+        // Find or create "Ungrouped"
+        if (!nodeMap['ungrouped']) {
+          nodeMap['ungrouped'] = { id: 'ungrouped', name: 'Chapters', chapters: [], subfolders: [] };
+          rootNodes.push(nodeMap['ungrouped']);
+        }
+        nodeMap['ungrouped'].chapters.push(chapter);
+      }
+    });
+
+    // Build subfolder relations
+    subjectFolders.forEach(folder => {
+      if (folder.parentId && nodeMap[folder.parentId]) {
+        nodeMap[folder.parentId].subfolders.push(nodeMap[folder.id]);
+      } else if (!folder.parentId) {
+        rootNodes.push(nodeMap[folder.id]);
+      }
+    });
+
+    return rootNodes;
+  };
+
+  const folderTree = buildTree();
+
+  const renderChapters = (node: ChapterFolderNode, depth: number = 0) => {
+    return (
+      <div key={node.id} className={cn("mb-16", depth > 0 && "ml-4 md:ml-8 pl-4 md:pl-8 border-l border-white/5 mt-12")}>
+        {node.name !== 'Chapters' && (
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className={cn(
+              "font-display font-bold text-white/80",
+              depth === 0 ? "text-2xl" : "text-xl"
+            )}>{node.name}</h2>
+            <div className="h-px bg-white/5 flex-grow" />
+          </div>
+        )}
+        
+        {node.chapters.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {node.chapters.map((chapter, idx) => (
+              <motion.div
+                key={chapter.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -8 }}
+                className="group"
+              >
+                <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`} className="block h-full">
+                  <div className="glass-card p-8 h-full flex flex-col group-hover:neon-border transition-all relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
+                    
+                    <div className="flex items-start justify-between mb-8">
+                      <div className="text-4xl font-display font-bold text-neon-blue/20 drop-shadow-[0_0_8px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_15px_rgba(0,242,255,0.8)] transition-all duration-300">
+                        {String(idx + 1).padStart(2, '0')}
+                      </div>
+                      {chapter.isImportant && (
+                        <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(188,19,254,0.4)]">
+                          <Star size={12} fill="currentColor" /> Important
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-2xl font-display font-bold mb-4 group-hover:neon-text transition-colors break-words">
+                      {chapter.name}
+                    </h3>
+                    
+                    <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-neon-blue/40 drop-shadow-[0_0_5px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_10px_rgba(0,242,255,0.6)] uppercase tracking-widest font-bold transition-all">
+                        {chapter.resources?.length || 0} Materials
+                      </div>
+                      <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
+                        <ChevronRight size={20} className="group-hover:text-neon-blue" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {node.subfolders.map(subNode => renderChapters(subNode, depth + 1))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-12">
@@ -90,58 +196,7 @@ export default function SubjectDetail() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4">
-        {folderNames.map((folderName, fIdx) => (
-          <div key={folderName} className="mb-16">
-            {folderName !== 'Default' && (
-              <div className="flex items-center gap-4 mb-8">
-                <h2 className="text-2xl font-display font-bold text-white/80">{folderName}</h2>
-                <div className="h-px bg-white/5 flex-grow" />
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {chaptersByFolder[folderName].map((chapter, idx) => (
-                <motion.div
-                  key={chapter.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: (fIdx * 5 + idx) * 0.05 }}
-                  whileHover={{ y: -8 }}
-                  className="group"
-                >
-                  <Link to={`/class/${classId}/subject/${subjectId}/chapter/${chapter.id}`} className="block h-full">
-                    <div className="glass-card p-8 h-full flex flex-col group-hover:neon-border transition-all relative overflow-hidden">
-                      <div className="absolute -right-4 -top-4 w-24 h-24 bg-neon-blue/5 rounded-full blur-2xl group-hover:bg-neon-blue/10 transition-colors"></div>
-                      
-                      <div className="flex items-start justify-between mb-8">
-                        <div className="text-4xl font-display font-bold text-neon-blue/20 drop-shadow-[0_0_8px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_15px_rgba(0,242,255,0.8)] transition-all duration-300">
-                          {String(idx + 1).padStart(2, '0')}
-                        </div>
-                        {chapter.isImportant && (
-                          <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-neon-purple/20 text-neon-purple text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(188,19,254,0.4)]">
-                            <Star size={12} fill="currentColor" /> Important
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="text-2xl font-display font-bold mb-4 group-hover:neon-text transition-colors break-words">
-                        {chapter.name}
-                      </h3>
-                      
-                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                        <div className="text-xs text-neon-blue/40 drop-shadow-[0_0_5px_rgba(0,242,255,0.2)] group-hover:text-neon-blue group-hover:drop-shadow-[0_0_10px_rgba(0,242,255,0.6)] uppercase tracking-widest font-bold transition-all">
-                          {chapter.resources.length} Materials
-                        </div>
-                        <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue group-hover:bg-neon-blue/10 transition-all">
-                          <ChevronRight size={20} className="group-hover:text-neon-blue" />
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        ))}
+        {folderTree.map(node => renderChapters(node))}
 
         {enabledChapters.length === 0 && (
           <div className="text-center py-32 glass-card">

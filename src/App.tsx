@@ -375,7 +375,11 @@ export default function App() {
             const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
             let role = (isDefaultAdmin || isSecretLogin) ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (isDefaultAdmin ? 'Vijay Admin' : (isSecretLogin ? 'Special Student' : 'Student'));
+            let name = firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Special Student' : 'Student');
+            
+            if (isDefaultAdmin && !firebaseUser.displayName) {
+              name = 'Vijay Admin';
+            }
             
             if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
               name = 'Hania Aamir';

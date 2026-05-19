@@ -168,11 +168,24 @@ service cloud.firestore {
              data.subjectId is string && data.subjectId.size() > 0 && data.subjectId.size() < 50 &&
              data.classId is string && data.classId.size() > 0 && data.classId.size() < 50 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             (!('folderId' in data) || data.folderId is string || data.folderId == null) &&
              (!('resources' in data) || data.resources is list) &&
              (!('quiz' in data) || data.quiz is list) &&
              (!('quizEnabled' in data) || data.quizEnabled is bool) &&
              (!('isImportant' in data) || data.isImportant is bool) &&
              (!('enabled' in data) || data.enabled is bool) &&
+             (!('order' in data) || data.order is number);
+    }
+
+    function isValidFolder(data) {
+      return data.keys().hasAll(['id', 'name', 'enabled']) &&
+             data.id is string &&
+             data.name is string &&
+             data.enabled is bool &&
+             (!('parentId' in data) || data.parentId is string || data.parentId == null) &&
+             (!('chapterId' in data) || data.chapterId is string) &&
+             (!('subjectId' in data) || data.subjectId is string) &&
+             (!('classId' in data) || data.classId is string) &&
              (!('order' in data) || data.order is number);
     }
 
@@ -448,6 +461,12 @@ service cloud.firestore {
     match /chapters/{chapterId} {
       allow get, list: if true;
       allow create, update: if isAdmin() && isValidChapter(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /folders/{folderId} {
+      allow get, list: if true;
+      allow create, update: if isAdmin() && isValidFolder(request.resource.data);
       allow delete: if isAdmin();
     }
 
