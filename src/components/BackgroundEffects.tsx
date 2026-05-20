@@ -508,13 +508,13 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
   ];
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-[-10] overflow-hidden">
       {effect === 'snow' && (
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {[...Array(quality === 'high' ? 50 : 20)].map((_, i) => (
             <div 
               key={i}
-              className="absolute bg-white rounded-full opacity-20 animate-fall"
+              className="absolute bg-white rounded-full opacity-20 animate-fall pointer-events-none"
               style={{
                 left: `${Math.random() * 100}%`,
                 width: `${Math.random() * 4 + 2}px`,
@@ -529,11 +529,11 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
       )}
 
       {effect === 'stars' && (
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {[...Array(quality === 'high' ? 100 : 40)].map((_, i) => (
             <div 
               key={i}
-              className="absolute bg-white rounded-full animate-twinkle"
+              className="absolute bg-white rounded-full animate-twinkle pointer-events-none"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -549,33 +549,33 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
       )}
 
       {effect === 'cybergrid' && (
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] animate-grid-move" />
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] animate-grid-move pointer-events-none" />
         </div>
       )}
 
       {effect === 'aurora' && (
-        <div className="absolute inset-0 filter blur-[100px] opacity-30 mix-blend-screen">
-          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-neon-blue rounded-full animate-blob opacity-50" />
-          <div className="absolute top-[10%] right-[-10%] w-[50%] h-[50%] bg-neon-purple rounded-full animate-blob animation-delay-2000 opacity-50" />
-          <div className="absolute bottom-[-20%] left-[20%] w-[70%] h-[60%] bg-neon-pink rounded-full animate-blob animation-delay-4000 opacity-50" />
+        <div className="absolute inset-0 filter blur-[100px] opacity-30 mix-blend-screen pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-neon-blue rounded-full animate-blob opacity-50 pointer-events-none" />
+          <div className="absolute top-[10%] right-[-10%] w-[50%] h-[50%] bg-neon-purple rounded-full animate-blob animation-delay-2000 opacity-50 pointer-events-none" />
+          <div className="absolute bottom-[-20%] left-[20%] w-[70%] h-[60%] bg-neon-pink rounded-full animate-blob animation-delay-4000 opacity-50 pointer-events-none" />
         </div>
       )}
 
       {effect === 'supernova' && (
-        <div className="absolute inset-0 flex items-center justify-center filter blur-[120px] opacity-35">
-          <div className="absolute w-[80vw] h-[80vw] sm:w-[50vw] sm:h-[50vw] rounded-full bg-gradient-to-r from-orange-400 via-red-500 to-indigo-950 animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute w-[90vw] h-[90vw] sm:w-[60vw] sm:h-[60vw] rounded-full bg-gradient-to-r from-amber-300 via-pink-500 to-transparent animate-spin-slow opacity-30" />
+        <div className="absolute inset-0 flex items-center justify-center filter blur-[120px] opacity-35 pointer-events-none">
+          <div className="absolute w-[80vw] h-[80vw] sm:w-[50vw] sm:h-[50vw] rounded-full bg-gradient-to-r from-orange-400 via-red-500 to-indigo-950 animate-pulse pointer-events-none" style={{ animationDuration: '8s' }} />
+          <div className="absolute w-[90vw] h-[90vw] sm:w-[60vw] sm:h-[60vw] rounded-full bg-gradient-to-r from-amber-300 via-pink-500 to-transparent animate-spin-slow opacity-30 pointer-events-none" />
         </div>
       )}
 
       {effect === 'nebula' && (
-        <div className="absolute inset-0 bg-black">
-          <div className="absolute inset-0 opacity-30 mix-blend-overlay animate-pulse" style={{ backgroundColor: '#050505' }} />
+        <div className="absolute inset-0 bg-transparent pointer-events-none">
+          <div className="absolute inset-0 opacity-30 mix-blend-overlay animate-pulse pointer-events-none" style={{ backgroundColor: '#050505' }} />
           {[...Array(5)].map((_, i) => (
             <div 
               key={i}
-              className="absolute rounded-full blur-[80px] opacity-20 animate-pulse"
+              className="absolute rounded-full blur-[80px] opacity-20 animate-pulse pointer-events-none"
               style={{
                 width: `${Math.random() * 40 + 30}%`,
                 height: `${Math.random() * 40 + 30}%`,
@@ -591,19 +591,19 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
       )}
 
       {effect === 'vortex' && (
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-          <div className="w-[180vw] h-[180vw] rounded-full border-[100px] border-neon-blue/5 animate-spin-slow opacity-20" />
-          <div className="absolute w-[140vw] h-[140vw] rounded-full border-[60px] border-neon-purple/5 animate-spin-reverse opacity-20" />
-          <div className="absolute w-[90vw] h-[90vw] rounded-full border-[40px] border-neon-pink/5 animate-spin-slow opacity-20" />
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+          <div className="w-[180vw] h-[180vw] rounded-full border-[100px] border-neon-blue/5 animate-spin-slow opacity-20 pointer-events-none" />
+          <div className="absolute w-[140vw] h-[140vw] rounded-full border-[60px] border-neon-purple/5 animate-spin-reverse opacity-20 pointer-events-none" />
+          <div className="absolute w-[90vw] h-[90vw] rounded-full border-[40px] border-neon-pink/5 animate-spin-slow opacity-20 pointer-events-none" />
         </div>
       )}
 
       {effect === 'drift' && (
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {[...Array(quality === 'high' ? 40 : 15)].map((_, i) => (
             <div 
               key={i}
-              className="absolute bg-gradient-to-r from-neon-blue to-transparent w-24 h-px opacity-10 animate-drift-line"
+              className="absolute bg-gradient-to-r from-neon-blue to-transparent w-24 h-px opacity-10 animate-drift-line pointer-events-none"
               style={{
                 top: `${Math.random() * 100}%`,
                 left: `${Math.random() * 100}%`,
@@ -616,7 +616,7 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
       )}
 
       {canvasEffects.includes(effect) && (
-        <canvas ref={canvasRef} className="absolute inset-0 opacity-80 mix-blend-screen pointer-events-none z-0" />
+        <canvas ref={canvasRef} className="absolute inset-0 opacity-80 mix-blend-screen pointer-events-none z-[-10]" />
       )}
     </div>
   );
