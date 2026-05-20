@@ -192,7 +192,7 @@ export interface SiteConfig {
   searchEnabled?: boolean;
   gamesEnabled?: boolean;
   liveClubEnabled?: boolean;
-  bgEffect?: 'none' | 'snow' | 'confetti' | 'stars' | 'cybergrid' | 'aurora' | 'matrix' | 'nebula' | 'vortex' | 'drift';
+  bgEffect?: 'none' | 'snow' | 'confetti' | 'stars' | 'cybergrid' | 'aurora' | 'matrix' | 'nebula' | 'vortex' | 'drift' | 'supernova' | 'meteors' | 'hyperdrive' | 'fireflies' | 'digitalwave' | 'cosmicdust' | 'blackhole' | 'sonar' | 'rain' | 'glitch' | 'orion' | 'spacewarp';
   animQuality?: 'high' | 'medium' | 'low';
   secretLoginEnabled?: boolean;
   showSecretLoginEntry?: boolean;

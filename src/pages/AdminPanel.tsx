@@ -4035,7 +4035,7 @@ export default function AdminPanel() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Theme Mode</label>
                             <select 
                               value={editingConfig?.defaultThemeMode || 'dark'}
-                              onChange={(e) => saveSiteConfig({ defaultThemeMode: e.target.value as 'light' | 'dark' | 'auto' })}
+                              onChange={(e) => saveImmediate({ defaultThemeMode: e.target.value as 'light' | 'dark' | 'auto' })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="dark" className="bg-zinc-900">Always Dark</option>
@@ -4048,7 +4048,7 @@ export default function AdminPanel() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">BG Effect</label>
                             <select 
                               value={editingConfig?.bgEffect || 'none'}
-                              onChange={(e) => saveSiteConfig({ bgEffect: e.target.value as any })}
+                              onChange={(e) => saveImmediate({ bgEffect: e.target.value as any })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="none" className="bg-zinc-900">None</option>
@@ -4061,6 +4061,18 @@ export default function AdminPanel() {
                               <option value="nebula" className="bg-zinc-900">Celestial Nebula</option>
                               <option value="vortex" className="bg-zinc-900">Vortex Spin</option>
                               <option value="drift" className="bg-zinc-900">Particle Drift</option>
+                              <option value="supernova" className="bg-zinc-900">Supernova Ignite</option>
+                              <option value="meteors" className="bg-zinc-900">Meteor Shower</option>
+                              <option value="hyperdrive" className="bg-zinc-900">Hyperdrive Travel</option>
+                              <option value="fireflies" className="bg-zinc-900">Bioluminescent Fireflies</option>
+                              <option value="digitalwave" className="bg-zinc-900">Digital Frequency Wave</option>
+                              <option value="cosmicdust" className="bg-zinc-900">Cosmic Dust Drift</option>
+                              <option value="blackhole" className="bg-zinc-900">Gravity Black Hole</option>
+                              <option value="sonar" className="bg-zinc-900">Cyber Sonar Radar</option>
+                              <option value="rain" className="bg-zinc-900">Cosmic Rain Shower</option>
+                              <option value="glitch" className="bg-zinc-900">Retro Cyber Glitch</option>
+                              <option value="orion" className="bg-zinc-900">Orion Constellation</option>
+                              <option value="spacewarp" className="bg-zinc-900">Space Warp Tunnel</option>
                             </select>
                           </div>
 
@@ -4068,7 +4080,7 @@ export default function AdminPanel() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1 leading-relaxed">Animation Quality</label>
                             <select 
                               value={editingConfig?.animQuality || 'high'}
-                              onChange={(e) => saveSiteConfig({ animQuality: e.target.value as 'high' | 'medium' | 'low' })}
+                              onChange={(e) => saveImmediate({ animQuality: e.target.value as 'high' | 'medium' | 'low' })}
                               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue appearance-none"
                             >
                               <option value="high" className="bg-zinc-900">High (60fps+)</option>
