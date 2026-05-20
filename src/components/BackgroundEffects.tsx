@@ -508,7 +508,7 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
   ];
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[-10] overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
       {effect === 'snow' && (
         <div className="absolute inset-0 pointer-events-none">
           {[...Array(quality === 'high' ? 50 : 20)].map((_, i) => (
@@ -616,7 +616,7 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ effect = 'none', 
       )}
 
       {canvasEffects.includes(effect) && (
-        <canvas ref={canvasRef} className="absolute inset-0 opacity-80 mix-blend-screen pointer-events-none z-[-10]" />
+        <canvas ref={canvasRef} className="absolute inset-0 opacity-80 mix-blend-screen pointer-events-none z-0" />
       )}
     </div>
   );
