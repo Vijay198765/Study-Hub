@@ -327,7 +327,7 @@ service cloud.firestore {
              (!('searchEnabled' in data) || data.searchEnabled is bool) &&
              (!('gamesEnabled' in data) || data.gamesEnabled is bool) &&
              (!('liveClubEnabled' in data) || data.liveClubEnabled is bool) &&
-             (!('bgEffect' in data) || (data.bgEffect in ['none', 'snow', 'confetti', 'stars', 'cybergrid', 'aurora', 'matrix', 'nebula', 'vortex', 'drift'])) &&
+             (!('bgEffect' in data) || (data.bgEffect in ['none', 'snow', 'confetti', 'stars', 'cybergrid', 'aurora', 'matrix', 'nebula', 'vortex', 'drift', 'supernova', 'meteors', 'hyperdrive', 'fireflies', 'digitalwave', 'cosmicdust', 'blackhole', 'sonar', 'rain', 'glitch', 'orion', 'spacewarp'])) &&
              (!('animQuality' in data) || (data.animQuality in ['high', 'medium', 'low'])) &&
              (!('secretLoginEnabled' in data) || data.secretLoginEnabled is bool) &&
              (!('secretLoginKey' in data) || (data.secretLoginKey is string && data.secretLoginKey.size() < 100)) &&
