@@ -5,7 +5,7 @@ import { ExternalLink, Maximize2 } from 'lucide-react';
 
 export default function Explorer() {
   return (
-    <div className="min-h-screen bg-black pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-transparent pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <Helmet>
         <title>COSMOS — Solar System Explorer</title>
       </Helmet>

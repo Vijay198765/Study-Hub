@@ -233,7 +233,7 @@ export default function LiveComments() {
   const getReplies = (parentId: string) => comments.filter(c => c.parentId === parentId);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-black text-white font-sans">
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-transparent text-white font-sans">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center">

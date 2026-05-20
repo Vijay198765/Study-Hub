@@ -1326,7 +1326,7 @@ export default function Games() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 bg-dark-bg text-white">
+    <div className="min-h-screen pt-24 pb-12 px-4 bg-transparent text-white">
       <div className="max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {!selectedGame ? (
