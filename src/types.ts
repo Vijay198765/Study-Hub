@@ -68,6 +68,11 @@ export interface User {
   isApproved?: boolean;
   isSecret?: boolean;
   secretLoginLogged?: boolean;
+  isGmailUser?: boolean;
+  emailVerified?: boolean;
+  gmailCreatedAt?: string | null;
+  gmailLastSignIn?: string | null;
+  googleDisplayName?: string;
   showOnLeaderboard?: boolean;
   pinnedToTop?: boolean;
   totalTimeSpent?: number; // in minutes (natural)

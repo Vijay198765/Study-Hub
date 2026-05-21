@@ -14,7 +14,8 @@ import {
   Palette,
   Hash,
   Info,
-  Eye
+  Eye,
+  Shield
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -677,44 +678,269 @@ const WordScramble = () => {
 const SpaceDodge = () => {
   const [gameState, setGameState] = useState<GameState>('start');
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(() => {
+    try {
+      return Number(localStorage.getItem('space_dodge_high_score') || '0');
+    } catch {
+      return 0;
+    }
+  });
   const [playerPos, setPlayerPos] = useState(50);
-  const [obstacles, setObstacles] = useState<{ id: number, x: number, y: number }[]>([]);
+  const [obstacles, setObstacles] = useState<{ id: number, x: number, y: number, speed: number, size: number, char: string }[]>([]);
+  const [lasers, setLasers] = useState<{ id: number, x: number, y: number }[]>([]);
+  const [powerups, setPowerups] = useState<{ id: number, x: number, y: number, type: 'shield' | 'bonus' }[]>([]);
+  const [shieldActive, setShieldActive] = useState(false);
+  const [shieldTimeLeft, setShieldTimeLeft] = useState(0);
+  const [stars, setStars] = useState<{ id: number, x: number, y: number, size: number, speed: number }[]>(() => 
+    Array.from({ length: 45 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 1,
+      speed: Math.random() * 0.8 + 0.2
+    }))
+  );
+  
   const requestRef = React.useRef<number>(0);
   const lastTimeRef = React.useRef<number>(0);
+  const keysPressedRef = React.useRef<Record<string, boolean>>({});
+  const lastShotTimeRef = React.useRef<number>(0);
+
+  // Sound synthesis via Web Audio API 
+  const playSoundEffect = (type: 'laser' | 'powerup' | 'explosion' | 'click' | 'shield') => {
+    if (typeof window === 'undefined') return;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    try {
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      const now = ctx.currentTime;
+      if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+        gainNode.gain.setValueAtTime(0.04, now);
+        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'laser') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(700, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+        gainNode.gain.setValueAtTime(0.06, now);
+        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'powerup') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'shield') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.12);
+        osc.frequency.linearRampToValueAtTime(440, now + 0.3);
+        gainNode.gain.setValueAtTime(0.08, now);
+        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'explosion') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.6);
+        gainNode.gain.setValueAtTime(0.2, now);
+        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.6);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+    } catch (_) {}
+  };
+
+  const fireLaser = () => {
+    const now = Date.now();
+    if (now - lastShotTimeRef.current > 220) { // Max 4.5 shots per second
+      playSoundEffect('laser');
+      setLasers(prev => [...prev, { id: now, x: playerPos, y: 85 }]);
+      lastShotTimeRef.current = now;
+    }
+  };
 
   const update = useCallback((time: number) => {
-    if (lastTimeRef.current !== undefined) {
-      const deltaTime = time - lastTimeRef.current;
-      
-      if (deltaTime > 32) { // Cap at ~30fps for stability
-        setObstacles(prev => {
-          const moved = prev.map(o => ({ ...o, y: o.y + 1.5 }));
-          const filtered = moved.filter(o => o.y < 100);
-          
-          // Reduced collision radius from 10 to 6 for better accuracy
-          const collision = filtered.some(o => o.y > 85 && Math.abs(o.x - playerPos) < 6);
-          if (collision) {
-            setGameState('end');
-            return [];
-          }
-
-          if (Math.random() < 0.08) {
-            filtered.push({ id: Date.now(), x: Math.random() * 90 + 5, y: 0 });
-          }
-          return filtered;
-        });
-        setScore(prev => prev + 1);
-        lastTimeRef.current = time;
-      }
+    if (!lastTimeRef.current) {
+      lastTimeRef.current = time;
+      requestRef.current = requestAnimationFrame(update);
+      return;
     }
+    const deltaTime = Math.min(50, time - lastTimeRef.current); // Clamp delta to prevent crazy physics
+    lastTimeRef.current = time;
+
+    // Smooth ship steering
+    let moveDir = 0;
+    if (keysPressedRef.current['ArrowLeft'] || keysPressedRef.current['a'] || keysPressedRef.current['A']) moveDir -= 1;
+    if (keysPressedRef.current['ArrowRight'] || keysPressedRef.current['d'] || keysPressedRef.current['D']) moveDir += 1;
+    if (keysPressedRef.current[' '] || keysPressedRef.current['ArrowUp'] || keysPressedRef.current['w']) {
+      fireLaser();
+    }
+
+    if (moveDir !== 0) {
+      const shipSpeed = 0.082 * deltaTime;
+      setPlayerPos(prev => Math.max(5, Math.min(95, prev + moveDir * shipSpeed)));
+    }
+
+    // Move starfield particle effects
+    setStars(prev => prev.map(s => {
+      let newY = s.y + s.speed * 0.12 * deltaTime;
+      if (newY > 100) {
+        newY = 0;
+        return { ...s, y: newY, x: Math.random() * 100 };
+      }
+      return { ...s, y: newY };
+    }));
+
+    // Scroll active lasers
+    setLasers(prev => {
+      const moved = prev.map(l => ({ ...l, y: l.y - 0.45 * deltaTime }));
+      return moved.filter(l => l.y > 0);
+    });
+
+    // Reduce protective shield timer
+    setShieldTimeLeft(prev => {
+      if (prev <= 0) {
+        if (shieldActive) setShieldActive(false);
+        return 0;
+      }
+      return Math.max(0, prev - deltaTime);
+    });
+
+    // Handle incoming hazards (asteroids, garbage) with scaling level difficulty
+    setObstacles(prev => {
+      const difficultyMultiplier = Math.min(2.5, 1 + score / 1500);
+      const moved = prev.map(o => ({ ...o, y: o.y + o.speed * 0.05 * deltaTime * difficultyMultiplier }));
+      let filtered = moved.filter(o => o.y < 105);
+
+      // Verify laser projectile collisions
+      setLasers(lPrev => {
+        let activeLasers = [...lPrev];
+        filtered = filtered.filter(obs => {
+          const hitIdx = activeLasers.findIndex(l => Math.abs(l.x - obs.x) < 8 && Math.abs(l.y - obs.y) < 7);
+          if (hitIdx !== -1) {
+            playSoundEffect('explosion');
+            activeLasers.splice(hitIdx, 1);
+            setScore(s => s + 75); // Get points for shooting meteor!
+            return false; 
+          }
+          return true;
+        });
+        return activeLasers;
+      });
+
+      // Verify player body collisions
+      const playerCollision = filtered.some(o => o.y > 83 && o.y < 93 && Math.abs(o.x - playerPos) < 6);
+      if (playerCollision) {
+        if (shieldActive) {
+          // Explode the asteroid but save the player!
+          playSoundEffect('explosion');
+          setShieldActive(false);
+          setShieldTimeLeft(0);
+          filtered = filtered.filter(o => !(o.y > 83 && o.y < 93 && Math.abs(o.x - playerPos) < 6));
+        } else {
+          playSoundEffect('explosion');
+          setGameState('end');
+          setHighScore(h => {
+            const finalScore = score;
+            if (finalScore > h) {
+              try {
+                localStorage.setItem('space_dodge_high_score', finalScore.toString());
+              } catch (_) {}
+              return finalScore;
+            }
+            return h;
+          });
+          return [];
+        }
+      }
+
+      // Random asteroid generator
+      const spawnRate = 0.015 * difficultyMultiplier;
+      if (Math.random() < spawnRate && filtered.length < 15) {
+        const chars = ['☄️', '🪨', '🪐', '👾'];
+        const randomChar = chars[Math.floor(Math.random() * chars.length)];
+        filtered.push({
+          id: Date.now() + Math.random(),
+          x: Math.random() * 90 + 5,
+          y: -5,
+          speed: Math.random() * 2 + 1.2,
+          size: Math.random() * 1.5 + 0.8,
+          char: randomChar
+        });
+      }
+      return filtered;
+    });
+
+    // Scroll active powerups on field
+    setPowerups(prev => {
+      const moved = prev.map(p => ({ ...p, y: p.y + 0.08 * deltaTime }));
+      let filtered = moved.filter(p => p.y < 105);
+
+      // Check collision with player ship
+      const activePowerups = filtered.filter(p => {
+        const caught = p.y > 82 && p.y < 94 && Math.abs(p.x - playerPos) < 8;
+        if (caught) {
+          if (p.type === 'shield') {
+            playSoundEffect('shield');
+            setShieldActive(true);
+            setShieldTimeLeft(6000); // 6 seconds immunity shield
+          } else {
+            playSoundEffect('powerup');
+            setScore(s => s + 300); // Instant 300 boost points
+          }
+          return false;
+        }
+        return true;
+      });
+
+      // Spawn rate of positive power-ups
+      if (Math.random() < 0.003 && activePowerups.length < 2) {
+        activePowerups.push({
+          id: Date.now() + Math.random(),
+          x: Math.random() * 90 + 5,
+          y: -5,
+          type: Math.random() > 0.4 ? 'shield' : 'bonus'
+        });
+      }
+      return activePowerups;
+    });
+
+    // Score ticking increments
+    setScore(prev => prev + 1);
     requestRef.current = requestAnimationFrame(update);
-  }, [playerPos]);
+  }, [playerPos, score, shieldActive]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (gameState !== 'playing') return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     setPlayerPos(Math.max(5, Math.min(95, x)));
+  };
+
+  const startMission = () => {
+    playSoundEffect('powerup');
+    setScore(0);
+    setObstacles([]);
+    setLasers([]);
+    setPowerups([]);
+    setShieldActive(false);
+    setShieldTimeLeft(0);
+    setGameState('playing');
+    lastTimeRef.current = 0;
   };
 
   useEffect(() => {
@@ -726,66 +952,176 @@ const SpaceDodge = () => {
     return () => cancelAnimationFrame(requestRef.current);
   }, [gameState, update]);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') setPlayerPos(prev => Math.max(5, prev - 5));
-    if (e.key === 'ArrowRight') setPlayerPos(prev => Math.min(95, prev + 5));
-  };
-
+  // Handle continuous keys inputs tracking
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') setPlayerPos(prev => Math.max(5, prev - 5));
-      if (e.key === 'ArrowRight') setPlayerPos(prev => Math.min(95, prev + 5));
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('keydown', handleKeyDown);
+      if (['ArrowLeft', 'ArrowRight', ' ', 'ArrowUp'].includes(e.key)) {
+        e.preventDefault();
       }
+      keysPressedRef.current[e.key] = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressedRef.current[e.key] = false;
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
   return (
     <div 
-      className="relative w-full h-[500px] bg-black rounded-xl overflow-hidden border border-white/10 touch-none"
+      className="relative w-full h-[520px] bg-zinc-950 rounded-2xl overflow-hidden border border-white/10 touch-none flex flex-col justify-between"
       onPointerMove={handlePointerMove}
     >
+      {/* Dynamic Starfield Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+        {stars.map(s => (
+          <div 
+            key={s.id}
+            className="absolute bg-white rounded-full opacity-60 animate-pulse"
+            style={{ 
+              left: `${s.x}%`, 
+              top: `${s.y}%`,
+              width: `${s.size}px`,
+              height: `${s.size}px`
+            }}
+          />
+        ))}
+      </div>
+
       {gameState === 'start' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20 bg-black/60 backdrop-blur-sm">
-          <Target size={64} className="mb-6 text-blue-400" />
-          <h2 className="text-3xl font-bold mb-4">Space Dodge</h2>
-          <p className="text-white/60 mb-8">Use Arrow Keys to dodge incoming asteroids!</p>
-          <button onClick={() => { setScore(0); setObstacles([]); setGameState('playing'); }} className="btn-neon px-8 py-3">Start Mission</button>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 bg-black/70 backdrop-blur-sm px-6">
+          <div className="w-[84px] h-[84px] rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 shadow-[0_0_25px_rgba(59,130,246,0.2)]">
+            <Target size={44} className="text-blue-400 animate-spin" style={{ animationDuration: '6s' }} />
+          </div>
+          <h2 className="text-3xl font-extrabold mb-3 text-white tracking-wider uppercase">Space Dodge</h2>
+          <p className="text-white/60 mb-6 max-w-sm text-sm leading-relaxed">
+            Shoot lasers with <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-xs">SPACE / ArrowUp</span> & steer with <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-xs">ARROW KEYS</span> or touch/drag to dodge! Shot rocks yield bonus scores.
+          </p>
+          <div className="flex flex-col items-center gap-3 mb-8">
+            <span className="text-xs text-white/40 uppercase tracking-widest">Personal High Score</span>
+            <div className="text-xl font-mono font-extrabold text-blue-400 bg-blue-900/10 px-4 py-1.5 rounded-lg border border-blue-500/20">
+              🏆 {highScore} pts
+            </div>
+          </div>
+          <button onClick={startMission} className="btn-neon bg-blue-500 text-black px-10 py-3.5 font-bold uppercase tracking-wider text-sm rounded-xl">
+            Launch Fighter
+          </button>
         </div>
       )}
 
       {gameState === 'playing' && (
         <>
-          <div className="absolute top-4 left-4 text-2xl font-mono text-white/40 z-20">Score: {score}</div>
+          {/* Top Panel Indicators */}
+          <div className="absolute top-4 inset-x-4 flex justify-between items-center z-10 pointer-events-none select-none">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-white/40 uppercase tracking-widest">Mission Score</span>
+              <span className="text-2xl font-mono font-bold text-white leading-none">{score}</span>
+            </div>
+
+            {shieldActive && (
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-emerald-400 font-mono text-xs animate-bounce">
+                <Shield size={14} className="animate-spin" /> SHIELD: {Math.ceil(shieldTimeLeft / 1000)}s
+              </div>
+            )}
+
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-white/40 uppercase tracking-widest">Best Record</span>
+              <span className="text-sm font-mono text-blue-400 leading-none">🏆 {highScore}</span>
+            </div>
+          </div>
+
+          {/* Shooting instruction reminder */}
+          <div className="absolute bottom-4 left-4 text-[10px] font-mono text-white/20 select-none hidden sm:block">
+            ☄️ Space to shoot lasers • Move cursor to navigate
+          </div>
+
+          {/* Flying player spaceship */}
           <motion.div 
             animate={{ left: `${playerPos}%` }}
-            className="absolute bottom-10 w-10 h-10 bg-blue-500 rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.8)] -translate-x-1/2 flex items-center justify-center"
+            transition={{ type: 'tween', duration: 0.05 }}
+            className="absolute bottom-12 w-10 h-10 -translate-x-1/2 flex flex-col items-center justify-center pointer-events-none"
           >
-            🚀
+            {/* Plasma Forcefield Shield Glow */}
+            {shieldActive && (
+              <div className="absolute -inset-4 rounded-full border-2 border-emerald-400/40 bg-emerald-500/5 animate-pulse blur-[1px] shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
+            )}
+            
+            <div className="text-3xl filter drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">
+              🚀
+            </div>
+
+            {/* Jet Fire Exhaust Engine */}
+            <div className="w-1.5 h-4 bg-gradient-to-t from-red-500 via-orange-400 to-transparent mt-[-4px] animate-bounce" />
           </motion.div>
+
+          {/* Projectile Lasers lasers */}
+          {lasers.map(l => (
+            <div 
+              key={l.id} 
+              className="absolute w-1 h-3 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,1)]"
+              style={{ left: `${l.x}%`, top: `${l.y}%` }}
+            />
+          ))}
+
+          {/* Laser obstacles meteor rocks */}
           {obstacles.map(o => (
             <div 
               key={o.id} 
-              className="absolute w-8 h-8 text-2xl"
-              style={{ left: `${o.x}%`, top: `${o.y}%` }}
+              className="absolute text-center select-none"
+              style={{ 
+                left: `${o.x}%`, 
+                top: `${o.y}%`,
+                fontSize: `${o.size * 18}px`,
+                transform: 'translate(-55%, -55%)'
+              }}
             >
-              ☄️
+              {o.char}
+            </div>
+          ))}
+
+          {/* Floating Powerups */}
+          {powerups.map(p => (
+            <div 
+              key={p.id} 
+              className={`absolute text-2xl select-none animate-bounce flex items-center justify-center w-8 h-8 rounded-full border shadow-[0_0_15px_rgba(255,255,255,0.2)]`}
+              style={{ 
+                left: `${p.x}%`, 
+                top: `${p.y}%`,
+                borderColor: p.type === 'shield' ? 'rgba(52,211,153,0.4)' : 'rgba(251,191,36,0.4)',
+                backgroundColor: p.type === 'shield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              {p.type === 'shield' ? '🛡️' : '💎'}
             </div>
           ))}
         </>
       )}
 
       {gameState === 'end' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20 bg-black/80 backdrop-blur-md">
-          <h2 className="text-4xl font-bold mb-4 text-red-500">Mission Failed!</h2>
-          <p className="text-xl text-white/60 mb-8">Distance Traveled: {score}m</p>
-          <button onClick={() => { setScore(0); setObstacles([]); setGameState('playing'); }} className="btn-neon px-8 py-3">Restart Mission</button>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 bg-black/80 backdrop-blur-md px-6">
+          <div className="text-6xl mb-4 animate-bounce">💥</div>
+          <h2 className="text-3xl font-extrabold mb-2 text-red-500 uppercase tracking-widest">Ship Destroyed</h2>
+          <p className="text-white/60 mb-6 text-sm">You collided with an orbital comet!</p>
+          
+          <div className="grid grid-cols-2 gap-4 max-w-xs w-full mb-8">
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 text-center">
+              <span className="text-[10px] text-white/40 uppercase tracking-widest block mb-1">Score Gained</span>
+              <span className="text-xl font-mono font-bold text-white">{score}</span>
+            </div>
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 text-center">
+              <span className="text-[10px] text-white/40 uppercase tracking-widest block mb-1">Current Best</span>
+              <span className="text-xl font-mono font-bold text-blue-400">🏆 {highScore}</span>
+            </div>
+          </div>
+
+          <button onClick={startMission} className="btn-neon bg-red-500 text-black px-12 py-3.5 font-bold uppercase tracking-wider text-sm rounded-xl">
+            Quick Restart
+          </button>
         </div>
       )}
     </div>

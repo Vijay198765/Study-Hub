@@ -340,6 +340,22 @@ export default function App() {
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
             
+            // Save detailed Gmail/Google account information
+            const isGoogleProv = firebaseUser.providerData?.some((p: any) => p.providerId === 'google.com') || firebaseUser.email?.endsWith('@gmail.com');
+            if (isGoogleProv) {
+              if (profileData.isGmailUser !== true) updates.isGmailUser = true;
+              if (profileData.emailVerified !== firebaseUser.emailVerified) updates.emailVerified = firebaseUser.emailVerified;
+              if (firebaseUser.metadata?.creationTime && profileData.gmailCreatedAt !== firebaseUser.metadata.creationTime) {
+                updates.gmailCreatedAt = firebaseUser.metadata.creationTime;
+              }
+              if (firebaseUser.metadata?.lastSignInTime && profileData.gmailLastSignIn !== firebaseUser.metadata.lastSignInTime) {
+                updates.gmailLastSignIn = firebaseUser.metadata.lastSignInTime;
+              }
+              if (firebaseUser.displayName && profileData.googleDisplayName !== firebaseUser.displayName) {
+                updates.googleDisplayName = firebaseUser.displayName;
+              }
+            }
+            
             // Sync location if available
             if (userLocation && (!profileData.lastLocation || 
                 Math.abs(profileData.lastLocation.lat - userLocation.lat) > 0.01)) {
@@ -408,6 +424,8 @@ export default function App() {
               };
             }
 
+            const isGoogleProv = firebaseUser.providerData?.some((p: any) => p.providerId === 'google.com') || firebaseUser.email?.endsWith('@gmail.com');
+
             profileData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
@@ -420,6 +438,11 @@ export default function App() {
               totalTimeSpent: 0,
               isSecret: isSecretLogin,
               secretLoginLogged: isSecretLogin,
+              isGmailUser: isGoogleProv,
+              emailVerified: firebaseUser.emailVerified || false,
+              gmailCreatedAt: firebaseUser.metadata?.creationTime || null,
+              gmailLastSignIn: firebaseUser.metadata?.lastSignInTime || null,
+              googleDisplayName: firebaseUser.displayName || '',
               ...extraData
             };
             if (!firebaseUser.isAnonymous) {

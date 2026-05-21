@@ -495,22 +495,22 @@ export default function ChapterDetail() {
     <div className="min-h-screen pt-24 pb-12">
       <section className="bg-transparent border-b border-white/5 pt-8 pb-12 px-4 mb-12">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 text-xs md:text-sm text-white/30 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
+          <div className="flex flex-wrap items-center gap-y-2 gap-x-2 text-xs md:text-sm text-white/30 mb-6 pb-2">
             <Link to="/" className="hover:text-neon-blue transition-colors">Home</Link>
-            <ChevronRight size={12} />
-            <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors">{currentClass?.name || 'Class'}</Link>
-            <ChevronRight size={12} />
-            <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors">{subject?.name || 'Subject'}</Link>
-            <ChevronRight size={12} />
+            <ChevronRight size={12} className="shrink-0" />
+            <Link to={`/class/${classId}`} className="hover:text-neon-blue transition-colors shrink-0">{currentClass?.name || 'Class'}</Link>
+            <ChevronRight size={12} className="shrink-0" />
+            <Link to={`/class/${classId}/subject/${subjectId}`} className="hover:text-neon-blue transition-colors shrink-0">{subject?.name || 'Subject'}</Link>
+            <ChevronRight size={12} className="shrink-0" />
             {folders.find(f => f.id === chapter.folderId) && (
               <>
-                <span className="text-white/30 truncate max-w-[100px] md:max-w-none" title={folders.find(f => f.id === chapter.folderId)?.name}>
+                <span className="text-white/30 break-words" title={folders.find(f => f.id === chapter.folderId)?.name}>
                   {folders.find(f => f.id === chapter.folderId)?.name}
                 </span>
-                <ChevronRight size={12} />
+                <ChevronRight size={12} className="shrink-0" />
               </>
             )}
-            <span className="text-white/60 break-words">{chapter.name}</span>
+            <span className="text-white/60 break-words font-medium">{chapter.name}</span>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">

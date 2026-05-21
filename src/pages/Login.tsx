@@ -95,15 +95,25 @@ export default function Login() {
           photoURL: convertDriveUrl(user.photoURL || undefined),
           role: role,
           isApproved: siteConfig?.autoApproveUsers !== false,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          isGmailUser: true,
+          emailVerified: user.emailVerified || false,
+          gmailCreatedAt: user.metadata.creationTime || null,
+          gmailLastSignIn: user.metadata.lastSignInTime || null,
+          googleDisplayName: user.displayName || name.trim()
         });
       } else {
         role = userDoc.data().role;
-        // Update name and sync photo if different
+        // Update name and sync photo if different along with Gmail details
         await setDoc(userRef, {
           ...userDoc.data(),
           name: name.trim(),
-          photoURL: convertDriveUrl(user.photoURL || userDoc.data().photoURL || undefined)
+          photoURL: convertDriveUrl(user.photoURL || userDoc.data().photoURL || undefined),
+          isGmailUser: true,
+          emailVerified: user.emailVerified || false,
+          gmailCreatedAt: user.metadata.creationTime || userDoc.data().gmailCreatedAt || null,
+          gmailLastSignIn: user.metadata.lastSignInTime || null,
+          googleDisplayName: user.displayName || userDoc.data().googleDisplayName || name.trim()
         }, { merge: true });
       }
 

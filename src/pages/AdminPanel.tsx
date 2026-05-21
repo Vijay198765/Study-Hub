@@ -520,6 +520,7 @@ export default function AdminPanel() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [expandedUserUid, setExpandedUserUid] = useState<string | null>(null);
   const [tests, setTests] = useState<Test[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [siteComments, setSiteComments] = useState<any[]>([]);
@@ -2480,7 +2481,8 @@ export default function AdminPanel() {
                         u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com'
                       )
                       .map((user) => (
-                      <tr key={user.uid} className="border-b border-white/5 hover:bg-white/5 transition-all group">
+                        <React.Fragment key={user.uid}>
+                          <tr className="border-b border-white/5 hover:bg-white/5 transition-all group">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden relative">
@@ -2505,7 +2507,15 @@ export default function AdminPanel() {
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white/60">
-                          {user.email}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{user.email}</span>
+                            {(user.isGmailUser || user.email?.endsWith('@gmail.com')) && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20" title="Verified Google Gmail Account SSO">
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-3 h-3" />
+                                Google
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'admin' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-white/10 text-white/60'}`}>
@@ -2598,9 +2608,146 @@ export default function AdminPanel() {
                                 <Trash2 size={16} />
                               </button>
                             )}
+                            <button
+                              onClick={() => setExpandedUserUid(expandedUserUid === user.uid ? null : user.uid)}
+                              className={`p-2 rounded-lg transition-all ${expandedUserUid === user.uid ? 'text-emerald-400 bg-emerald-500/10' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                              title="View Detailed Google / Gmail Auth Info"
+                            >
+                              <Info size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>
+                      {expandedUserUid === user.uid && (
+                        <tr key={`${user.uid}-expanded`} className="bg-white/[0.02] border-b border-white/5">
+                          <td colSpan={6} className="py-4 px-6">
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 rounded-2xl bg-zinc-950/40 border border-white/5">
+                                {/* Left column: Google Gmail Login Profile Card */}
+                                <div className="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-white/5">
+                                  <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <Globe size={14} /> Google Account Auth Save
+                                  </h4>
+                                  <div className="space-y-2 text-sm text-white/70">
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Auth Provider:</span>
+                                      <span className="font-mono text-xs text-white">
+                                        {user.isGmailUser ? 'Gmail / Google Auth' : 'Standard / Guest account'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Google account Name:</span>
+                                      <span className="text-white font-medium text-xs">
+                                        {user.googleDisplayName || user.name || 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Email Verified:</span>
+                                      {user.emailVerified || user.email?.endsWith('@gmail.com') ? (
+                                        <span className="text-[12px] text-emerald-400 font-bold flex items-center gap-1">
+                                          <CheckCircle2 size={12} /> Verified Google Mail
+                                        </span>
+                                      ) : (
+                                        <span className="text-[12px] text-red-400 font-bold flex items-center gap-1">
+                                          <AlertCircle size={12} /> Unknown Status / Guest
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Gmail creation Date:</span>
+                                      <span className="font-mono text-[11px] text-white/80">
+                                        {user.gmailCreatedAt ? new Date(user.gmailCreatedAt).toLocaleString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between pt-1">
+                                      <span className="text-white/40 text-xs">Last Authentication:</span>
+                                      <span className="font-mono text-[11px] text-white/80">
+                                        {user.gmailLastSignIn ? new Date(user.gmailLastSignIn).toLocaleString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Middle column: Network & OS Environment */}
+                                <div className="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-white/5">
+                                  <h4 className="text-xs font-bold text-neon-blue uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <Smartphone size={14} /> Device & Local OS Info
+                                  </h4>
+                                  <div className="space-y-2 text-sm text-white/70">
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Operating System:</span>
+                                      <span className="text-xs text-white">
+                                        {user.deviceInfo?.platform || 'Unknown OS'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Language:</span>
+                                      <span className="text-xs font-mono text-white">
+                                        {user.deviceInfo?.language || 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Screen Resolution:</span>
+                                      <span className="text-xs font-mono text-white">
+                                        {user.deviceInfo?.screenResolution || 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col border-b border-white/5 pb-1 max-w-full">
+                                      <span className="text-white/40 text-xs mb-1">User Agent string:</span>
+                                      <span className="text-[10px] break-all text-white/60 font-mono select-all">
+                                        {user.deviceInfo?.userAgent || 'N/A'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right column: Study Hub Account Status */}
+                                <div className="space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-white/5">
+                                  <h4 className="text-xs font-bold text-purple-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <ShieldCheck size={14} /> Profile & DB Integration
+                                  </h4>
+                                  <div className="space-y-2 text-sm text-white/70">
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">App User UID:</span>
+                                      <span className="font-mono text-[9px] text-white/60 select-all border border-white/10 px-1 py-0.5 rounded bg-black/40">
+                                        {user.uid}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Study-Hub Created:</span>
+                                      <span className="font-mono text-xs text-white">
+                                        {user.createdAt ? (typeof user.createdAt === 'string' ? new Date(user.createdAt).toLocaleString() : 'N/A') : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-white/5 pb-1">
+                                      <span className="text-white/40 text-xs">Location coordinates:</span>
+                                      <span className="text-xs font-mono text-white">
+                                        {user.lastLocation ? `${user.lastLocation.lat.toFixed(4)}, ${user.lastLocation.lon.toFixed(4)}` : 'No Location Permission'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between pt-1">
+                                      <span className="text-white/40 text-xs">Original Photo URL:</span>
+                                      {user.photoURL ? (
+                                        <a href={convertDriveUrl(user.photoURL)} target="_blank" rel="noreferrer" className="text-xs text-neon-blue hover:underline flex items-center gap-1 inline-flex">
+                                          Open HQ Image <ExternalLink size={10} />
+                                        </a>
+                                      ) : (
+                                        <span className="text-xs text-white/30">None</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </td>
+                        </tr>
+                      )}
+                        </React.Fragment>
                     ))}
                     {users.length === 0 && (
                       <tr>
