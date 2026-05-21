@@ -10,7 +10,7 @@ import {
   limit,
   getDocs
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 import { convertDriveUrl } from '../lib/utils';
 import { Class, Subject, Chapter, User, Test, TestResult, Folder } from '../types';
 
@@ -278,15 +278,26 @@ export const saveUser = async (user: User) => {
 };
 
 export const purgeSpecialStudentDocs = async () => {
+  if (!auth.currentUser) {
+    console.log("No authenticated user, skipping programmatic purge.");
+    return;
+  }
+
   const usersRef = collection(db, 'users');
   const q = query(usersRef, where('email', '==', 'anonymous@studyhub.com'));
   try {
     const snap = await getDocs(q);
     const promises = snap.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(promises);
-    console.log(`Programmatic cleanup: purged ${snap.size} registered anonymous@studyhub.com user profiles.`);
-  } catch (error) {
-    console.error("Failed to programmatically purge special student users:", error);
+    if (snap.size > 0) {
+      console.log(`Programmatic cleanup: purged ${snap.size} registered anonymous@studyhub.com user profiles.`);
+    }
+  } catch (error: any) {
+    if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+      console.log("Skipping programmatic purge: user lacks delete/query permissions for users collection.");
+    } else {
+      console.error("Failed to programmatically purge special student users:", error);
+    }
   }
 };
 

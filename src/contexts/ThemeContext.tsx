@@ -54,67 +54,107 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'auto'>('dark');
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'theme'), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data() as ThemeSettings;
+    const unsubTheme = onSnapshot(doc(db, 'settings', 'theme'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as ThemeSettings;
         const mergedTheme = { ...defaultTheme, ...data };
         setTheme(mergedTheme);
-        applyTheme(mergedTheme);
       } else {
-        applyTheme(defaultTheme);
+        setTheme(defaultTheme);
       }
     }, (error) => handleFirestoreError(error, OperationType.GET, 'settings/theme'));
 
-    return () => unsubscribe();
+    const unsubConfig = onSnapshot(doc(db, 'config', 'site'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data && data.defaultThemeMode) {
+          setThemeMode(data.defaultThemeMode);
+        } else {
+          setThemeMode('dark');
+        }
+      }
+    }, (error) => {
+      console.warn("Could not read site config for theme mode, defaulting to dark", error);
+    });
+
+    return () => {
+      unsubTheme();
+      unsubConfig();
+    };
   }, []);
 
-  const applyTheme = (t: ThemeSettings) => {
+  useEffect(() => {
+    applyTheme(theme, themeMode);
+  }, [theme, themeMode]);
+
+  const applyTheme = (t: ThemeSettings, mode: 'light' | 'dark' | 'auto') => {
     const root = document.documentElement;
+    
+    let isLight = false;
+    if (mode === 'light') {
+      isLight = true;
+    } else if (mode === 'auto') {
+      isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    }
+
+    root.classList.toggle('light', isLight);
+    root.classList.toggle('dark', !isLight);
+
+    const finalBg = isLight ? '#f8fafc' : t.darkBg;
+    const finalCard = isLight ? '#ffffff' : t.darkCard;
+    const finalBorder = isLight ? '#e2e8f0' : t.darkBorder;
+    const finalTextPrimary = isLight ? '#0f172a' : t.textPrimary;
+    const finalTextSecondary = isLight ? '#475569' : t.textSecondary;
+
     root.style.setProperty('--neon-blue', t.neonBlue);
     root.style.setProperty('--neon-purple', t.neonPurple);
     root.style.setProperty('--neon-pink', t.neonPink);
     root.style.setProperty('--neon-magenta', t.neonMagenta);
-    root.style.setProperty('--dark-bg', t.darkBg);
-    root.style.setProperty('--dark-card', t.darkCard);
-    root.style.setProperty('--dark-border', t.darkBorder);
-    root.style.setProperty('--text-primary', t.textPrimary);
-    root.style.setProperty('--text-secondary', t.textSecondary);
-    root.style.setProperty('--accent-color', t.accentColor);
+    root.style.setProperty('--dark-bg', finalBg);
+    root.style.setProperty('--dark-card', finalCard);
+    root.style.setProperty('--dark-border', finalBorder);
+    root.style.setProperty('--text-primary', finalTextPrimary);
+    root.style.setProperty('--text-secondary', finalTextSecondary);
+    root.style.setProperty('--accent-color', isLight ? adjustColor(t.accentColor, -30) : t.accentColor);
     root.style.setProperty('--success-color', t.successColor);
     root.style.setProperty('--error-color', t.errorColor);
     root.style.setProperty('--warning-color', t.warningColor);
     root.style.setProperty('--info-color', t.infoColor);
     root.style.setProperty('--watermark-text', t.watermarkText);
     root.style.setProperty('--watermark-size', t.watermarkSize.toString());
-    root.style.setProperty('--watermark-opacity', t.watermarkOpacity.toString());
+    root.style.setProperty('--watermark-opacity', isLight ? '0.04' : t.watermarkOpacity.toString());
     root.style.setProperty('--watermark-rotate', t.watermarkRotate.toString());
     
     // Derived colors
-    root.style.setProperty('--neon-blue-dim', adjustColor(t.neonBlue, -40));
-    root.style.setProperty('--neon-purple-dim', adjustColor(t.neonPurple, -40));
-    root.style.setProperty('--accent-dim', adjustColor(t.accentColor, -40));
+    root.style.setProperty('--neon-blue-dim', adjustColor(t.neonBlue, isLight ? -20 : -40));
+    root.style.setProperty('--neon-purple-dim', adjustColor(t.neonPurple, isLight ? -20 : -40));
+    root.style.setProperty('--accent-dim', adjustColor(t.accentColor, isLight ? -20 : -40));
   };
 
   // Helper to darken/lighten hex colors for derived variables
   const adjustColor = (hex: string, amt: number) => {
-    let usePound = false;
-    if (hex[0] === "#") {
+    if (!hex || typeof hex !== 'string' || hex[0] !== '#') return hex;
+    try {
+      let usePound = true;
       hex = hex.slice(1);
-      usePound = true;
+      const num = parseInt(hex, 16);
+      if (isNaN(num)) return '#' + hex;
+      let r = (num >> 16) + amt;
+      if (r > 255) r = 255;
+      else if (r < 0) r = 0;
+      let b = ((num >> 8) & 0x00FF) + amt;
+      if (b > 255) b = 255;
+      else if (b < 0) b = 0;
+      let g = (num & 0x0000FF) + amt;
+      if (g > 255) g = 255;
+      else if (g < 0) g = 0;
+      return "#" + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+    } catch (_) {
+      return hex;
     }
-    const num = parseInt(hex, 16);
-    let r = (num >> 16) + amt;
-    if (r > 255) r = 255;
-    else if (r < 0) r = 0;
-    let b = ((num >> 8) & 0x00FF) + amt;
-    if (b > 255) b = 255;
-    else if (b < 0) b = 0;
-    let g = (num & 0x0000FF) + amt;
-    if (g > 255) g = 255;
-    else if (g < 0) g = 0;
-    return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
   };
 
   const updateTheme = async (newTheme: Partial<ThemeSettings>) => {

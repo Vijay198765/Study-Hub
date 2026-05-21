@@ -247,8 +247,10 @@ export default function App() {
 
   // Programmatic purge of any existing Special Student/anonymous@studyhub.com documents
   useEffect(() => {
-    purgeSpecialStudentDocs().catch(err => console.error("Purge error on mount:", err));
-  }, []);
+    if (isAdmin) {
+      purgeSpecialStudentDocs().catch(err => console.error("Purge error:", err));
+    }
+  }, [isAdmin]);
 
   // Minimum loading time for the animation
   useEffect(() => {
