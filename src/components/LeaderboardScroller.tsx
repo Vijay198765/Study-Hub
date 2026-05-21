@@ -129,7 +129,10 @@ export default function LeaderboardScroller() {
 
                   {/* Scholar Name - In the middle */}
                   <div className="flex flex-col px-3 min-w-0 py-1">
-                    <span className="text-sm font-display font-black text-white uppercase italic tracking-tight whitespace-normal break-words group-hover:text-neon-blue leading-tight">
+                    <span className={cn(
+                      "text-sm font-display font-black text-white uppercase italic tracking-tight whitespace-normal break-words group-hover:text-neon-blue leading-tight",
+                      idx === 0 && "h-[18px] w-[480px] max-w-full font-mono no-underline text-left text-[16px]"
+                    )}>
                       {user.name || 'Anonymous Scholar'}
                     </span>
                     {idx === 0 && <span className="text-[7px] text-yellow-400 font-bold uppercase tracking-widest mt-0.5">Top Contributor</span>}
