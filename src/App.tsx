@@ -342,8 +342,11 @@ export default function App() {
             // Side-effect updates (IP, photo, name, secret upgrade)
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
-            if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
+            if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden && !isMainAdmin) {
               updates.photoURL = convertDriveUrl(activeUser.photoURL);
+            }
+            if (isMainAdmin && !profileData.photoURLOverridden) {
+              updates.photoURLOverridden = true;
             }
             if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
@@ -376,11 +379,6 @@ export default function App() {
               if (profileData.name !== 'Hania Aamir') {
                 updates.name = 'Hania Aamir';
               }
-            }
-
-            // Also ensure main admin photo is always synced from Google if not overridden
-            if (isMainAdmin && activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
-              updates.photoURL = convertDriveUrl(activeUser.photoURL);
             }
 
             // Upgrade anonymous user to admin if they have the special login flags

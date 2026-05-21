@@ -6,7 +6,7 @@ import { Class, Subject } from '../types';
 import { getClasses, getSubjectsByClass } from '../services/dataService';
 import { Skeleton } from '../components/Skeleton';
 import { db } from '../firebase';
-import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { convertDriveUrl } from '../lib/utils';
 
 export default function ClassDetail() {
@@ -19,8 +19,15 @@ export default function ClassDetail() {
   useEffect(() => {
     const q = query(
       collection(db, 'users'),
-      where('email', 'in', ['vijayninama683@gmail.com', 'Vijayninama683@gmail.com']),
-      limit(1)
+      where('email', 'in', [
+        'vijayninama683@gmail.com',
+        'Vijayninama683@gmail.com',
+        'vijayNinama683@gmail.com',
+        'VijayNinama683@gmail.com',
+        'VIJAYNINAMA683@gmail.com',
+        'tagoreteam2025@gmail.com',
+        'Tagoreteam2025@gmail.com'
+      ])
     );
     const unsubscribe = onSnapshot(q, (snap) => {
       if (!snap.empty) {
@@ -29,7 +36,32 @@ export default function ClassDetail() {
           photoURL: docData.photoURL,
           name: docData.name || 'Vijay'
         });
+      } else {
+        // Fallback: search for users with 'admin' role
+        const qRole = query(
+          collection(db, 'users'),
+          where('role', '==', 'admin'),
+          limit(5)
+        );
+        getDocs(qRole).then((adminSnap) => {
+          if (!adminSnap.empty) {
+            const matchDoc = adminSnap.docs.find(d => {
+              const email = (d.data().email || '').toLowerCase();
+              return email === 'vijayninama683@gmail.com' || email === 'tagoreteam2025@gmail.com';
+            }) || adminSnap.docs[0];
+            
+            const docData = matchDoc.data();
+            setAdminUser({
+              photoURL: docData.photoURL,
+              name: docData.name || 'Vijay'
+            });
+          }
+        }).catch(err => {
+          console.warn('Fallback admin query failed:', err);
+        });
       }
+    }, (error) => {
+      console.warn('Admin user listener error:', error);
     });
     return () => unsubscribe();
   }, []);
@@ -116,8 +148,11 @@ export default function ClassDetail() {
                     <img 
                       src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
                       alt="Vijay Avatar" 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center aspect-square rounded-full"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay";
+                      }}
                     />
                   </div>
                 </div>
