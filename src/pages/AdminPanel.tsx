@@ -5266,6 +5266,27 @@ export default function AdminPanel() {
                               <span className="text-xs font-black uppercase tracking-widest">Override Photo URL</span>
                             </button>
 
+                            <button 
+                              onClick={async () => {
+                                const user = users.find(u => u.uid === selectedIdentityUid);
+                                if (!user) return;
+                                if (confirm(`Reset and Sync ${user.name}'s DP with Gmail account?\n\nThis will remove any custom overrides and re-fetch the profile picture on next sync/refresh.`)) {
+                                  await saveUser({ 
+                                    ...user, 
+                                    photoURLOverridden: false,
+                                    photoURL: '' // Clear photo to force re-fetch from Google info
+                                  });
+                                  setToast({ message: 'Reset custom photo! Google sync activated.', type: 'success' });
+                                }
+                              }}
+                              className="flex flex-col items-center justify-center gap-3 p-6 bg-emerald-600/10 border border-emerald-600/20 rounded-2xl hover:bg-emerald-600/20 transition-all group"
+                            >
+                              <div className="p-3 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition-transform">
+                                <RefreshCcw size={24} />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest">Sync Gmail DP</span>
+                            </button>
+
                             {/* Decoy buttons for normal admins */}
                             {(isAdmin || isSuperAdmin) && (
                               <>

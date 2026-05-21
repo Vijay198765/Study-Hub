@@ -5,12 +5,34 @@ import { Book, ArrowLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { Class, Subject } from '../types';
 import { getClasses, getSubjectsByClass } from '../services/dataService';
 import { Skeleton } from '../components/Skeleton';
+import { db } from '../firebase';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { convertDriveUrl } from '../lib/utils';
 
 export default function ClassDetail() {
   const { classId } = useParams();
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminUser, setAdminUser] = useState<{ photoURL?: string; name?: string } | null>(null);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'users'),
+      where('email', 'in', ['vijayninama683@gmail.com', 'Vijayninama683@gmail.com']),
+      limit(1)
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        const docData = snap.docs[0].data();
+        setAdminUser({
+          photoURL: docData.photoURL,
+          name: docData.name || 'Vijay'
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribeClasses = getClasses(setClasses);
@@ -87,26 +109,39 @@ export default function ClassDetail() {
                 </span>
               </div>
               
-              <div className="flex items-center gap-3 bg-zinc-950/80 border border-white/5 hover:border-emerald-500/20 px-5 py-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(52,211,153,0.05)] transition-all">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.2)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" fill="#F2F2F2" />
-                    <path d="M20 4H16V14L20 11V4Z" fill="#C5221F" />
-                    <path d="M4 4H8V14L4 11V4Z" fill="#B31412" />
-                    <path d="M20 4L12 11L4 4V6L12 13L20 6V4Z" fill="#EA4335" />
-                    <path d="M2 6V18C2 19.1 2.9 20 4 20H8V11L2 6Z" fill="#4285F4" />
-                    <path d="M22 6V18C2 19.1 21.1 20 20 20H16V11L22 6Z" fill="#34A853" />
-                  </svg>
-                  <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Support</span>
+              <div className="flex items-center gap-4 bg-zinc-950/80 border border-white/5 hover:border-emerald-500/20 px-5 py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(52,211,153,0.05)] transition-all">
+                {/* User's DP profile logo to the left of the Gmail icons */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 p-[1.5px] shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform duration-200">
+                  <div className="w-full h-full rounded-full bg-zinc-950 overflow-hidden relative">
+                    <img 
+                      src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
+                      alt="Vijay Avatar" 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
                 </div>
-                <div className="h-4 w-px bg-white/10" />
-                <a 
-                  href="mailto:vijayninama683@gmail.com" 
-                  className="text-xs font-mono font-medium text-white/80 hover:text-neon-blue transition-all"
-                  title="Contact Support via Gmail"
-                >
-                  vijayninama683@gmail.com
-                </a>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.2)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" fill="#F2F2F2" />
+                      <path d="M20 4H16V14L20 11V4Z" fill="#C5221F" />
+                      <path d="M4 4H8V14L4 11V4Z" fill="#B31412" />
+                      <path d="M20 4L12 11L4 4V6L12 13L20 6V4Z" fill="#EA4335" />
+                      <path d="M2 6V18C2 19.1 2.9 20 4 20H8V11L2 6Z" fill="#4285F4" />
+                      <path d="M22 6V18C2 19.1 21.1 20 20 20H16V11L22 6Z" fill="#34A853" />
+                    </svg>
+                    <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Support</span>
+                  </div>
+                  <a 
+                    href="mailto:vijayninama683@gmail.com" 
+                    className="text-xs font-mono font-medium text-white/80 hover:text-neon-blue transition-all"
+                    title="Contact Support via Gmail"
+                  >
+                    vijayninama683@gmail.com
+                  </a>
+                </div>
               </div>
             </div>
           </div>

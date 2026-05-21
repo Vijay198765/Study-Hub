@@ -297,13 +297,22 @@ export default function App() {
       const isAdminLogin = localStorage.getItem('isAdminLogin') === 'true';
 
       if (firebaseUser) {
+        // Force reload to get the latest Google profile picture (photoURL)
+        try {
+          await firebaseUser.reload();
+          setUser(auth.currentUser);
+        } catch (reloadErr) {
+          console.warn("Could not reload firebase user details:", reloadErr);
+        }
+        const activeUser = auth.currentUser || firebaseUser;
+
         // Fetch IP address - Use the shared function
         let detectedIp = userIp || 'unknown';
         if (detectedIp === 'unknown') {
           detectedIp = await getIp();
         }
 
-        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userRef = doc(db, 'users', activeUser.uid);
         
         try {
           // 1. Initial Profile Setup/Upgrade (one-time action)
@@ -333,26 +342,26 @@ export default function App() {
             // Side-effect updates (IP, photo, name, secret upgrade)
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
-            if (firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
-              updates.photoURL = convertDriveUrl(firebaseUser.photoURL);
+            if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
+              updates.photoURL = convertDriveUrl(activeUser.photoURL);
             }
-            if (firebaseUser.displayName && !profileData.name) updates.name = firebaseUser.displayName;
+            if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
             
             // Save detailed Gmail/Google account information
-            const isGoogleProv = firebaseUser.providerData?.some((p: any) => p.providerId === 'google.com') || firebaseUser.email?.endsWith('@gmail.com');
+            const isGoogleProv = activeUser.providerData?.some((p: any) => p.providerId === 'google.com') || activeUser.email?.endsWith('@gmail.com');
             if (isGoogleProv) {
               if (profileData.isGmailUser !== true) updates.isGmailUser = true;
-              if (profileData.emailVerified !== firebaseUser.emailVerified) updates.emailVerified = firebaseUser.emailVerified;
-              if (firebaseUser.metadata?.creationTime && profileData.gmailCreatedAt !== firebaseUser.metadata.creationTime) {
-                updates.gmailCreatedAt = firebaseUser.metadata.creationTime;
+              if (profileData.emailVerified !== activeUser.emailVerified) updates.emailVerified = activeUser.emailVerified;
+              if (activeUser.metadata?.creationTime && profileData.gmailCreatedAt !== activeUser.metadata.creationTime) {
+                updates.gmailCreatedAt = activeUser.metadata.creationTime;
               }
-              if (firebaseUser.metadata?.lastSignInTime && profileData.gmailLastSignIn !== firebaseUser.metadata.lastSignInTime) {
-                updates.gmailLastSignIn = firebaseUser.metadata.lastSignInTime;
+              if (activeUser.metadata?.lastSignInTime && profileData.gmailLastSignIn !== activeUser.metadata.lastSignInTime) {
+                updates.gmailLastSignIn = activeUser.metadata.lastSignInTime;
               }
-              if (firebaseUser.displayName && profileData.googleDisplayName !== firebaseUser.displayName) {
-                updates.googleDisplayName = firebaseUser.displayName;
+              if (activeUser.displayName && profileData.googleDisplayName !== activeUser.displayName) {
+                updates.googleDisplayName = activeUser.displayName;
               }
             }
             
@@ -370,13 +379,13 @@ export default function App() {
             }
 
             // Also ensure main admin photo is always synced from Google if not overridden
-            if (isMainAdmin && firebaseUser.photoURL && profileData.photoURL !== firebaseUser.photoURL && !profileData.photoURLOverridden) {
-              updates.photoURL = convertDriveUrl(firebaseUser.photoURL);
+            if (isMainAdmin && activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
+              updates.photoURL = convertDriveUrl(activeUser.photoURL);
             }
 
             // Upgrade anonymous user to admin if they have the special login flags
             let forceUpgrade = false;
-            if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
+            if (activeUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
               updates.adminKey = siteConfig?.secretLoginKey || '7117';
               updates.name = localStorage.getItem('studentName') || 'Guest';
@@ -386,7 +395,7 @@ export default function App() {
             }
 
             if (Object.keys(updates).length > 0) {
-              if (!firebaseUser.isAnonymous) {
+              if (!activeUser.isAnonymous) {
                 await updateDoc(userRef, updates);
               }
               // Merge updates into profileData for immediate state use
@@ -399,17 +408,17 @@ export default function App() {
           } else {
             // New user doc creation
             const adminEmails = ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'];
-            const isDefaultAdmin = adminEmails.includes(firebaseUser.email?.toLowerCase() || '');
-            const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
+            const isDefaultAdmin = adminEmails.includes(activeUser.email?.toLowerCase() || '');
+            const isSecretLogin = activeUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
             let role = (isDefaultAdmin || isSecretLogin) ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (firebaseUser.isAnonymous ? (localStorage.getItem('studentName') || 'Guest') : 'Student');
+            let name = activeUser.displayName || (activeUser.isAnonymous ? (localStorage.getItem('studentName') || 'Guest') : 'Student');
             
-            if (isDefaultAdmin && !firebaseUser.displayName) {
+            if (isDefaultAdmin && !activeUser.displayName) {
               name = 'Vijay Admin';
             }
             
-            if (firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
+            if (activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
               name = 'Hania Aamir';
             }
 
@@ -424,13 +433,13 @@ export default function App() {
               };
             }
 
-            const isGoogleProv = firebaseUser.providerData?.some((p: any) => p.providerId === 'google.com') || firebaseUser.email?.endsWith('@gmail.com');
+            const isGoogleProv = activeUser.providerData?.some((p: any) => p.providerId === 'google.com') || activeUser.email?.endsWith('@gmail.com');
 
             profileData = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
+              uid: activeUser.uid,
+              email: activeUser.email || '',
               name: name,
-              photoURL: firebaseUser.photoURL || '',
+              photoURL: activeUser.photoURL || '',
               role: role,
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
@@ -439,13 +448,13 @@ export default function App() {
               isSecret: isSecretLogin,
               secretLoginLogged: isSecretLogin,
               isGmailUser: isGoogleProv,
-              emailVerified: firebaseUser.emailVerified || false,
-              gmailCreatedAt: firebaseUser.metadata?.creationTime || null,
-              gmailLastSignIn: firebaseUser.metadata?.lastSignInTime || null,
-              googleDisplayName: firebaseUser.displayName || '',
+              emailVerified: activeUser.emailVerified || false,
+              gmailCreatedAt: activeUser.metadata?.creationTime || null,
+              gmailLastSignIn: activeUser.metadata?.lastSignInTime || null,
+              googleDisplayName: activeUser.displayName || '',
               ...extraData
             };
-            if (!firebaseUser.isAnonymous) {
+            if (!activeUser.isAnonymous) {
               await setDoc(userRef, profileData);
             }
           }
@@ -453,15 +462,15 @@ export default function App() {
           // 2. Set Initial Local State
           setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
           const isUserAdmin = profileData.role === 'admin' || 
-                             firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                             firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+                             activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                             activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
           setIsAdmin(isUserAdmin);
           
           // Only treat as special admin if it was a secret login session
           setIsSpecialAdmin(isSpecial || (profileData.isSecret && profileData.secretLoginLogged));
 
           // 3. Log activity - Skip for secret logins and vijayninama683@gmail.com
-          if (!isSpecial && firebaseUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
+          if (!isSpecial && activeUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
              const deviceInfo = {
                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
                platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',
@@ -470,7 +479,7 @@ export default function App() {
              };
 
              addDoc(collection(db, 'activityLogs'), {
-               userId: firebaseUser.uid,
+               userId: activeUser.uid,
                userName: profileData.name || 'Anonymous',
                userEmail: profileData.email || 'N/A',
                action: 'Session Started',
@@ -484,10 +493,10 @@ export default function App() {
           }
 
           // 4. Listen for User Messages
-          if (firebaseUser) {
+          if (activeUser) {
             const q = query(
-              collection(db, 'userMessages'), 
-              where('userId', 'in', [firebaseUser.uid, 'all'])
+               collection(db, 'userMessages'), 
+               where('userId', 'in', [activeUser.uid, 'all'])
             );
             unsubscribeMessages = onSnapshot(q, {
               next: (snap) => {
@@ -525,8 +534,8 @@ export default function App() {
                 const data = snap.data();
                 setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
                 const isUserAdmin = data.role === 'admin' || 
-                                   firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                                   firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+                                   activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                                   activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
                 setIsAdmin(isUserAdmin);
                 // Hide special status from local state if it's a main admin to be less conspicuous? 
                 // No, we need it for permissions, but we'll hide them from UI lists.
@@ -534,7 +543,7 @@ export default function App() {
               }
             },
             error: (error) => {
-              handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+              handleFirestoreError(error, OperationType.GET, `users/${activeUser.uid}`);
             }
           });
 
@@ -543,15 +552,15 @@ export default function App() {
             console.warn("Profile setup: Client is currently offline. Relying on background listeners once online.");
             // Set a basic temporary profile so the app doesn't stay in a broken state
             const tempProfile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              name: firebaseUser.displayName || 'Guest',
+              uid: activeUser.uid,
+              email: activeUser.email || '',
+              name: activeUser.displayName || 'Guest',
               role: 'student',
               isOffline: true
             };
             setUserProfile(tempProfile);
-            const isUserAdmin = firebaseUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                               firebaseUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+            const isUserAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
+                               activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
             setIsAdmin(isUserAdmin);
           } else {
             console.error("Critical error in user profile setup:", safeStringify(error));
