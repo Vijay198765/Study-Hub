@@ -2326,7 +2326,7 @@ export default function AdminPanel() {
                     const csvData = users
                       .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
                       .map(u => [
-                        u.name || 'Special Student',
+                        u.name || 'Guest',
                         u.email,
                         u.role,
                         u.totalTimeSpent || 0,
@@ -2361,8 +2361,8 @@ export default function AdminPanel() {
                 <button 
                   onClick={() => {
                     setConfirmAction({
-                      title: 'Purge Anonymous Users',
-                      message: 'Are you sure you want to delete ALL users with the email anonymous@studyhub.com? This will remove guest profiles from the dashboard.',
+                      title: 'Purge Legacy Anonymous Users',
+                      message: 'Are you sure you want to delete ALL legacy profiles with the email anonymous@studyhub.com? This will remove outdated records from the dashboard.',
                       onConfirm: async () => {
                         try {
                           const anonymousUsers = users.filter(u => u.email === 'anonymous@studyhub.com');
@@ -2426,7 +2426,7 @@ export default function AdminPanel() {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-white font-medium">
-                                {user.name || 'Special Student'}
+                                {user.name || 'Guest'}
                               </span>
                             </div>
                           </div>
@@ -3078,7 +3078,7 @@ export default function AdminPanel() {
                         return [
                           dateObj.toLocaleDateString(),
                           dateObj.toLocaleTimeString(),
-                          log.userName || 'Special Student',
+                          log.userName || 'Guest',
                           log.userEmail || 'N/A',
                           log.action,
                           log.ip || log.deviceInfo?.ip || 'N/A',
@@ -3167,7 +3167,7 @@ export default function AdminPanel() {
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-col">
-                            <span className="text-white text-xs font-medium">{log.userName || 'Special Student'}</span>
+                            <span className="text-white text-xs font-medium">{log.userName || 'Guest'}</span>
                             <span className="text-[10px] text-white/40 truncate max-w-[150px]">{log.userEmail || 'N/A'}</span>
                           </div>
                         </td>

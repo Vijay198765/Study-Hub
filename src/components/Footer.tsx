@@ -62,7 +62,7 @@ export default function Footer({ siteConfig }: FooterProps) {
       try {
         console.log("Secret key matches! Setting flags and signing in anonymously...");
         localStorage.setItem('isSpecialLogin', 'true');
-        localStorage.setItem('studentName', matchedProfile ? matchedProfile.label : 'Special Student');
+        localStorage.setItem('studentName', matchedProfile ? matchedProfile.label : 'Guest');
         localStorage.setItem('isAdminLogin', 'true'); // Changed to true to enable dashboard visibility
         localStorage.setItem('hasSkippedLogin', 'false');
         
@@ -91,18 +91,6 @@ export default function Footer({ siteConfig }: FooterProps) {
         const user = userCredential.user;
 
         if (user) {
-          const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, {
-            uid: user.uid,
-            email: 'anonymous@studyhub.com',
-            name: matchedProfile ? matchedProfile.label : 'Special Student',
-            role: 'student',
-            adminKey: secretKey,
-            isLegend: true,
-            updatedAt: serverTimestamp(),
-            secretLoginLogged: true
-          }, { merge: true });
-          
           toast.success('Special access granted!');
           // Small delay to ensure auth state is persisted before redirect
           setTimeout(() => {

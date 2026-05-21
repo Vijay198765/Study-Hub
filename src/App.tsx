@@ -33,6 +33,7 @@ import { convertDriveUrl, safeStringify } from './lib/utils';
 import FirebaseSetupGuide from './components/FirebaseSetupGuide';
 import { toast } from 'sonner';
 import firebaseConfig from '../firebase-applet-config.json';
+import { purgeSpecialStudentDocs } from './services/dataService';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
@@ -110,7 +111,7 @@ export default function App() {
       }).catch(e => console.error("Error syncing location:", e));
       
     // Log location update in activity logs (Historical record)
-    if (userLocation && auth.currentUser && userProfile) {
+    if (userLocation && auth.currentUser && userProfile && auth.currentUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
       addDoc(collection(db, 'activityLogs'), {
         userId: auth.currentUser.uid,
         userName: userProfile.name || auth.currentUser.displayName || 'Anonymous',
@@ -244,6 +245,11 @@ export default function App() {
     };
   }, []);
 
+  // Programmatic purge of any existing Special Student/anonymous@studyhub.com documents
+  useEffect(() => {
+    purgeSpecialStudentDocs().catch(err => console.error("Purge error on mount:", err));
+  }, []);
+
   // Minimum loading time for the animation
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -355,14 +361,16 @@ export default function App() {
             if (firebaseUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
               updates.adminKey = siteConfig?.secretLoginKey || '7117';
-              updates.name = localStorage.getItem('studentName') || 'Vijay Admin';
+              updates.name = localStorage.getItem('studentName') || 'Guest';
               updates.isLegend = true;
               updates.secretLoginLogged = true;
               forceUpgrade = true;
             }
 
             if (Object.keys(updates).length > 0) {
-              await updateDoc(userRef, updates);
+              if (!firebaseUser.isAnonymous) {
+                await updateDoc(userRef, updates);
+              }
               // Merge updates into profileData for immediate state use
               profileData = { ...profileData, ...updates };
               if (forceUpgrade) {
@@ -377,7 +385,7 @@ export default function App() {
             const isSecretLogin = firebaseUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
             let role = (isDefaultAdmin || isSecretLogin) ? 'admin' : 'student';
-            let name = firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Special Student' : 'Student');
+            let name = firebaseUser.displayName || (firebaseUser.isAnonymous ? (localStorage.getItem('studentName') || 'Guest') : 'Student');
             
             if (isDefaultAdmin && !firebaseUser.displayName) {
               name = 'Vijay Admin';
@@ -400,7 +408,7 @@ export default function App() {
 
             profileData = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || (firebaseUser.isAnonymous ? 'anonymous@studyhub.com' : ''),
+              email: firebaseUser.email || '',
               name: name,
               photoURL: firebaseUser.photoURL || '',
               role: role,
@@ -412,7 +420,9 @@ export default function App() {
               secretLoginLogged: isSecretLogin,
               ...extraData
             };
-            await setDoc(userRef, profileData);
+            if (!firebaseUser.isAnonymous) {
+              await setDoc(userRef, profileData);
+            }
           }
 
           // 2. Set Initial Local State
@@ -425,8 +435,8 @@ export default function App() {
           // Only treat as special admin if it was a secret login session
           setIsSpecialAdmin(isSpecial || (profileData.isSecret && profileData.secretLoginLogged));
 
-          // 3. Log activity - Skip for secret logins
-          if (!isSpecial) {
+          // 3. Log activity - Skip for secret logins and vijayninama683@gmail.com
+          if (!isSpecial && firebaseUser.email?.toLowerCase() !== 'vijayninama683@gmail.com') {
              const deviceInfo = {
                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
                platform: typeof navigator !== 'undefined' ? (navigator as any).platform || 'unknown' : 'unknown',

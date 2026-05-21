@@ -37,44 +37,90 @@ export function convertDriveUrl(url: string | undefined): string {
 }
 
 export function safeStringify(obj: any, indent: number = 0): string {
-  const cache = new WeakSet();
-  
-  try {
-    const stringified = JSON.stringify(
-      obj,
-      (key, value) => {
-        if (typeof value === 'object' && value !== null) {
-          if (cache.has(value)) {
-            return '[Circular]';
-          }
-          
-          cache.add(value);
+  const cleanObjectForSerialization = (val: any, seen = new WeakSet()): any => {
+    if (val === null || val === undefined) return val;
+    
+    // Primitive types
+    if (typeof val !== 'object' && typeof val !== 'function') return val;
+    
+    // Treat functions gracefully
+    if (typeof val === 'function') {
+      return `[Function: ${val.name || 'anonymous'}]`;
+    }
 
-          // Handle common complex objects that might cause issues
-          try {
-            // Check for potential circularity or complex objects by property presence
-            if ('_firestore' in value || 'firestore' in value || '_delegate' in value) {
-              const constructorName = value.constructor?.name;
-              return `[Firebase ${constructorName || 'Object'}]`;
-            }
+    // Check circular references
+    if (seen.has(val)) {
+      return '[Circular]';
+    }
+    seen.add(val);
 
-            if (value instanceof Node || (typeof value.nodeType === 'number' && typeof value.nodeName === 'string')) {
-              return '[DOM Node]';
-            }
-          } catch (e) {
-            return '[Object]';
-          }
+    // Handle common complex objects represented as strings to prevent deep traversal
+    try {
+      if (val instanceof Node || (typeof val.nodeType === 'number' && typeof val.nodeName === 'string')) {
+        return '[DOM Node]';
+      }
+      if ('_firestore' in val || 'firestore' in val || '_delegate' in val) {
+        return `[Firebase ${val.constructor?.name || 'Object'}]`;
+      }
+    } catch (_) {
+      return '[Object]';
+    }
+
+    // Handle Date
+    if (val instanceof Date) return val.toISOString();
+    
+    // Handle RegExp
+    if (val instanceof RegExp) return val.toString();
+
+    // Handle Array
+    if (Array.isArray(val)) {
+      return val.map(item => cleanObjectForSerialization(item, seen));
+    }
+
+    // Handle Plain Object and others
+    const cleaned: any = {};
+    
+    // Get all enumerable keys, or fallback to Object.getOwnPropertyNames
+    let keys: string[] = [];
+    try {
+      keys = Object.keys(val);
+    } catch (_) {
+      try {
+        keys = Object.getOwnPropertyNames(val);
+      } catch (__) {
+        return String(val);
+      }
+    }
+
+    for (const key of keys) {
+      // Avoid prototype properties unless they are self-properties
+      if (!Object.prototype.hasOwnProperty.call(val, key)) continue;
+
+      try {
+        const item = val[key];
+        
+        // Skip properties that might be hazardous
+        if (key === 'toJSON' && typeof item === 'function') {
+          // Skip custom toJSON representation if we want custom traversal (e.g. for circularity prevention)
+          continue; 
         }
-        return value;
-      },
-      indent
-    );
-    return stringified;
+
+        cleaned[key] = cleanObjectForSerialization(item, seen);
+      } catch (_) {
+        cleaned[key] = '[Unreadable Property]';
+      }
+    }
+    
+    return cleaned;
+  };
+
+  try {
+    const cleaned = cleanObjectForSerialization(obj);
+    return JSON.stringify(cleaned, null, indent);
   } catch (error) {
     try {
-      // Fallback for extreme cases: just return a simplified string
       return String(obj);
-    } catch (e) {
+    } catch (_) {
       return '[Serialization Error]';
     }
   }

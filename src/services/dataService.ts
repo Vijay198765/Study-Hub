@@ -7,7 +7,8 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  getDocs
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { convertDriveUrl } from '../lib/utils';
@@ -251,6 +252,12 @@ export const getUsers = (callback: (users: User[]) => void) => {
 };
 
 export const saveUser = async (user: User) => {
+  // If anonymous or has Special Student name/email, do not save it
+  if (user.email?.toLowerCase() === 'anonymous@studyhub.com' || user.name === 'Special Student') {
+    console.log("Skipping saving special student/anonymous profile to Firestore.");
+    return;
+  }
+
   const path = `users/${user.uid}`;
   
   // Sanitize photo URL if it's a Drive link
@@ -263,14 +270,23 @@ export const saveUser = async (user: User) => {
     user.name = 'Hania Aamir';
   }
 
-  if (user.email?.toLowerCase() === 'anonymous@studyhub.com' && !user.name) {
-    user.name = 'Special Student';
-  }
-
   try {
     await setDoc(doc(db, 'users', user.uid), cleanData(user));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const purgeSpecialStudentDocs = async () => {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('email', '==', 'anonymous@studyhub.com'));
+  try {
+    const snap = await getDocs(q);
+    const promises = snap.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(promises);
+    console.log(`Programmatic cleanup: purged ${snap.size} registered anonymous@studyhub.com user profiles.`);
+  } catch (error) {
+    console.error("Failed to programmatically purge special student users:", error);
   }
 };
 
