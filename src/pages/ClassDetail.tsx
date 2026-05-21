@@ -79,11 +79,35 @@ export default function ClassDetail() {
               <h1 className="text-5xl font-display font-bold mb-2">{currentClass.name}</h1>
               <p className="text-white/50">Select a subject to view chapters and study materials.</p>
             </div>
-            <div className="flex items-center gap-4 bg-black px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(0,242,255,0.1)]">
-              <GraduationCap className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,242,255,0.5)]" />
-              <span className="font-medium text-white/80">
-                <span className="text-neon-blue font-bold drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">{enabledSubjects.length}</span> Subjects Available
-              </span>
+            <div className="flex flex-col items-stretch md:items-end gap-3 shrink-0">
+              <div className="flex items-center gap-4 bg-black px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(0,242,255,0.1)]">
+                <GraduationCap className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,242,255,0.5)]" />
+                <span className="font-medium text-white/80">
+                  <span className="text-neon-blue font-bold drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">{enabledSubjects.length}</span> Subjects Available
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-zinc-950/80 border border-white/5 hover:border-emerald-500/20 px-5 py-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(52,211,153,0.05)] transition-all">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.2)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" fill="#F2F2F2" />
+                    <path d="M20 4H16V14L20 11V4Z" fill="#C5221F" />
+                    <path d="M4 4H8V14L4 11V4Z" fill="#B31412" />
+                    <path d="M20 4L12 11L4 4V6L12 13L20 6V4Z" fill="#EA4335" />
+                    <path d="M2 6V18C2 19.1 2.9 20 4 20H8V11L2 6Z" fill="#4285F4" />
+                    <path d="M22 6V18C2 19.1 21.1 20 20 20H16V11L22 6Z" fill="#34A853" />
+                  </svg>
+                  <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Support</span>
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <a 
+                  href="mailto:vijayninama683@gmail.com" 
+                  className="text-xs font-mono font-medium text-white/80 hover:text-neon-blue transition-all"
+                  title="Contact Support via Gmail"
+                >
+                  vijayninama683@gmail.com
+                </a>
+              </div>
             </div>
           </div>
         </div>
