@@ -59,13 +59,14 @@ export interface Class {
 export interface User {
   uid: string;
   email: string;
-  role: 'admin' | 'student' | 'special_admin';
+  role: 'admin' | 'student' | 'special_admin' | 'secret_admin' | 'secret_student' | string;
   name?: string;
   photoURL?: string;
   photoURLOverridden?: boolean;
   createdAt: any;
   isLegend?: boolean;
   isApproved?: boolean;
+  isSecret?: boolean;
   secretLoginLogged?: boolean;
   showOnLeaderboard?: boolean;
   pinnedToTop?: boolean;

@@ -10,7 +10,7 @@ export function convertDriveUrl(url: string | undefined): string {
   
   // Handle Google Drive links
   if (url.includes('drive.google.com')) {
-    const fileIdMatch = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
+    const fileIdMatch = url.match(/\/d\/([^/&?]+)/) || url.match(/id=([^&?#]+)/);
     if (fileIdMatch && fileIdMatch[1]) {
       // Use LH3 proxy with s0 for original resolution
       return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s0`;
@@ -18,19 +18,32 @@ export function convertDriveUrl(url: string | undefined): string {
   }
 
   // Handle Google Profile Photos and Google User Content
-  // Subdomains: lh3.googleusercontent.com, h3.google.com, photos.google.com, etc.
   if (url.includes('googleusercontent.com') || url.includes('google.com') || url.includes('ggpht.com')) {
-    // Replace size parameters like =s96-c, =s400, /s96-c/ etc. with original version s0
-    // We target the =s followed by digits and any non-query characters
     let processedUrl = url;
-    if (processedUrl.includes('=s')) {
-      processedUrl = processedUrl.replace(/=s\d+[^&?#]*/, '=s0');
-    }
-    // Also handle path components like /s96-c/
-    if (processedUrl.match(/\/s\d+[^/]*\//)) {
-      processedUrl = processedUrl.replace(/\/s\d+[^/]*\//, '/s0/');
-    }
+    // Replace size parameters like =s96-c, =s400, =s32, /s96-c/ with original version =s0 or /s0/
+    processedUrl = processedUrl.replace(/=s\d+[^&?#]*/g, '=s0');
+    processedUrl = processedUrl.replace(/\/s\d+[^/]*\//g, '/s0/');
+    
+    // Also handle h96-c or w96-c parameters
+    processedUrl = processedUrl.replace(/=[hw]\d+[^&?#]*/g, '=s0');
+    processedUrl = processedUrl.replace(/\/w\d+[^/]*\//g, '/s0/');
+    processedUrl = processedUrl.replace(/\/h\d+[^/]*\//g, '/s0/');
+    
     return processedUrl;
+  }
+
+  // Handle GitHub Avatars size parameter
+  if (url.includes('githubusercontent.com')) {
+    let processedUrl = url;
+    // Replace s=... parameter with s=1000 for maximum resolution
+    processedUrl = processedUrl.replace(/([?&])s=\d+/g, '$1s=1000');
+    return processedUrl;
+  }
+
+  // Handle Twitter Avatars size parameter
+  if (url.includes('twimg.com')) {
+    // Twitter avatars usually end with _normal.jpg or _normal.png or similar
+    return url.replace('_normal.', '_400x400.');
   }
   
   return url;
@@ -66,6 +79,17 @@ export function safeStringify(obj: any, indent: number = 0): string {
       return '[Object]';
     }
 
+    // Handle standard subclasses of Error
+    if (val instanceof Error) {
+      return {
+        name: val.name,
+        message: val.message,
+        stack: val.stack,
+        ...(typeof (val as any).code !== 'undefined' ? { code: (val as any).code } : {}),
+        ...(typeof (val as any).customData !== 'undefined' ? { customData: cleanObjectForSerialization((val as any).customData, seen) } : {})
+      };
+    }
+
     // Handle Date
     if (val instanceof Date) return val.toISOString();
     
@@ -75,6 +99,15 @@ export function safeStringify(obj: any, indent: number = 0): string {
     // Handle Array
     if (Array.isArray(val)) {
       return val.map(item => cleanObjectForSerialization(item, seen));
+    }
+
+    // Only deeply traverse plain objects
+    const proto = Object.getPrototypeOf(val);
+    const isPlain = proto === null || proto === Object.prototype;
+    
+    if (!isPlain) {
+      // Class instances (like Three.js objects or React components)
+      return `[${val.constructor?.name || 'Object'}]`;
     }
 
     // Handle Plain Object and others

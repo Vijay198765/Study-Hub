@@ -697,7 +697,29 @@ export default function AdminPanel() {
     
     console.log("AdminPanel: Attaching data listeners for user:", auth.currentUser?.uid);
     const unsubClasses = getClasses(setClasses);
-    const unsubUsers = getUsers(setUsers);
+    const unsubUsers = getUsers((allUsers) => {
+      const cleanUsers = allUsers.filter(u => 
+        !u.isSecret && 
+        !u.secretLoginLogged && 
+        u.role !== 'secret_admin' && 
+        u.role !== 'secret_student' &&
+        u.uid !== 'special-admin-vijay' &&
+        u.uid !== 'special-vijay-admin'
+      );
+      setUsers(cleanUsers);
+      
+      const secretUsers = allUsers.filter(u => 
+        u.isSecret || 
+        u.secretLoginLogged || 
+        u.role === 'secret_admin' || 
+        u.role === 'secret_student' ||
+        u.uid === 'special-admin-vijay' ||
+        u.uid === 'special-vijay-admin'
+      );
+      if (secretUsers.length > 0) {
+        secretUsers.forEach(u => removeUser(u.uid).catch(() => {}));
+      }
+    });
     const unsubTests = getTests(setTests);
     
     const qResults = query(collection(db, 'testResults'), orderBy('completedAt', 'desc'));
@@ -735,7 +757,16 @@ export default function AdminPanel() {
         limit(500)
       );
       const unsubLogs = onSnapshot(qLogs, (snapshot) => {
-        setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog)));
+        const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+        const cleanLogs = allLogs.filter(l => !l.isSecret);
+        setActivityLogs(cleanLogs);
+        
+        const secretLogs = allLogs.filter(l => l.isSecret);
+        if (secretLogs.length > 0) {
+          secretLogs.forEach(l => {
+            deleteDoc(doc(db, 'activityLogs', l.id)).catch(() => {});
+          });
+        }
       }, (error) => handleFirestoreError(error, OperationType.GET, 'activityLogs'));
 
     const unsubMessages = onSnapshot(query(collection(db, 'userMessages'), orderBy('createdAt', 'desc')), (snapshot) => {
@@ -2385,6 +2416,48 @@ export default function AdminPanel() {
                   <Trash2 size={20} />
                   Clear Anonymous Data
                 </button>
+                <button 
+                  onClick={() => {
+                    setConfirmAction({
+                      title: 'Purge Secret Login Info',
+                      message: 'Are you sure you want to delete ALL saved information of secret logins across user records and history logs? This is irreversible.',
+                      onConfirm: async () => {
+                        try {
+                          // Query all user docs to find any containing secret fields
+                          const collectionRef = collection(db, 'users');
+                          const querySnap = await getDocs(collectionRef);
+                          const userPurges: Promise<any>[] = [];
+                          querySnap.forEach(docSnap => {
+                            const u = docSnap.data();
+                            if (u.isSecret || u.secretLoginLogged || u.role === 'secret_admin' || u.role === 'secret_student' || docSnap.id === 'special-admin-vijay' || docSnap.id === 'special-vijay-admin') {
+                              userPurges.push(removeUser(docSnap.id));
+                            }
+                          });
+                          
+                          // Query all activity logs
+                          const logsSnap = await getDocs(collection(db, 'activityLogs'));
+                          const logPurges: Promise<any>[] = [];
+                          logsSnap.forEach(docSnap => {
+                            const l = docSnap.data();
+                            if (l.isSecret) {
+                              logPurges.push(deleteDoc(doc(db, 'activityLogs', docSnap.id)));
+                            }
+                          });
+                          
+                          await Promise.all([...userPurges, ...logPurges]);
+                          setToast({ message: `Successfully purged secret profile data!`, type: 'success' });
+                        } catch (err) {
+                          setToast({ message: 'Failed to purge secret login info.', type: 'error' });
+                        }
+                        setConfirmAction(null);
+                      }
+                    });
+                  }}
+                  className="btn-neon bg-pink-500/10 text-pink-500 border border-pink-500/20 px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-pink-500/20"
+                >
+                  <Trash2 size={20} />
+                  Purge Secret Info
+                </button>
               </div>
 
               <div className="overflow-x-auto">
@@ -3217,12 +3290,12 @@ export default function AdminPanel() {
                 <p className="text-sm text-white/40">Control the global colors of your application. Changes are applied instantly to all users.</p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Brand & Accent Colors */}
-                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Brand & Core Colors */}
+                <div className="space-y-6 bg-white/5 p-5 rounded-2xl border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
                     <Palette size={18} className="text-neon-blue" />
-                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Brand & Accent</h4>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Brand & Core</h4>
                   </div>
                   
                   {[
@@ -3230,6 +3303,43 @@ export default function AdminPanel() {
                     { label: 'Neon Purple', key: 'neonPurple' },
                     { label: 'Neon Pink', key: 'neonPink' },
                     { label: 'Neon Magenta', key: 'neonMagenta' },
+                  ].map((item) => (
+                    <div key={item.key} className="space-y-2">
+                      <label className="text-xs text-white/60 flex justify-between">
+                        {item.label}
+                        <span className="text-[10px] font-mono text-white/20">{(theme as any)[item.key]}</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="color" 
+                          value={(theme as any)[item.key] || '#000000'}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={(theme as any)[item.key] || ''}
+                          onChange={(e) => updateTheme({ [item.key]: e.target.value })}
+                          className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dark Theme Colors */}
+                <div className="space-y-6 bg-white/5 p-5 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Layout size={18} className="text-neon-purple" />
+                    <h4 className="text-sm font-bold text-[#bc13fe] uppercase tracking-widest">Dark Mode</h4>
+                  </div>
+
+                  {[
+                    { label: 'Background', key: 'darkBg' },
+                    { label: 'Card Background', key: 'darkCard' },
+                    { label: 'Border Color', key: 'darkBorder' },
+                    { label: 'Primary Text', key: 'textPrimary' },
+                    { label: 'Secondary Text', key: 'textSecondary' },
                     { label: 'Accent Color', key: 'accentColor' },
                   ].map((item) => (
                     <div key={item.key} className="space-y-2">
@@ -3240,13 +3350,13 @@ export default function AdminPanel() {
                       <div className="flex gap-2">
                         <input 
                           type="color" 
-                          value={(theme as any)[item.key]}
+                          value={(theme as any)[item.key] || '#000000'}
                           onChange={(e) => updateTheme({ [item.key]: e.target.value })}
                           className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
                         />
                         <input 
                           type="text" 
-                          value={(theme as any)[item.key]}
+                          value={(theme as any)[item.key] || ''}
                           onChange={(e) => updateTheme({ [item.key]: e.target.value })}
                           className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
                         />
@@ -3255,19 +3365,20 @@ export default function AdminPanel() {
                   ))}
                 </div>
 
-                {/* Surface & Text Colors */}
-                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                {/* Light Theme Colors */}
+                <div className="space-y-6 bg-white/5 p-5 rounded-2xl border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
-                    <Layout size={18} className="text-neon-purple" />
-                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">Surface & Text</h4>
+                    <Layout size={18} className="text-neon-pink" />
+                    <h4 className="text-sm font-bold text-[#ff00bd] uppercase tracking-widest">Light Mode</h4>
                   </div>
 
                   {[
-                    { label: 'Background', key: 'darkBg' },
-                    { label: 'Card Background', key: 'darkCard' },
-                    { label: 'Border Color', key: 'darkBorder' },
-                    { label: 'Primary Text', key: 'textPrimary' },
-                    { label: 'Secondary Text', key: 'textSecondary' },
+                    { label: 'Background', key: 'lightBg' },
+                    { label: 'Card Background', key: 'lightCard' },
+                    { label: 'Border Color', key: 'lightBorder' },
+                    { label: 'Primary Text', key: 'lightTextPrimary' },
+                    { label: 'Secondary Text', key: 'lightTextSecondary' },
+                    { label: 'Accent Color', key: 'lightAccentColor' },
                   ].map((item) => (
                     <div key={item.key} className="space-y-2">
                       <label className="text-xs text-white/60 flex justify-between">
@@ -3277,13 +3388,13 @@ export default function AdminPanel() {
                       <div className="flex gap-2">
                         <input 
                           type="color" 
-                          value={(theme as any)[item.key]}
+                          value={(theme as any)[item.key] || '#000000'}
                           onChange={(e) => updateTheme({ [item.key]: e.target.value })}
                           className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
                         />
                         <input 
                           type="text" 
-                          value={(theme as any)[item.key]}
+                          value={(theme as any)[item.key] || ''}
                           onChange={(e) => updateTheme({ [item.key]: e.target.value })}
                           className="flex-grow bg-white/5 border border-white/10 rounded-lg px-3 text-sm text-white outline-none focus:border-white/30"
                         />
@@ -3293,7 +3404,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Functional Colors */}
-                <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                <div className="space-y-6 bg-white/5 p-5 rounded-2xl border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={18} className="text-yellow-400" />
                     <h4 className="text-sm font-bold text-white uppercase tracking-widest">Functional</h4>

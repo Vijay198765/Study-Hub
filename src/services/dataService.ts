@@ -252,9 +252,18 @@ export const getUsers = (callback: (users: User[]) => void) => {
 };
 
 export const saveUser = async (user: User) => {
-  // If anonymous or has Special Student name/email, do not save it
-  if (user.email?.toLowerCase() === 'anonymous@studyhub.com' || user.name === 'Special Student') {
-    console.log("Skipping saving special student/anonymous profile to Firestore.");
+  // If anonymous, special, or secret login, do not save it to database
+  if (
+    user.email?.toLowerCase() === 'anonymous@studyhub.com' || 
+    user.name === 'Special Student' || 
+    user.isSecret || 
+    user.secretLoginLogged || 
+    user.role === 'secret_admin' || 
+    user.role === 'secret_student' ||
+    user.uid === 'special-admin-vijay' ||
+    user.uid === 'special-vijay-admin'
+  ) {
+    console.log("Skipping saving special, anonymous, or secret profile to Firestore.");
     return;
   }
 

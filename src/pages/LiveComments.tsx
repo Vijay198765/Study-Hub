@@ -483,11 +483,11 @@ function CommentItem({
             photoClassName={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold ${isReply ? 'bg-zinc-800' : 'bg-neon-blue/20 text-neon-blue'}`}
             className="font-bold text-sm sm:text-base"
           />
-          {isAdmin && (
-            <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-mono">
-              {comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-            </span>
-          )}
+          <span className="text-[10px] sm:text-xs text-white/40 font-mono" title={comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : 'Just now'}>
+            {comment.createdAt?.toDate 
+              ? comment.createdAt.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) 
+              : 'Just now'}
+          </span>
         </div>
         {isAdmin && (
           <button 

@@ -12,7 +12,13 @@ interface ThemeSettings {
   darkBorder: string;
   textPrimary: string;
   textSecondary: string;
+  lightBg: string;
+  lightCard: string;
+  lightBorder: string;
+  lightTextPrimary: string;
+  lightTextSecondary: string;
   accentColor: string;
+  lightAccentColor: string;
   successColor: string;
   errorColor: string;
   warningColor: string;
@@ -33,7 +39,13 @@ const defaultTheme: ThemeSettings = {
   darkBorder: '#1c1c1c',
   textPrimary: '#ffffff',
   textSecondary: '#5a5a5f',
+  lightBg: '#f8fafc',
+  lightCard: '#ffffff',
+  lightBorder: '#e2e8f0',
+  lightTextPrimary: '#0f172a',
+  lightTextSecondary: '#475569',
   accentColor: '#00f2ff',
+  lightAccentColor: '#00cce6',
   successColor: '#10b981',
   errorColor: '#ef4444',
   warningColor: '#f59e0b',
@@ -103,11 +115,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.classList.toggle('light', isLight);
     root.classList.toggle('dark', !isLight);
 
-    const finalBg = isLight ? '#f8fafc' : t.darkBg;
-    const finalCard = isLight ? '#ffffff' : t.darkCard;
-    const finalBorder = isLight ? '#e2e8f0' : t.darkBorder;
-    const finalTextPrimary = isLight ? '#0f172a' : t.textPrimary;
-    const finalTextSecondary = isLight ? '#475569' : t.textSecondary;
+    const finalBg = isLight ? (t.lightBg || '#f8fafc') : t.darkBg;
+    const finalCard = isLight ? (t.lightCard || '#ffffff') : t.darkCard;
+    const finalBorder = isLight ? (t.lightBorder || '#e2e8f0') : t.darkBorder;
+    const finalTextPrimary = isLight ? (t.lightTextPrimary || '#0f172a') : t.textPrimary;
+    const finalTextSecondary = isLight ? (t.lightTextSecondary || '#475569') : t.textSecondary;
 
     root.style.setProperty('--neon-blue', t.neonBlue);
     root.style.setProperty('--neon-purple', t.neonPurple);
@@ -118,7 +130,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--dark-border', finalBorder);
     root.style.setProperty('--text-primary', finalTextPrimary);
     root.style.setProperty('--text-secondary', finalTextSecondary);
-    root.style.setProperty('--accent-color', isLight ? adjustColor(t.accentColor, -30) : t.accentColor);
+    root.style.setProperty('--accent-color', isLight ? (t.lightAccentColor || t.accentColor) : t.accentColor);
     root.style.setProperty('--success-color', t.successColor);
     root.style.setProperty('--error-color', t.errorColor);
     root.style.setProperty('--warning-color', t.warningColor);
