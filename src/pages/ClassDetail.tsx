@@ -116,11 +116,8 @@ export default function ClassDetail() {
                     <img 
                       src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
                       alt="Vijay Avatar" 
-                      className="w-full h-full object-cover object-center aspect-square rounded-full"
+                      className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay";
-                      }}
                     />
                   </div>
                 </div>
