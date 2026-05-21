@@ -103,17 +103,27 @@ export default function Login() {
           googleDisplayName: user.displayName || name.trim()
         });
       } else {
-        role = userDoc.data().role;
+        const existingData = userDoc.data();
+        role = existingData.role;
+        
+        // Prevent overwriting the main admin or custom overridden profiles with Google's changing DP
+        const isMainAdmin = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
+        const keepExistingPhoto = existingData.photoURLOverridden || isMainAdmin;
+        const photoToSave = keepExistingPhoto && existingData.photoURL 
+          ? existingData.photoURL 
+          : convertDriveUrl(user.photoURL || existingData.photoURL || undefined);
+
         // Update name and sync photo if different along with Gmail details
         await setDoc(userRef, {
-          ...userDoc.data(),
+          ...existingData,
           name: name.trim(),
-          photoURL: convertDriveUrl(user.photoURL || userDoc.data().photoURL || undefined),
+          photoURL: photoToSave,
+          photoURLOverridden: existingData.photoURLOverridden || isMainAdmin,
           isGmailUser: true,
           emailVerified: user.emailVerified || false,
-          gmailCreatedAt: user.metadata.creationTime || userDoc.data().gmailCreatedAt || null,
+          gmailCreatedAt: user.metadata.creationTime || existingData.gmailCreatedAt || null,
           gmailLastSignIn: user.metadata.lastSignInTime || null,
-          googleDisplayName: user.displayName || userDoc.data().googleDisplayName || name.trim()
+          googleDisplayName: user.displayName || existingData.googleDisplayName || name.trim()
         }, { merge: true });
       }
 
