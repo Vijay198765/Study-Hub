@@ -430,14 +430,14 @@ body{background:var(--bg);color:var(--t1);font-family:'Rajdhani',sans-serif;over
 <!-- DISTANCE CALC -->
 <div id="distcalc">
   <div class="dctitle">🔭 Distance Calc <button class="mclose" onclick="toggleDistCalc()">✕</button></div>
-  <div class="dcrow"><span class="dclbl">From</span><select class="dcsel" id="dcfrom" onchange="calcDist()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth" selected>Earth</option><option value="mars">Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option></select></div>
-  <div class="dcrow"><span class="dclbl">To</span><select class="dcsel" id="dcto" onchange="calcDist()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth">Earth</option><option value="mars" selected>Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option></select></div>
+  <div class="dcrow"><span class="dclbl">From</span><select class="dcsel" id="dcfrom" onchange="calcDist()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth" selected>Earth</option><option value="moon">Moon</option><option value="mars">Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option><option value="pluto">Pluto</option></select></div>
+  <div class="dcrow"><span class="dclbl">To</span><select class="dcsel" id="dcto" onchange="calcDist()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth">Earth</option><option value="moon">Moon</option><option value="mars" selected>Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option><option value="pluto">Pluto</option></select></div>
   <div class="dcres" id="dcres">Select planets above</div>
 </div>
 
 <!-- MODALS -->
 <div class="modal" id="tl-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Exploration Timeline</div><button class="mclose" onclick="closeModal('tl-modal')">✕</button></div><div class="mbody" id="tlbody"></div></div></div>
-<div class="modal" id="cmp-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Planet Comparison</div><button class="mclose" onclick="closeModal('cmp-modal')">✕</button></div><div class="mbody"><div class="cmpg"><div class="cmpc"><select class="cmpsel" id="cmpa" onchange="doCompare()"><option value="earth">Earth</option><option value="mars">Mars</option><option value="venus">Venus</option><option value="mercury">Mercury</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option></select><div id="cmpas"></div></div><div class="cmpc"><select class="cmpsel" id="cmpb" onchange="doCompare()"><option value="mars">Mars</option><option value="earth">Earth</option><option value="venus">Venus</option><option value="mercury">Mercury</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option></select><div id="cmpbs"></div></div></div></div></div></div>
+<div class="modal" id="cmp-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Planet Comparison</div><button class="mclose" onclick="closeModal('cmp-modal')">✕</button></div><div class="mbody"><div class="cmpg"><div class="cmpc"><select class="cmpsel" id="cmpa" onchange="doCompare()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth" selected>Earth</option><option value="moon">Moon</option><option value="mars">Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option><option value="pluto">Pluto</option></select><div id="cmpas"></div></div><div class="cmpc"><select class="cmpsel" id="cmpb" onchange="doCompare()"><option value="sun">Sun</option><option value="mercury">Mercury</option><option value="venus">Venus</option><option value="earth">Earth</option><option value="moon">Moon</option><option value="mars" selected>Mars</option><option value="jupiter">Jupiter</option><option value="saturn">Saturn</option><option value="uranus">Uranus</option><option value="neptune">Neptune</option><option value="pluto">Pluto</option></select><div id="cmpbs"></div></div></div></div></div></div>
 <div class="modal" id="qz-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Astronomy Quiz</div><button class="mclose" onclick="closeModal('qz-modal')">✕</button></div><div class="mbody" id="qzbody"></div></div></div>
 <div class="modal" id="gal-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Galaxies & Deep Space</div><button class="mclose" onclick="closeModal('gal-modal')">✕</button></div><div class="mbody" id="galbody"></div></div></div>
 <div class="modal" id="bh-modal"><div class="mbox"><div class="mhdr"><div class="mtitle">Black Holes</div><button class="mclose" onclick="closeModal('bh-modal')">✕</button></div><div class="mbody" id="bhbody"></div></div></div>
@@ -455,15 +455,15 @@ const DB = {
   venus:{name:'Venus',type:'Terrestrial Planet',col:'#e8c07d',glow:'#c8a050',diameter:'12,104 km',gravity:'8.87 m/s²',temp:'465°C average',atmos:'CO₂ 96%, N₂ 3.5%',moons:0,dist:'0.72 AU',rot:'243 days (retrograde)',class:'Rocky',facts:['Rotates backwards relative to most planets','A day on Venus is longer than its year','Surface pressure is 90× that of Earth','Has thousands of active volcanoes','Strongest greenhouse effect in the solar system'],missions:['Magellan (1989)','Venera 13 (1981)','Venus Express (2005)','DAVINCI+ (2029)'],atm:[{n:'CO₂',p:96},{n:'Nitrogen',p:3},{n:'Other',p:1}]},
   earth:{name:'Earth',type:'Terrestrial Planet',col:'#1e90ff',glow:'#0066cc',diameter:'12,742 km',gravity:'9.81 m/s²',temp:'-89 to +58°C',atmos:'N₂ 78%, O₂ 21%',moons:1,dist:'1.00 AU',rot:'23h 56m',class:'Ocean World',facts:['Only confirmed planet with life','71% of surface is covered by ocean','Magnetic field shields us from solar wind','The Moon stabilises our axial tilt','Approximately 4.54 billion years old'],missions:['ISS (1998–present)','Hubble (1990)','GPS Constellation','Landsat Program'],atm:[{n:'Nitrogen',p:78},{n:'Oxygen',p:21},{n:'Argon',p:1}]},
   moon:{name:'Moon',type:"Earth's Natural Satellite",col:'#cccccc',glow:'#aaa',diameter:'3,474 km',gravity:'1.62 m/s²',temp:'-173 to +127°C',atmos:'Exosphere (trace)',moons:0,dist:'0.00257 AU from Earth',rot:'27.3 days (tidally locked)',class:'Moon',facts:['12 humans walked on it between 1969–1972','Drifting away from Earth at 3.8 cm/year','Tidal locking means same face always visible','Formed from giant impact 4.5 billion years ago','Moonquakes recorded up to magnitude 5.5'],missions:['Apollo 11–17 (1969–72)','Chang\'e 5 (2020)','Artemis (2025+)'],atm:[{n:'Helium',p:47},{n:'Neon',p:30},{n:'H₂',p:23}]},
-  mars:{name:'Mars',type:'Terrestrial Planet',col:'#c1440e',glow:'#8b2500',diameter:'6,779 km',gravity:'3.72 m/s²',temp:'-125 to +20°C',atmos:'CO₂ 95%, N₂ 2.6%',moons:2,dist:'1.52 AU',rot:'24h 37m',class:'Rocky Desert',facts:['Olympus Mons: tallest volcano at 22 km','Valles Marineris canyon is 4,000 km long','Largest dust storms in the solar system','Evidence of ancient liquid water on surface','Two small moons: Phobos and Deimos'],missions:['Perseverance Rover (2021)','Curiosity Rover (2012)','InSight Lander (2018)','Mars Odyssey (2001)'],atm:[{n:'CO₂',p:95},{n:'Nitrogen',p:3},{n:'Argon',p:2}]},
+  mars:{name:'Mars',type:'Terrestrial Planet',col:'#c1440e',glow:'#8b2500',diameter:'6,779 km',gravity:'3.72 m/s²',temp:'-153 to +20°C',atmos:'CO₂ 95%, N₂ 2.6%',moons:2,dist:'1.52 AU',rot:'24h 37m',class:'Rocky Desert',facts:['Olympus Mons: tallest volcano at 22 km','Valles Marineris canyon is 4,000 km long','Largest dust storms in the solar system','Evidence of ancient liquid water on surface','Two small moons: Phobos and Deimos'],missions:['Perseverance Rover (2021)','Curiosity Rover (2012)','InSight Lander (2018)','Mars Odyssey (2001)'],atm:[{n:'CO₂',p:95},{n:'Nitrogen',p:3},{n:'Argon',p:2}]},
   jupiter:{name:'Jupiter',type:'Gas Giant',col:'#b5854a',glow:'#8b5e30',diameter:'139,820 km',gravity:'24.79 m/s²',temp:'-108°C cloud top',atmos:'H₂ 89%, He 10%',moons:95,dist:'5.20 AU',rot:'9h 56m',class:'Gas Giant',facts:['More massive than all other planets combined','Great Red Spot is a storm older than 400 years','Fastest rotating planet in the solar system','Galilean moons: Io, Europa, Ganymede, Callisto','Gravitational shield protecting inner planets'],missions:['Juno (2016–present)','Galileo (1995–2003)','Voyager 1&2 (1979)','Pioneer 10&11'],atm:[{n:'Hydrogen',p:89},{n:'Helium',p:10},{n:'Other',p:1}]},
   saturn:{name:'Saturn',type:'Gas Giant',col:'#e4d191',glow:'#c4b060',diameter:'116,460 km',gravity:'10.44 m/s²',temp:'-178°C cloud top',atmos:'H₂ 96%, He 3%',moons:146,dist:'9.58 AU',rot:'10h 42m',class:'Ringed Gas Giant',facts:['Rings span 282,000 km but are only 10–100m thick','Less dense than water — it would float!','Titan has a thick atmosphere with methane lakes','North polar hexagonal storm is 30,000 km wide','Most moons of any planet: 146 confirmed'],missions:['Cassini–Huygens (2004–2017)','Voyager 1&2 (1980–81)','Pioneer 11 (1979)'],atm:[{n:'Hydrogen',p:96},{n:'Helium',p:3},{n:'Other',p:1}]},
-  uranus:{name:'Uranus',type:'Ice Giant',col:'#7de8e8',glow:'#40b0b0',diameter:'50,724 km',gravity:'8.87 m/s²',temp:'-224°C (coldest)',atmos:'H₂ 83%, He 15%, CH₄ 2%',moons:28,dist:'19.22 AU',rot:'17h 14m (retrograde)',class:'Ice Giant',facts:['Rotates on its side with a 98° axial tilt','Coldest planetary atmosphere in the solar system','Each season lasts 21 Earth years','Has 13 known ring systems','Only Voyager 2 has visited (1986)'],missions:['Voyager 2 (1986)','Uranus Orbiter (planned 2030s)'],atm:[{n:'Hydrogen',p:83},{n:'Helium',p:15},{n:'Methane',p:2}]},
+  uranus:{name:'Uranus',type:'Ice Giant',col:'#7de8e8',glow:'#40b0b0',diameter:'50,724 km',gravity:'8.69 m/s²',temp:'-224°C (coldest)',atmos:'H₂ 83%, He 15%, CH₄ 2%',moons:28,dist:'19.22 AU',rot:'17h 14m (retrograde)',class:'Ice Giant',facts:['Rotates on its side with a 98° axial tilt','Coldest planetary atmosphere in the solar system','Each season lasts 21 Earth years','Has 13 known ring systems','Only Voyager 2 has visited (1986)'],missions:['Voyager 2 (1986)','Uranus Orbiter (planned 2030s)'],atm:[{n:'Hydrogen',p:83},{n:'Helium',p:15},{n:'Methane',p:2}]},
   neptune:{name:'Neptune',type:'Ice Giant',col:'#5b6dd6',glow:'#3040a0',diameter:'49,244 km',gravity:'11.15 m/s²',temp:'-218°C',atmos:'H₂ 80%, He 19%, CH₄ 1%',moons:16,dist:'30.05 AU',rot:'16h 6m',class:'Ice Giant',facts:['Fastest winds in the solar system at 2,100 km/h','Great Dark Spot is a giant storm system','Triton orbits backwards — likely a captured KBO','Predicted mathematically before being observed','One Neptune year = 165 Earth years'],missions:['Voyager 2 (1989)','Neptune Odyssey (proposed)'],atm:[{n:'Hydrogen',p:80},{n:'Helium',p:19},{n:'Methane',p:1}]},
   pluto:{name:'Pluto',type:'Dwarf Planet',col:'#a0855f',glow:'#705535',diameter:'2,377 km',gravity:'0.62 m/s²',temp:'-233°C',atmos:'N₂ 98%, CH₄ 1.5%',moons:5,dist:'39.48 AU',rot:'6.4 days (retrograde)',class:'Dwarf Planet / KBO',facts:['Reclassified as dwarf planet in 2006','Heart-shaped nitrogen ice plain: Tombaugh Regio','Charon so large they form a binary system','Highly elliptical and tilted orbit','New Horizons revealed water-ice mountains (2015)'],missions:['New Horizons (2015 flyby)'],atm:[{n:'Nitrogen',p:98},{n:'Methane',p:2}]}
 };
 
-const AU_KM = {sun:0,mercury:57.9e6,venus:108.2e6,earth:149.6e6,mars:227.9e6,jupiter:778.5e6,saturn:1432e6,uranus:2867e6,neptune:4515e6};
+const AU_KM = {sun:0,mercury:57.91e6,venus:108.2e6,earth:149.6e6,mars:227.9e6,jupiter:778.5e6,saturn:1433.5e6,uranus:2872.5e6,neptune:4495.1e6,pluto:5906.4e6};
 
 const PCFG = [
   {key:'mercury',r:.38,or:5,   col:0x9e9e9e,spd:.00804,tilt:.03, em:0x222222,rings:0},
@@ -520,7 +520,7 @@ const TIMELINE_DATA = [
   {y:'2018',m:'Parker Solar Probe',d:'Closest ever approach to the Sun, diving into the solar corona.'},
   {y:'2021',m:'Perseverance & Ingenuity',d:'First powered flight on another planet; oxygen produced on Mars.'},
   {y:'2021',m:'James Webb Space Telescope',d:'Most powerful telescope ever; sees back 13 billion years.'},
-  {y:'2025',m:'Artemis Lunar Program',d:'Crewed return to the Moon, with lunar base and Mars plans ahead.'},
+  {y:'2022-2026',m:'Artemis Lunar Program',d:'Artemis I launched in 2022; crewed lunar missions scheduled from 2025 onwards, aiming to establish a sustainable presence.'},
 ];
 
 const GAL_DATA = [
@@ -850,11 +850,31 @@ function toggleDistCalc() { document.getElementById('distcalc').classList.toggle
 function calcDist() {
   const a=document.getElementById('dcfrom').value, b=document.getElementById('dcto').value;
   if(a===b){document.getElementById('dcres').innerHTML='Same object — distance is 0';return;}
-  const diff=Math.abs((AU_KM[a]||0)-(AU_KM[b]||0));
-  const km=(diff/1e6).toFixed(2);
-  const au=(diff/149.6e6).toFixed(3);
-  const lm=(diff/299792/60).toFixed(1);
-  document.getElementById('dcres').innerHTML=`${DB[a]?.name||a} → ${DB[b]?.name||b}<br><span style="font-size:17px">${km}M km</span><br><span style="font-size:11px;color:var(--t2)">${au} AU &nbsp;|&nbsp; ☀ Light travel: ${lm} min</span>`;
+  
+  let diff;
+  if((a==='earth' && b==='moon') || (a==='moon' && b==='earth')) {
+    diff = 384400; // Average physical distance between Earth and Moon in km
+  } else {
+    const valA = a === 'moon' ? AU_KM['earth'] : (AU_KM[a] || 0);
+    const valB = b === 'moon' ? AU_KM['earth'] : (AU_KM[b] || 0);
+    diff = Math.abs(valA - valB);
+  }
+  
+  const km=(diff/1e6).toFixed(3);
+  const au=(diff/149.59787e6).toFixed(5);
+  
+  // Custom travel time calculation (light speed is 299,792 km/s)
+  const totalSeconds = diff / 299792;
+  let lightTimeStr = '';
+  if (totalSeconds < 60) {
+    lightTimeStr = `${totalSeconds.toFixed(2)} sec`;
+  } else if (totalSeconds < 3600) {
+    lightTimeStr = `${(totalSeconds / 60).toFixed(1)} min`;
+  } else {
+    lightTimeStr = `${(totalSeconds / 3600).toFixed(1)} hours`;
+  }
+  
+  document.getElementById('dcres').innerHTML=`${DB[a]?.name||a} → ${DB[b]?.name||b}<br><span style="font-size:17px">${parseFloat(km) < 1 ? (diff.toLocaleString() + ' km') : (parseFloat(km).toFixed(2) + 'M km')}</span><br><span style="font-size:11px;color:var(--t2)">${parseFloat(au).toFixed(4)} AU &nbsp;|&nbsp; ☀ Light travel: ${lightTimeStr}</span>`;
 }
 
 function resetCamera() {
