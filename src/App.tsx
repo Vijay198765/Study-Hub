@@ -342,8 +342,10 @@ export default function App() {
             // Side-effect updates (IP, photo, name, secret upgrade)
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
-            if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden && !isMainAdmin) {
-              updates.photoURL = convertDriveUrl(activeUser.photoURL);
+            if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
+              if (!isMainAdmin || !profileData.photoURL) {
+                updates.photoURL = convertDriveUrl(activeUser.photoURL);
+              }
             }
             if (isMainAdmin && !profileData.photoURLOverridden) {
               updates.photoURLOverridden = true;

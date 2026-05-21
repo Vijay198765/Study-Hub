@@ -17,47 +17,52 @@ export default function ClassDetail() {
   const [adminUser, setAdminUser] = useState<{ photoURL?: string; name?: string } | null>(null);
 
   useEffect(() => {
+    // Listen to all users with admin role in real-time
     const q = query(
       collection(db, 'users'),
-      where('email', 'in', [
-        'vijayninama683@gmail.com',
-        'Vijayninama683@gmail.com',
-        'vijayNinama683@gmail.com',
-        'VijayNinama683@gmail.com',
-        'VIJAYNINAMA683@gmail.com',
-        'tagoreteam2025@gmail.com',
-        'Tagoreteam2025@gmail.com'
-      ])
+      where('role', 'in', ['admin', 'superadmin', 'super_admin'])
     );
     const unsubscribe = onSnapshot(q, (snap) => {
       if (!snap.empty) {
-        const docData = snap.docs[0].data();
+        // Try finding 'vijayninama683@gmail.com' case-insensitively
+        let matchDoc = snap.docs.find(d => {
+          const email = (d.data().email || '').toLowerCase();
+          return email === 'vijayninama683@gmail.com';
+        });
+        
+        // Fallback to tagoreteam2025@gmail.com
+        if (!matchDoc) {
+          matchDoc = snap.docs.find(d => {
+            const email = (d.data().email || '').toLowerCase();
+            return email === 'tagoreteam2025@gmail.com';
+          });
+        }
+        
+        const adminDoc = matchDoc || snap.docs[0];
+        const docData = adminDoc.data();
+        
+        console.log("Loaded Admin User for ClassDetail:", docData.email, "Photo:", docData.photoURL);
+        
         setAdminUser({
-          photoURL: docData.photoURL,
+          photoURL: docData.photoURL || '',
           name: docData.name || 'Vijay'
         });
       } else {
-        // Fallback: search for users with 'admin' role
-        const qRole = query(
-          collection(db, 'users'),
-          where('role', '==', 'admin'),
-          limit(5)
-        );
-        getDocs(qRole).then((adminSnap) => {
-          if (!adminSnap.empty) {
-            const matchDoc = adminSnap.docs.find(d => {
-              const email = (d.data().email || '').toLowerCase();
-              return email === 'vijayninama683@gmail.com' || email === 'tagoreteam2025@gmail.com';
-            }) || adminSnap.docs[0];
-            
+        // Fallback to searching without role filters
+        getDocs(collection(db, 'users')).then((allSnap) => {
+          const matchDoc = allSnap.docs.find(d => {
+            const email = (d.data().email || '').toLowerCase();
+            return email === 'vijayninama683@gmail.com' || email === 'tagoreteam2025@gmail.com';
+          });
+          if (matchDoc) {
             const docData = matchDoc.data();
             setAdminUser({
-              photoURL: docData.photoURL,
+              photoURL: docData.photoURL || '',
               name: docData.name || 'Vijay'
             });
           }
         }).catch(err => {
-          console.warn('Fallback admin query failed:', err);
+          console.warn('Fallback users query failed:', err);
         });
       }
     }, (error) => {
