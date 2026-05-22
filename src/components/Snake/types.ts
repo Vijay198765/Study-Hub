@@ -59,6 +59,17 @@ export interface Pellets {
   size: number;
   color: string;
   points: number;
+  fruitEmoji?: string;
+}
+
+export interface PowerUpItem {
+  id: string;
+  x: number;
+  y: number;
+  type: 'speed' | 'magnet' | 'double' | 'shield' | 'freeze';
+  color: string;
+  emoji: string;
+  pulseScale: number;
 }
 
 export interface KillRecord {

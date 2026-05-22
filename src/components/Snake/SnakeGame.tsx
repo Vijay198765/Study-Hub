@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Play, RotateCcw, Volume2, VolumeX, MessageSquare, ShieldAlert } from 'lucide-react';
-import { SnakeSegment, BotSnake, Pellets, KillRecord, FloatingEmote, SnakePlayerStats, SnakeSkin } from './types';
+import { SnakeSegment, BotSnake, Pellets, KillRecord, FloatingEmote, SnakePlayerStats, SnakeSkin, PowerUpItem } from './types';
 import { SKINS } from './skinData';
 
 // Sound Helper using Web Audio API
@@ -139,7 +139,7 @@ const drawSnakeSegment = (
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  r: number,
+  baseR: number,
   index: number,
   totalLength: number,
   baseColor: string,
@@ -150,6 +150,10 @@ const drawSnakeSegment = (
   isBoosting: boolean
 ) => {
   ctx.save();
+
+  // Organic winding swimming wave ripple!
+  const rippleFactor = Math.sin(index * 0.35 - Date.now() / 140);
+  const r = Math.max(3, baseR * (1 + rippleFactor * 0.12));
 
   // Create standard highlights for 3D sphere look
   let grd = ctx.createRadialGradient(
@@ -360,6 +364,9 @@ const drawSnakeHeadDecorations = (
   ctx.restore();
 };
 
+const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
+const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
+
 export default function SnakeGame({
   stats,
   activeSkinId,
@@ -372,6 +379,7 @@ export default function SnakeGame({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [tick, setTick] = useState(0);
 
   // Live scoreboard trackers
   const [liveScore, setLiveScore] = useState(0);
@@ -390,10 +398,17 @@ export default function SnakeGame({
     killCount: 0,
     displayName: playerDisplayName || 'Spectre',
     skinId: activeSkinId,
+    // Active power-up buffs (measured in frame steps):
+    speedTimer: 0,
+    magnetTimer: 0,
+    doubleTimer: 0,
+    shieldTimer: 0,
+    freezeTimer: 0
   });
 
   const botsRef = useRef<BotSnake[]>([]);
   const pelletsRef = useRef<Pellets[]>([]);
+  const powerUpsRef = useRef<PowerUpItem[]>([]);
   const killFeedRef = useRef<KillRecord[]>([]);
   const floatEmotesRef = useRef<FloatingEmote[]>([]);
   const mouseRef = useRef({ x: 0, y: 0 });
@@ -432,24 +447,57 @@ export default function SnakeGame({
     playerRef.current.angle = 0;
     playerRef.current.killCount = 0;
     playerRef.current.isBoosting = false;
+    playerRef.current.speedTimer = 0;
+    playerRef.current.magnetTimer = 0;
+    playerRef.current.doubleTimer = 0;
+    playerRef.current.shieldTimer = 0;
+    playerRef.current.freezeTimer = 0;
 
     setLiveScore(0);
     setLiveKills(0);
     setMaxLengthAchieved(12);
 
-    // 2. Generate 120 colorful pellets
+    // 2. Generate 150 juicy fruits and sparkling gem pellets
+    const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
+    const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
+    
     const pellets: Pellets[] = [];
     for (let i = 0; i < 150; i++) {
+      const isFruit = Math.random() < 0.65;
+      const emoji = isFruit 
+        ? FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)] 
+        : GEM_EMOJIS[Math.floor(Math.random() * GEM_EMOJIS.length)];
       pellets.push({
         id: Math.random().toString(),
         x: Math.floor(Math.random() * (MAP_SIZE - 40)) + 20,
         y: Math.floor(Math.random() * (MAP_SIZE - 40)) + 20,
-        size: Math.floor(Math.random() * 5) + 3,
+        size: isFruit ? 8 : 6,
         color: PELLET_COLORS[Math.floor(Math.random() * PELLET_COLORS.length)],
-        points: Math.floor(Math.random() * 8) + 4
+        points: isFruit ? 12 : 8,
+        fruitEmoji: emoji
       });
     }
     pelletsRef.current = pellets;
+
+    // 3. Spawning 5 scattered power-up bottles
+    const powerUps: PowerUpItem[] = [];
+    const puTypes: Array<'speed' | 'magnet' | 'double' | 'shield' | 'freeze'> = ['speed', 'magnet', 'double', 'shield', 'freeze'];
+    const puEmojis = { speed: '⚡', magnet: '🧲', double: '💰', shield: '🛡️', freeze: '❄️' };
+    const puColors = { speed: '#38bdf8', magnet: '#ec4899', double: '#fbbf24', shield: '#10b981', freeze: '#06b6d4' };
+
+    for (let i = 0; i < 5; i++) {
+      const type = puTypes[i % puTypes.length];
+      powerUps.push({
+        id: Math.random().toString(),
+        x: Math.floor(Math.random() * (MAP_SIZE - 200)) + 100,
+        y: Math.floor(Math.random() * (MAP_SIZE - 200)) + 100,
+        type: type,
+        color: puColors[type],
+        emoji: puEmojis[type],
+        pulseScale: 1
+      });
+    }
+    powerUpsRef.current = powerUps;
 
     // 3. Create 10 hostile AI bot snakes
     const bots: BotSnake[] = [];
@@ -632,23 +680,37 @@ export default function SnakeGame({
       const player = playerRef.current;
       const head = player.segments[0];
 
-      // --- 1. Settle speed parameters (boosting uses length) ---
-      let playerSpeed = player.isBoosting && player.segments.length > 6 ? 6 : 3.5;
+      // --- 1. Settle speed parameters (speed powerup offers free high-velocity slithering) ---
+      const isSpeedActive = player.speedTimer > 0;
+      let playerSpeed = (player.isBoosting || isSpeedActive) ? 6 : 3.5;
+      
       if (player.isBoosting && player.segments.length > 6 && animId % 10 === 0) {
-        // Shed body particles behind
-        const last = player.segments.pop();
-        if (last) {
-          pelletsRef.current.push({
-            id: Math.random().toString(),
-            x: last.x + (Math.random() * 20 - 10),
-            y: last.y + (Math.random() * 20 - 10),
-            size: 4,
-            color: '#ffffff',
-            points: 5
-          });
+        if (!isSpeedActive) {
+          // Normal boosting consumes tail length to shed pellet seeds
+          const last = player.segments.pop();
+          if (last) {
+            pelletsRef.current.push({
+              id: Math.random().toString(),
+              x: last.x + (Math.random() * 20 - 10),
+              y: last.y + (Math.random() * 20 - 10),
+              size: 4,
+              color: '#ffffff',
+              points: 5
+            });
+            audio.playBoost();
+          }
+        } else {
+          // Free speed bottle boosting! Just trigger minor sound effect.
           audio.playBoost();
         }
       }
+
+      // Decrement active power-up buff frame timers
+      if (player.speedTimer > 0) player.speedTimer--;
+      if (player.magnetTimer > 0) player.magnetTimer--;
+      if (player.doubleTimer > 0) player.doubleTimer--;
+      if (player.shieldTimer > 0) player.shieldTimer--;
+      if (player.freezeTimer > 0) player.freezeTimer--;
 
       // --- 2. Update player head segment coordinates ---
       const nextHeadX = head.x + Math.cos(player.angle) * playerSpeed;
@@ -662,7 +724,6 @@ export default function SnakeGame({
 
       // Sliding chain logic for entire tail segments
       const newSegments = [{ x: nextHeadX, y: nextHeadY }];
-      let cumulativeDist = 0;
       const targetSpacing = 13; // Distance between tail segment links
 
       for (let i = 1; i < player.segments.length; i++) {
@@ -686,7 +747,9 @@ export default function SnakeGame({
       setLiveScore(player.segments.length * 15 - 180 + player.killCount * 100);
       setMaxLengthAchieved(prev => Math.max(prev, player.segments.length));
 
-      // --- 3. Update AI Bots Steering ---
+      // --- 3. Update AI Bots Steering (Bots are slowed by 65% when Ice freeze bottle is active!) ---
+      const botSpeedMult = player.freezeTimer > 0 ? 0.35 : 1.0;
+
       botsRef.current.forEach((bot) => {
         const botHead = bot.segments[0];
         bot.changeDirectionTimer--;
@@ -723,8 +786,8 @@ export default function SnakeGame({
         bot.angle += Math.sin(angleDiff) * 0.1;
 
         // Propagate updates
-        const nextBotHeadX = botHead.x + Math.cos(bot.angle) * bot.speed;
-        const nextBotHeadY = botHead.y + Math.sin(bot.angle) * bot.speed;
+        const nextBotHeadX = botHead.x + Math.cos(bot.angle) * bot.speed * botSpeedMult;
+        const nextBotHeadY = botHead.y + Math.sin(bot.angle) * bot.speed * botSpeedMult;
         const nextBotSegs = [{ x: nextBotHeadX, y: nextBotHeadY }];
 
         for (let j = 1; j < bot.segments.length; j++) {
@@ -745,21 +808,76 @@ export default function SnakeGame({
         bot.segments = nextBotSegs;
       });
 
-      // --- 4. Pellets collision detectors ---
+      // --- 4. Pellet Suction & Consumptions ---
       const currentHead = player.segments[0];
       const radiusPlayer = 15;
 
-      // Player eating pellets
+      // Handle Magnet powerup suction (pulls close fruits/gems closer rapidly!)
+      if (player.magnetTimer > 0) {
+        pelletsRef.current.forEach((p) => {
+          const dx = currentHead.x - p.x;
+          const dy = currentHead.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 200 && dist > 5) {
+            p.x += (dx / dist) * 7.5;
+            p.y += (dy / dist) * 7.5;
+          }
+        });
+        powerUpsRef.current.forEach((pu) => {
+          const dx = currentHead.x - pu.x;
+          const dy = currentHead.y - pu.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 200 && dist > 5) {
+            pu.x += (dx / dist) * 7.5;
+            pu.y += (dy / dist) * 7.5;
+          }
+        });
+      }
+
+      // Player eating pellets (Double score multiplier grants 2x tail growth chances!)
       pelletsRef.current = pelletsRef.current.filter((p) => {
         const dist = Math.hypot(p.x - currentHead.x, p.y - currentHead.y);
         if (dist < radiusPlayer + p.size) {
-          // Increase snake tail length (e.g. add segment on every 4 points)
-          if (Math.random() < 0.25) {
+          const growthChance = player.doubleTimer > 0 ? 0.50 : 0.25;
+          if (Math.random() < growthChance) {
             const tail = player.segments[player.segments.length - 1];
             player.segments.push({ x: tail.x, y: tail.y });
           }
           audio.playEat();
           return false; // Pellets consumed
+        }
+        return true;
+      });
+
+      // Player eating physical power-ups
+      powerUpsRef.current = powerUpsRef.current.filter((pu) => {
+        const dist = Math.hypot(pu.x - currentHead.x, pu.y - currentHead.y);
+        if (dist < radiusPlayer + 14) {
+          if (pu.type === 'speed') {
+            player.speedTimer = 600; // 10 seconds of free speed boost
+          } else if (pu.type === 'magnet') {
+            player.magnetTimer = 900; // 15 seconds of item magnet
+          } else if (pu.type === 'double') {
+            player.doubleTimer = 900; // 15 seconds of double points tail growth
+          } else if (pu.type === 'shield') {
+            player.shieldTimer = 750; // 12 seconds of invulnerability shield
+          } else if (pu.type === 'freeze') {
+            player.freezeTimer = 600; // 10 seconds of bot slow down ice
+          }
+
+          audio.playEat();
+
+          // Spawn beautiful localized text alert above player snake head
+          floatEmotesRef.current.push({
+            id: Math.random().toString(),
+            x: currentHead.x,
+            y: currentHead.y - 40,
+            text: `🧪 ${pu.type.toUpperCase()} ACTIVATED! ${pu.emoji}`,
+            opacity: 1,
+            timer: 75
+          });
+
+          return false; // Bottle consumed
         }
         return true;
       });
@@ -780,15 +898,39 @@ export default function SnakeGame({
         });
       });
 
-      // Replenish pellets
+      // Replenish pellets (juicy fruits and luxury glowing gems!)
       while (pelletsRef.current.length < 150) {
+        const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
+        const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
+        const isFruit = Math.random() < 0.65;
+        const emoji = isFruit 
+          ? FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)] 
+          : GEM_EMOJIS[Math.floor(Math.random() * GEM_EMOJIS.length)];
         pelletsRef.current.push({
           id: Math.random().toString(),
           x: Math.floor(Math.random() * (MAP_SIZE - 40)) + 20,
           y: Math.floor(Math.random() * (MAP_SIZE - 40)) + 20,
-          size: Math.floor(Math.random() * 5) + 3,
+          size: isFruit ? 8 : 6,
           color: PELLET_COLORS[Math.floor(Math.random() * PELLET_COLORS.length)],
-          points: Math.floor(Math.random() * 8) + 4
+          points: isFruit ? 12 : 8,
+          fruitEmoji: emoji
+        });
+      }
+
+      // Replenish power ups always to keep 5 on the battlefield
+      while (powerUpsRef.current.length < 5) {
+        const puTypes: Array<'speed' | 'magnet' | 'double' | 'shield' | 'freeze'> = ['speed', 'magnet', 'double', 'shield', 'freeze'];
+        const puEmojis = { speed: '⚡', magnet: '🧲', double: '💰', shield: '🛡️', freeze: '❄️' };
+        const puColors = { speed: '#38bdf8', magnet: '#ec4899', double: '#fbbf24', shield: '#10b981', freeze: '#06b6d4' };
+        const type = puTypes[Math.floor(Math.random() * puTypes.length)];
+        powerUpsRef.current.push({
+          id: Math.random().toString(),
+          x: Math.floor(Math.random() * (MAP_SIZE - 200)) + 100,
+          y: Math.floor(Math.random() * (MAP_SIZE - 200)) + 100,
+          type: type,
+          color: puColors[type],
+          emoji: puEmojis[type],
+          pulseScale: 1
         });
       }
 
@@ -803,7 +945,21 @@ export default function SnakeGame({
           const segCoords = bot.segments[j];
           const dist = Math.hypot(headCoords.x - segCoords.x, headCoords.y - segCoords.y);
           if (dist < 22) { // Collision threshold
-            playerDied = true;
+            if (player.shieldTimer > 0) {
+              // Shield absorbed! Bounce the snake head back
+              player.angle = player.angle + Math.PI;
+              player.shieldTimer = Math.max(0, player.shieldTimer - 150); // subtract armor timer
+              floatEmotesRef.current.push({
+                id: Math.random().toString(),
+                x: headCoords.x,
+                y: headCoords.y - 35,
+                text: '🛡️ SHIELD BLOCKED COLLISION!',
+                opacity: 1,
+                timer: 50
+              });
+            } else {
+              playerDied = true;
+            }
           }
         }
       });
@@ -829,7 +985,14 @@ export default function SnakeGame({
             if (k === 0) {
               // Duel of heads: larger wins
               if (bot.segments.length > player.segments.length) {
-                playerDied = true;
+                if (player.shieldTimer > 0) {
+                  // Shield absorbs head collision!
+                  player.angle = player.angle + Math.PI;
+                  player.shieldTimer = Math.max(0, player.shieldTimer - 120);
+                  botCrashed = true; // bot dies instead because player is shielded!
+                } else {
+                  playerDied = true;
+                }
               }
             } else {
               killedByPlayer = true;
@@ -853,13 +1016,18 @@ export default function SnakeGame({
           // turn bot into colorful food pellets
           bot.segments.forEach((seg, idx) => {
             if (idx % 2 === 0) {
+              const isFruit = Math.random() < 0.65;
+              const emoji = isFruit 
+                ? FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)] 
+                : GEM_EMOJIS[Math.floor(Math.random() * GEM_EMOJIS.length)];
               pelletsRef.current.push({
                 id: Math.random().toString(),
-                x: seg.x + (Math.random() * 10 - 5),
-                y: seg.y + (Math.random() * 10 - 5),
-                size: 6,
+                x: seg.x + (Math.random() * 14 - 7),
+                y: seg.y + (Math.random() * 14 - 7),
+                size: isFruit ? 9 : 7,
                 color: bot.color,
-                points: 15
+                points: 15,
+                fruitEmoji: emoji
               });
             }
           });
@@ -977,7 +1145,7 @@ export default function SnakeGame({
       ctx.lineWidth = 6;
       ctx.strokeRect(-camX, -camY, MAP_SIZE, MAP_SIZE);
 
-      // Render colorful pellets
+      // Render colorful pellets (high-quality fruit and gem emojis)
       pelletsRef.current.forEach((pellet) => {
         // Frustum culling (only draw elements inside player bounds)
         if (
@@ -986,13 +1154,84 @@ export default function SnakeGame({
           pellet.y - pellet.size - camY >= 0 &&
           pellet.y + pellet.size - camY <= viewSize.current.height
         ) {
+          ctx.save();
+          // Draw a soft glowing halo behind
           ctx.beginPath();
-          ctx.arc(pellet.x - camX, pellet.y - camY, pellet.size, 0, Math.PI * 2);
-          ctx.fillStyle = pellet.color;
-          ctx.shadowBlur = pellet.size * 1.5;
-          ctx.shadowColor = pellet.color;
+          ctx.arc(pellet.x - camX, pellet.y - camY, pellet.size * 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = pellet.color + '15';
           ctx.fill();
-          ctx.shadowBlur = 0; // Reset shadow glow
+
+          if (pellet.fruitEmoji) {
+            // Draw fruit Emoji!
+            ctx.font = `${Math.floor(pellet.size * 2.1)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pellet.fruitEmoji, pellet.x - camX, pellet.y - camY);
+          } else {
+            // Falling back to glossy gem look
+            const radGrd = ctx.createRadialGradient(
+              pellet.x - camX - pellet.size*0.3, pellet.y - camY - pellet.size*0.3, pellet.size*0.1,
+              pellet.x - camX, pellet.y - camY, pellet.size
+            );
+            radGrd.addColorStop(0, '#ffffff');
+            radGrd.addColorStop(0.3, pellet.color);
+            radGrd.addColorStop(1, '#000000');
+            ctx.beginPath();
+            ctx.arc(pellet.x - camX, pellet.y - camY, pellet.size, 0, Math.PI * 2);
+            ctx.fillStyle = radGrd;
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      });
+
+      // Draw active powerups on map
+      powerUpsRef.current.forEach((pu) => {
+        // Frustum culling
+        if (
+          pu.x - 30 - camX >= 0 &&
+          pu.x + 30 - camX <= viewSize.current.width &&
+          pu.y - 30 - camY >= 0 &&
+          pu.y + 30 - camY <= viewSize.current.height
+        ) {
+          ctx.save();
+          const pulse = Math.sin(Date.now() / 150) * 3 + 18;
+          
+          // Outer neon glow ring
+          ctx.strokeStyle = pu.color;
+          ctx.lineWidth = 2;
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = pu.color;
+          ctx.beginPath();
+          ctx.arc(pu.x - camX, pu.y - camY, pulse, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Soft radial gradient fill back
+          const rad = ctx.createRadialGradient(
+            pu.x - camX, pu.y - camY, 2,
+            pu.x - camX, pu.y - camY, pulse
+          );
+          rad.addColorStop(0, pu.color + '40');
+          rad.addColorStop(0.7, pu.color + '10');
+          rad.addColorStop(1, 'transparent');
+          ctx.fillStyle = rad;
+          ctx.beginPath();
+          ctx.arc(pu.x - camX, pu.y - camY, pulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw the physical bottle emoji inside!
+          ctx.shadowBlur = 0;
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pu.emoji, pu.x - camX, pu.y - camY);
+
+          // Render overhead tag
+          ctx.fillStyle = pu.color;
+          ctx.font = 'bold 8px Courier New, monospace';
+          ctx.fillText(pu.type.toUpperCase(), pu.x - camX, pu.y - camY - 24);
+
+          ctx.restore();
         }
       });
 
@@ -1093,6 +1332,42 @@ export default function SnakeGame({
       ctx.fillStyle = player.headColor;
       ctx.fill();
 
+      // Render active powerup visual auras around player head (SHIELD, MAGNET, SPEED)
+      if (player.shieldTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2.5 + Math.sin(Date.now() / 80) * 1.0;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = '#10b981';
+        ctx.beginPath();
+        ctx.arc(currentHead.x - camX, currentHead.y - camY, 25, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (player.magnetTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#ec4899';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]); // cool rotating dash line
+        ctx.translate(currentHead.x - camX, currentHead.y - camY);
+        ctx.rotate(Date.now() / 120);
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (player.speedTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(currentHead.x - camX, currentHead.y - camY, 19 + Math.sin(Date.now() / 100) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Player head cosmetics based on skin pattern
       ctx.save();
       ctx.translate(currentHead.x - camX, currentHead.y - camY);
@@ -1132,6 +1407,10 @@ export default function SnakeGame({
         ctx.fillText(em.text, em.x - camX, em.y - camY);
       });
 
+      if (animId % 6 === 0) {
+        setTick(prev => prev + 1);
+      }
+
       animId = requestAnimationFrame(updateAndDraw);
     };
 
@@ -1144,24 +1423,42 @@ export default function SnakeGame({
     };
   }, [isPlaying]);
 
+  // Combined pointer coordinate tracker (mouse dragging / tap fingers)
+  const handlePointerDownOrMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current || !isPlaying) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate relative coordinates to center
+    const dx = mouseX - rect.width / 2;
+    const dy = mouseY - rect.height / 2;
+    
+    playerRef.current.angle = Math.atan2(dy, dx);
+  };
+
   return (
-    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden bg-[#090a0f] border border-white/5 select-none">
+    <div className={`relative bg-[#090a0f] select-none transition-all duration-300 overflow-hidden ${
+      isPlaying 
+        ? 'fixed inset-0 w-screen h-screen z-[100] rounded-none border-0' 
+        : 'w-full h-[540px] rounded-2xl border border-white/5 shadow-2xl'
+    }`}>
       
       {/* 1. Play Now Screen Overlay */}
       {!isPlaying && !isGameOver && (
-        <div className="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-blue to-purple-500 flex items-center justify-center text-white text-2xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] mb-6">
+        <div className="absolute inset-0 bg-black/85 z-20 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-blue to-purple-500 flex items-center justify-center text-white text-3xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] mb-6 animate-bounce">
             🐍
           </div>
 
-          <h2 className="text-3xl font-extrabold text-white font-display mb-2">Snake .io Arena</h2>
-          <p className="text-white/50 text-sm max-w-sm mb-8">Slither smoothly, absorb pellets, cut off opponent bot trails and dominate the space board!</p>
+          <h2 className="text-3xl font-extrabold text-white font-display mb-1 tracking-tight">Snake .io Cosmic Arena</h2>
+          <p className="text-white/50 text-sm max-w-sm mb-8">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
 
           <button 
             onClick={startGame}
-            className="btn-neon px-10 py-3.5 text-lg font-bold flex items-center gap-2"
+            className="btn-neon px-12 py-4 text-lg font-bold flex items-center gap-2 tracking-wide transform hover:scale-105 active:scale-95 transition-all"
           >
-            <Play size={20} className="fill-slate-900 stroke-none" /> Join Arena
+            <Play size={20} className="fill-slate-900 stroke-none" /> Join Space Arena
           </button>
         </div>
       )}
@@ -1173,7 +1470,7 @@ export default function SnakeGame({
           animate={{ opacity: 1 }} 
           className="absolute inset-0 bg-black/95 z-20 flex flex-col items-center justify-center p-8 text-center"
         >
-          <div className="text-5xl mb-4 text-red-500">💀</div>
+          <div className="text-5xl mb-4 text-red-500 animate-pulse">💀</div>
           <h2 className="text-4xl font-black text-white font-display mb-2">Eliminated!</h2>
           <p className="text-white/40 text-xs mb-8">Your head crashed into an opponent's slither flank.</p>
 
@@ -1206,15 +1503,27 @@ export default function SnakeGame({
         ref={canvasRef}
         width={720}
         height={520}
+        onPointerDown={handlePointerDownOrMove}
+        onPointerMove={handlePointerDownOrMove}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        className="w-full h-full cursor-crosshair block"
+        className="w-full h-full cursor-crosshair block touch-none"
       />
 
       {/* 4. Overlay Live HUD controls */}
       {isPlaying && (
         <>
+          {/* Escape / Quit arena button */}
+          <button
+            onClick={() => {
+              triggerDeath();
+            }}
+            className="absolute top-5 right-5 bg-red-600/30 hover:bg-red-600/70 text-red-100 border border-red-500/30 font-bold text-xs rounded-xl px-4 py-2 pointer-events-auto backdrop-blur-md transition-all select-none shadow-lg z-50 flex items-center gap-1.5"
+          >
+            Quit Arena 🚪
+          </button>
+
           {/* Live Score stats layout */}
           <div className="absolute top-5 left-5 bg-black/60 border border-white/10 p-4 rounded-xl flex items-center gap-6 pointer-events-none z-10 backdrop-blur-md">
             <div>
@@ -1232,6 +1541,72 @@ export default function SnakeGame({
               <div className="text-xl font-bold font-mono text-purple-400 leading-none mt-0.5">{playerRef.current.segments.length}</div>
             </div>
           </div>
+
+          {/* Active Power-Ups Indicators */}
+          {(playerRef.current.speedTimer > 0 ||
+            playerRef.current.magnetTimer > 0 ||
+            playerRef.current.doubleTimer > 0 ||
+            playerRef.current.shieldTimer > 0 ||
+            playerRef.current.freezeTimer > 0) && (
+            <div className="absolute top-24 left-5 bg-black/75 border border-white/10 p-3.5 rounded-xl flex flex-col gap-2.5 z-10 backdrop-blur-md min-w-[170px] pointer-events-none">
+              <span className="text-[9px] text-white/50 uppercase font-bold tracking-wider block">Active Power-Ups 🧪</span>
+              {playerRef.current.speedTimer > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-[10px] font-bold text-sky-400">
+                    <span>⚡ Speed Thruster</span>
+                    <span>{Math.ceil(playerRef.current.speedTimer / 60)}s</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-sky-400 transition-all duration-100" style={{ width: `${(playerRef.current.speedTimer / 600) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+              {playerRef.current.magnetTimer > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-[10px] font-bold text-pink-400">
+                    <span>🧲 Pellet Magnet</span>
+                    <span>{Math.ceil(playerRef.current.magnetTimer / 60)}s</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-pink-400 transition-all duration-100" style={{ width: `${(playerRef.current.magnetTimer / 900) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+              {playerRef.current.doubleTimer > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-[10px] font-bold text-amber-400">
+                    <span>💰 Double Growth</span>
+                    <span>{Math.ceil(playerRef.current.doubleTimer / 60)}s</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400 transition-all duration-100" style={{ width: `${(playerRef.current.doubleTimer / 900) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+              {playerRef.current.shieldTimer > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-[10px] font-bold text-emerald-400">
+                    <span>🛡️ Crash Shield</span>
+                    <span>{Math.ceil(playerRef.current.shieldTimer / 60)}s</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-400 transition-all duration-100" style={{ width: `${(playerRef.current.shieldTimer / 750) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+              {playerRef.current.freezeTimer > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex justify-between text-[10px] font-bold text-cyan-400">
+                    <span>❄️ Time Freeze</span>
+                    <span>{Math.ceil(playerRef.current.freezeTimer / 60)}s</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-cyan-400 transition-all duration-100" style={{ width: `${(playerRef.current.freezeTimer / 600) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Chat Emotes drawer overlay selector */}
           <div className="absolute bottom-5 left-5 flex items-center gap-2 z-10">
@@ -1279,8 +1654,24 @@ export default function SnakeGame({
             </div>
           </div>
 
+          {/* Mobile Speed Boost button indicator */}
+          <div className="absolute bottom-5 right-[145px] z-20 pointer-events-auto">
+            <button
+              onPointerDown={() => { playerRef.current.isBoosting = true; }}
+              onPointerUp={() => { playerRef.current.isBoosting = false; }}
+              onPointerLeave={() => { playerRef.current.isBoosting = false; }}
+              onTouchStart={(e) => { e.preventDefault(); playerRef.current.isBoosting = true; }}
+              onTouchEnd={(e) => { e.preventDefault(); playerRef.current.isBoosting = false; }}
+              className="w-14 h-14 rounded-full bg-sky-500/20 active:scale-90 border border-sky-400/50 hover:neon-border flex items-center justify-center text-white text-xl font-bold transition-all shadow-[0_0_15px_rgba(59,130,246,0.25)] touch-none select-none"
+              title="Hold to Boost Speed"
+            >
+              ⚡
+            </button>
+            <div className="text-[8px] text-center text-sky-400/60 font-bold mt-1 uppercase">Hold Boost</div>
+          </div>
+
           {/* Live System Kill feed logging */}
-          <div className="absolute top-5 right-5 flex flex-col gap-1.5 z-10 pointer-events-none">
+          <div className="absolute top-20 right-5 flex flex-col gap-1.5 z-10 pointer-events-none">
             {killFeedRef.current.map((log) => (
               <motion.div 
                 key={log.id} 
@@ -1296,8 +1687,8 @@ export default function SnakeGame({
           </div>
 
           {/* Boost floating instruction tooltips */}
-          <div className="absolute top-24 left-5 text-[9px] font-bold text-white/30 flex items-center gap-2 pointer-events-none bg-black/40 border border-white/5 px-2 py-1 rounded">
-            Hold Click / Spacebar to BOOST (Sheds pieces of tail)
+          <div className="absolute top-[22px] right-[160px] text-[9px] font-bold text-white/30 hidden md:flex items-center gap-2 pointer-events-none bg-black/40 border border-white/5 px-2 py-1 rounded">
+            Drag mouse/finger to STEER • Hold space/Click to BOOST (Sheds parts)
           </div>
         </>
       )}
@@ -1305,7 +1696,7 @@ export default function SnakeGame({
       {/* 5. Sound muters buttons */}
       <button 
         onClick={toggleMute}
-        className="absolute bottom-5 right-32 w-10 h-10 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/60 hover:text-white z-10 backdrop-blur-md"
+        className="absolute bottom-5 right-[245px] w-10 h-10 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/60 hover:text-white z-10 backdrop-blur-md select-none"
       >
         {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
       </button>
