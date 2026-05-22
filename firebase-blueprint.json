@@ -305,6 +305,91 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "message", "showCount", "createdAt"]
+    },
+    "SnakePlayerStats": {
+      "title": "SnakePlayerStats",
+      "description": "Overall statistics for the Snake .io game attached to a user's account",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "highScore": { "type": "number" },
+        "totalScore": { "type": "number" },
+        "coins": { "type": "number" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "matchesPlayed": { "type": "number" },
+        "wins": { "type": "number" },
+        "killCount": { "type": "number" },
+        "longestSnakeLength": { "type": "number" },
+        "currentSkin": { "type": "string" },
+        "settings": { "type": "object" },
+        "dailyRewardsClaimed": { "type": "number" },
+        "lastDailyRewardAt": { "type": "string" }
+      },
+      "required": ["userId", "highScore", "totalScore", "coins", "xp", "level", "matchesPlayed", "wins"]
+    },
+    "SnakeScore": {
+      "title": "SnakeScore",
+      "description": "A top score entry for the Snake .io global leaderboards",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "score": { "type": "number" },
+        "kills": { "type": "number" },
+        "longestLength": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "score", "kills", "longestLength", "timestamp"]
+    },
+    "SnakeMatchHistory": {
+      "title": "SnakeMatchHistory",
+      "description": "Historical record of matches played in Snake .io",
+      "type": "object",
+      "properties": {
+        "matchId": { "type": "string" },
+        "userId": { "type": "string" },
+        "score": { "type": "number" },
+        "kills": { "type": "number" },
+        "longestLength": { "type": "number" },
+        "rank": { "type": "number" },
+        "coinsEarned": { "type": "number" },
+        "xpEarned": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "skinUsed": { "type": "string" }
+      },
+      "required": ["matchId", "userId", "score", "kills", "longestLength", "rank", "coinsEarned", "xpEarned", "timestamp"]
+    },
+    "SnakeInventory": {
+      "title": "SnakeInventory",
+      "description": "List of unlocked skins and cosmectics for a Snake .io player",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "unlockedSkins": { "type": "array" }
+      },
+      "required": ["userId", "unlockedSkins"]
+    },
+    "SnakeAchievement": {
+      "title": "SnakeAchievement",
+      "description": "List of achievements unlocked by a user in Snake .io",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "unlockedAchievements": { "type": "array" }
+      },
+      "required": ["userId", "unlockedAchievements"]
+    },
+    "SnakeLeaderboard": {
+      "title": "SnakeLeaderboard",
+      "description": "Global leaderboard aggregate data for the Snake .io game",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "rankings": { "type": "array" }
+      },
+      "required": ["id", "lastUpdated", "rankings"]
     }
   },
   "firestore": {
@@ -379,6 +464,30 @@
     "/userMessages/{msgId}": {
       "schema": "UserMessage",
       "description": "Direct messages for users"
+    },
+    "/snake_player_stats/{userId}": {
+      "schema": "SnakePlayerStats",
+      "description": "Collects global statistics for a user in Snake.io"
+    },
+    "/snake_scores/{scoreId}": {
+      "schema": "SnakeScore",
+      "description": "Submit scores for a global real-time leaderboard"
+    },
+    "/snake_match_history/{matchId}": {
+      "schema": "SnakeMatchHistory",
+      "description": "Saves match history logs for all user games"
+    },
+    "/snake_inventory/{userId}": {
+      "schema": "SnakeInventory",
+      "description": "Tracks skins purchased or unlocked for every snake player"
+    },
+    "/snake_achievements/{userId}": {
+      "schema": "SnakeAchievement",
+      "description": "Achievement badges unlocked"
+    },
+    "/snake_leaderboards/{leaderboardId}": {
+      "schema": "SnakeLeaderboard",
+      "description": "Pre-compiled high score rankings aggregated for Snake.io"
     }
   }
 }

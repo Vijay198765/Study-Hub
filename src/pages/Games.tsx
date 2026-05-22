@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import SnakeArena from '../components/Snake/SnakeArena';
 import { 
   Gamepad2, 
   Trophy, 
@@ -50,6 +51,7 @@ interface Game {
 }
 
 const GAMES: Game[] = [
+  { id: 'snake-io', name: 'Snake .io Arena', description: 'Steer smoothly, eat pellets, and cut off bots to grow giant!', icon: Gamepad2, color: 'from-emerald-400 to-blue-500' },
   { id: 'math-sprint', name: 'Math Sprint', description: 'Solve arithmetic problems as fast as you can!', icon: Hash, color: 'from-blue-500 to-cyan-500' },
   { id: 'memory-matrix', name: 'Memory Matrix', description: 'Find matching pairs of cards.', icon: Brain, color: 'from-purple-500 to-pink-500' },
   { id: 'reaction-test', name: 'Reaction Test', description: 'Click as soon as the screen turns green!', icon: Zap, color: 'from-yellow-500 to-orange-500' },
@@ -1648,6 +1650,7 @@ export default function Games() {
 
   const renderGame = () => {
     switch (selectedGame) {
+      case 'snake-io': return <SnakeArena />;
       case 'math-sprint': return <MathSprint />;
       case 'memory-matrix': return <MemoryMatrix />;
       case 'reaction-test': return <ReactionTest />;
@@ -1710,6 +1713,26 @@ export default function Games() {
                     </div>
                   </motion.div>
                 ))}
+              </div>
+            </motion.div>
+          ) : selectedGame === 'snake-io' ? (
+            <motion.div
+              key="snake-arena-view"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="w-full max-w-7xl mx-auto px-2"
+            >
+              <button 
+                onClick={() => setSelectedGame(null)}
+                className="flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/10 border border-white/10 bg-white/5 backdrop-blur-md px-5 py-2.5 rounded-xl transition-all mb-6 group select-none shadow-lg"
+              >
+                <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                <span className="font-semibold text-sm">Exit Arena Setup</span>
+              </button>
+
+              <div className="w-full relative z-10">
+                {renderGame()}
               </div>
             </motion.div>
           ) : (

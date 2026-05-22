@@ -437,6 +437,66 @@ service cloud.firestore {
              (!('showCount' in data) || data.showCount is number);
     }
 
+    function isValidSnakePlayerStats(data) {
+      return data.keys().hasAll(['userId', 'highScore', 'totalScore', 'coins', 'xp', 'level', 'matchesPlayed', 'wins']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.highScore is number &&
+             data.totalScore is number &&
+             data.coins is number &&
+             data.xp is number &&
+             data.level is number &&
+             data.matchesPlayed is number &&
+             data.wins is number &&
+             (!('killCount' in data) || data.killCount is number) &&
+             (!('longestSnakeLength' in data) || data.longestSnakeLength is number) &&
+             (!('currentSkin' in data) || data.currentSkin is string) &&
+             (!('dailyRewardsClaimed' in data) || data.dailyRewardsClaimed is number) &&
+             (!('lastDailyRewardAt' in data) || data.lastDailyRewardAt is string);
+    }
+
+    function isValidSnakeScore(data) {
+      return data.keys().hasAll(['userId', 'username', 'score', 'kills', 'longestLength', 'timestamp']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.username is string &&
+             data.score is number &&
+             data.kills is number &&
+             data.longestLength is number &&
+             (data.timestamp is timestamp || data.timestamp == request.time);
+    }
+
+    function isValidSnakeMatchHistory(data) {
+      return data.keys().hasAll(['matchId', 'userId', 'score', 'kills', 'longestLength', 'rank', 'coinsEarned', 'xpEarned', 'timestamp']) &&
+             data.matchId is string &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.score is number &&
+             data.kills is number &&
+             data.longestLength is number &&
+             data.rank is number &&
+             data.coinsEarned is number &&
+             data.xpEarned is number &&
+             (data.timestamp is timestamp || data.timestamp == request.time) &&
+             (!('skinUsed' in data) || data.skinUsed is string);
+    }
+
+    function isValidSnakeInventory(data) {
+      return data.keys().hasAll(['userId', 'unlockedSkins']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.unlockedSkins is list;
+    }
+
+    function isValidSnakeAchievement(data) {
+      return data.keys().hasAll(['userId', 'unlockedAchievements']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.unlockedAchievements is list;
+    }
+
+    function isValidSnakeLeaderboard(data) {
+      return data.keys().hasAll(['id', 'lastUpdated', 'rankings']) &&
+             data.id is string &&
+             (data.lastUpdated is timestamp || data.lastUpdated == request.time) &&
+             data.rankings is list;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -599,6 +659,42 @@ service cloud.firestore {
       allow read: if isAdmin() || (isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all'));
       allow create, delete: if isAdmin() && (request.resource == null || isValidUserMessage(request.resource.data));
       allow update: if (isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid)) && isValidUserMessage(request.resource.data);
+    }
+
+    match /snake_player_stats/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && userId == request.auth.uid && isValidSnakePlayerStats(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /snake_scores/{scoreId} {
+      allow get, list: if true;
+      allow create: if isAuthenticated() && isValidSnakeScore(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /snake_match_history/{matchId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidSnakeMatchHistory(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /snake_inventory/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && userId == request.auth.uid && isValidSnakeInventory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /snake_achievements/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && userId == request.auth.uid && isValidSnakeAchievement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /snake_leaderboards/{leaderboardId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (isAuthenticated() && isValidSnakeLeaderboard(request.resource.data));
+      allow delete: if isAdmin();
     }
   }
 }
