@@ -175,11 +175,11 @@ export default function ClassDetail() {
                     <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Support</span>
                   </div>
                   <a 
-                    href="mailto:vijayninama683@gmail.com" 
+                    href="mailto:tagoreteam2025@gmail.com" 
                     className="text-xs font-mono font-medium text-white/80 hover:text-neon-blue transition-all"
                     title="Contact Support via Gmail"
                   >
-                    vijayninama683@gmail.com
+                    tagoreteam2025@gmail.com
                   </a>
                 </div>
               </div>
