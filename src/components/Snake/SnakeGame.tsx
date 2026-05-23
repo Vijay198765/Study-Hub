@@ -129,7 +129,7 @@ interface SnakeGameProps {
   onMatchComplete: (gameStats: { score: number; kills: number; longestLength: number }) => void;
 }
 
-const MAP_SIZE = 2200; // Large 2D virtual boundary
+const MAP_SIZE = 3500; // Large 2D virtual boundary
 const BOT_NAMES = ['AeroSlither', 'RedViper', 'CobraCommander', 'NeonAsphalt', 'VenomDart', 'CosmicWorm', 'SlytherKing', 'Anaconda99', 'Basilisk', 'SneakySid'];
 const EMOTE_OPTIONS = ['😂', '🔥', '👑', '😡', '😜', '⚔️', '⚡', '👀'];
 const PELLET_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f43f5e', '#a7f3d0'];
@@ -151,82 +151,83 @@ const drawSnakeSegment = (
 ) => {
   ctx.save();
 
-  // Organic winding swimming wave ripple!
-  const rippleFactor = Math.sin(index * 0.35 - Date.now() / 140);
-  const r = Math.max(3, baseR * (1 + rippleFactor * 0.12));
+  // Equal thickness trailing all the time with a subtle breathing shimmer
+  const r = baseR;
 
   // Create standard highlights for 3D sphere look
   let grd = ctx.createRadialGradient(
-    x - r * 0.3, y - r * 0.3, r * 0.1,
+    x - r * 0.35, y - r * 0.35, r * 0.1,
     x, y, r
   );
 
   // Set style based on pattern!
   if (pattern === 'rainbow') {
     // Dynamic color cycle based on segment index and time
-    const hue = (index * 12 + Date.now() / 10) % 360;
-    grd.addColorStop(0, `hsl(${(hue + 60) % 360}, 100%, 80%)`);
-    grd.addColorStop(0.3, `hsl(${hue}, 100%, 55%)`);
-    grd.addColorStop(1, `hsl(${(hue - 20) % 360}, 100%, 30%)`);
+    const hue = (index * 14 + Date.now() / 8) % 360;
+    grd.addColorStop(0, `hsl(${(hue + 60) % 360}, 100%, 85%)`);
+    grd.addColorStop(0.3, `hsl(${hue}, 100%, 60%)`);
+    grd.addColorStop(1, `hsl(${(hue - 20) % 360}, 100%, 35%)`);
     
-    ctx.shadowBlur = isBoosting ? 20 : 8;
-    ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.7)`;
+    ctx.shadowBlur = isBoosting ? 24 : 10;
+    ctx.shadowColor = `hsla(${hue}, 100%, 55%, 0.85)`;
   } else if (pattern === 'neon') {
     grd.addColorStop(0, '#ffffff');
     grd.addColorStop(0.2, '#10b981');
     grd.addColorStop(1, '#064e3b');
     
-    ctx.shadowBlur = isBoosting ? 22 : 12;
+    ctx.shadowBlur = isBoosting ? 25 : 14;
     ctx.shadowColor = '#10b981';
   } else if (pattern === 'cyberpunk') {
     grd.addColorStop(0, '#fbcfe8');
     grd.addColorStop(0.3, '#ec4899');
     grd.addColorStop(1, '#3b0764');
     
-    ctx.shadowBlur = isBoosting ? 18 : 8;
+    ctx.shadowBlur = isBoosting ? 20 : 10;
     ctx.shadowColor = '#ec4899';
   } else if (pattern === 'glow') {
     grd.addColorStop(0, '#fef08a');
     grd.addColorStop(0.2, '#ec4899');
     grd.addColorStop(1, '#6b21a8');
     
-    ctx.shadowBlur = isBoosting ? 24 : 12;
+    ctx.shadowBlur = isBoosting ? 28 : 15;
     ctx.shadowColor = '#f43f5e';
   } else if (pattern === 'magma') {
     // Pulsating flame colors
-    const pulse = Math.sin(Date.now() / 150 + index * 0.5) * 0.15 + 0.85;
+    const pulse = Math.sin(Date.now() / 120 + index * 0.6) * 0.15 + 0.85;
     grd.addColorStop(0, '#fef08a');
     grd.addColorStop(0.3, `rgba(249, 115, 22, ${pulse})`);
     grd.addColorStop(1, '#7f1d1d');
     
-    ctx.shadowBlur = isBoosting ? 26 : 10;
+    ctx.shadowBlur = isBoosting ? 30 : 12;
     ctx.shadowColor = '#f97316';
   } else if (pattern === 'pulsing') {
     // Translucent cloaking pulse
-    const alpha = (Math.sin(Date.now() / 250 + index * 0.3) * 0.25 + 0.5);
+    const alpha = (Math.sin(Date.now() / 200 + index * 0.4) * 0.25 + 0.55);
     grd.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
     grd.addColorStop(0.3, `rgba(107, 114, 128, ${alpha})`);
     grd.addColorStop(1, `rgba(17, 24, 39, ${alpha})`);
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.15)';
   } else if (pattern === 'galaxy') {
     grd.addColorStop(0, '#e0f2fe');
     grd.addColorStop(0.3, '#8b5cf6');
     grd.addColorStop(1, '#1e1b4b');
     
-    ctx.shadowBlur = isBoosting ? 15 : 5;
+    ctx.shadowBlur = isBoosting ? 18 : 7;
     ctx.shadowColor = '#a78bfa';
   } else if (pattern === 'royal') {
     grd.addColorStop(0, '#fffbeb');
     grd.addColorStop(0.3, '#fbbf24');
     grd.addColorStop(1, '#78350f');
     
-    ctx.shadowBlur = isBoosting ? 20 : 8;
+    ctx.shadowBlur = isBoosting ? 24 : 11;
     ctx.shadowColor = '#fbbf24';
   } else if (pattern === 'dragon') {
     grd.addColorStop(0, '#a7f3d0');
     grd.addColorStop(0.3, '#06b6d4');
     grd.addColorStop(1, '#1e293b');
     
-    ctx.shadowBlur = isBoosting ? 16 : 6;
+    ctx.shadowBlur = isBoosting ? 18 : 8;
     ctx.shadowColor = '#34d399';
   } else if (pattern === 'stripes') {
     grd.addColorStop(0, '#ffedd5');
@@ -245,47 +246,131 @@ const drawSnakeSegment = (
   ctx.fillStyle = grd;
   ctx.fill();
 
-  // Draw unique pattern layers on top of each segment
-  if (pattern === 'dragon' && index % 2 === 0) {
-    // Spikey scales on back of segments
+  // --- Beautiful Design textures & overlay designs on top ---
+  if (pattern === 'dragon') {
+    // Double layered overlapping sharp dragon scales
     ctx.fillStyle = accentColor;
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 1;
+
+    // Scale 1
     ctx.beginPath();
-    ctx.arc(x, y - r * 0.8, r * 0.35, 0, Math.PI * 2);
-    ctx.arc(x, y + r * 0.8, r * 0.35, 0, Math.PI * 2);
+    ctx.arc(x, y - r * 0.4, r * 0.45, 0, Math.PI, false);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Scale 2
+    ctx.beginPath();
+    ctx.arc(x, y + r * 0.4, r * 0.45, Math.PI, 0, false);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Ridge spikes
+    ctx.fillStyle = headColor;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + r + 5, y - 3);
+    ctx.lineTo(x + r + 5, y + 3);
+    ctx.closePath();
     ctx.fill();
   }
 
-  if (pattern === 'galaxy' && index % 3 === 0) {
-    // Twinkling space star glints
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${Math.floor(r * 0.85)}px sans-serif`;
-    ctx.fillText('✦', x - r * 0.35, y + r * 0.3);
-  }
-
-  if (pattern === 'royal' && index % 2 === 0) {
-    // Imperial gold ring
-    ctx.strokeStyle = '#fef3c7';
+  if (pattern === 'galaxy') {
+    // Spatial rings orbiting each segment (Saturn-like aspect)
+    ctx.strokeStyle = '#c7d2fe';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(x, y, r * 0.65, 0, Math.PI * 2);
+    ctx.ellipse(x, y, r * 1.25, r * 0.35, Math.PI / 6, 0, Math.PI * 2);
     ctx.stroke();
+
+    if (index % 2 === 0) {
+      // Orbiting stardust sparkles
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.6, y - r * 0.4, 2, 0, Math.PI * 2);
+      ctx.arc(x + r * 0.7, y + r * 0.3, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
-  if (pattern === 'cyberpunk' && index % 2 === 0) {
-    // Hologram circular ring
+  if (pattern === 'royal') {
+    // Crown luxury lines with embedded diamond/ruby shape
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x - r * 0.4, y - r * 0.4, r * 0.8, r * 0.8);
+
+    // Luxury Ruby core
+    ctx.fillStyle = '#dc2626';
     ctx.beginPath();
-    ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.moveTo(x, y - r * 0.35);
+    ctx.lineTo(x + r * 0.35, y);
+    ctx.lineTo(x, y + r * 0.35);
+    ctx.lineTo(x - r * 0.35, y);
+    ctx.closePath();
+    ctx.fill();
   }
 
-  if (pattern === 'stripes' && index % 2 === 0) {
-    // Alternating dark stripe
+  if (pattern === 'cyberpunk') {
+    // Technocratic neon cross grids
+    ctx.strokeStyle = '#ffffff80';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.7, y);
+    ctx.lineTo(x + r * 0.4, y);
+    ctx.moveTo(x, y - r * 0.7);
+    ctx.lineTo(x, y + r * 0.7);
+    ctx.stroke();
+
+    // Central digital core
+    ctx.fillStyle = '#06b6d4';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (pattern === 'stripes') {
+    // Thick tigers stripes with shadow borders
     ctx.fillStyle = accentColor;
     ctx.beginPath();
-    ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
+    ctx.arc(x, y, r * 0.70, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (pattern === 'rainbow') {
+    // Swirling multi-color inner concentric rings
+    ctx.strokeStyle = `hsl(${(index * 20 + Date.now() / 6) % 360}, 100%, 75%)`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.60, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.30, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (pattern === 'neon') {
+    // Tech-matrix nodes
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(x - 3, y - 3, 6, 6);
+  }
+
+  if (pattern === 'classic' || pattern === 'default' || !pattern) {
+    // Simple sleek target rings
+    ctx.strokeStyle = '#ffffff30';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   ctx.restore();
@@ -724,7 +809,7 @@ export default function SnakeGame({
 
       // Sliding chain logic for entire tail segments
       const newSegments = [{ x: nextHeadX, y: nextHeadY }];
-      const targetSpacing = 13; // Distance between tail segment links
+      const targetSpacing = 15; // Distance between tail segment links
 
       for (let i = 1; i < player.segments.length; i++) {
         const prevSeg = newSegments[i - 1];
@@ -1189,47 +1274,80 @@ export default function SnakeGame({
       powerUpsRef.current.forEach((pu) => {
         // Frustum culling
         if (
-          pu.x - 30 - camX >= 0 &&
-          pu.x + 30 - camX <= viewSize.current.width &&
-          pu.y - 30 - camY >= 0 &&
-          pu.y + 30 - camY <= viewSize.current.height
+          pu.x - 35 - camX >= 0 &&
+          pu.x + 35 - camX <= viewSize.current.width &&
+          pu.y - 35 - camY >= 0 &&
+          pu.y + 35 - camY <= viewSize.current.height
         ) {
           ctx.save();
-          const pulse = Math.sin(Date.now() / 150) * 3 + 18;
-          
+          const px = pu.x - camX;
+          const py = pu.y - camY;
+          const pulse = Math.sin(Date.now() / 150) * 3 + 20;
+
           // Outer neon glow ring
           ctx.strokeStyle = pu.color;
-          ctx.lineWidth = 2;
-          ctx.shadowBlur = 15;
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = 20;
           ctx.shadowColor = pu.color;
           ctx.beginPath();
-          ctx.arc(pu.x - camX, pu.y - camY, pulse, 0, Math.PI * 2);
+          ctx.arc(px, py, pulse, 0, Math.PI * 2);
           ctx.stroke();
 
           // Soft radial gradient fill back
-          const rad = ctx.createRadialGradient(
-            pu.x - camX, pu.y - camY, 2,
-            pu.x - camX, pu.y - camY, pulse
-          );
-          rad.addColorStop(0, pu.color + '40');
-          rad.addColorStop(0.7, pu.color + '10');
+          const rad = ctx.createRadialGradient(px, py, 2, px, py, pulse);
+          rad.addColorStop(0, pu.color + '45');
+          rad.addColorStop(0.7, pu.color + '15');
           rad.addColorStop(1, 'transparent');
           ctx.fillStyle = rad;
           ctx.beginPath();
-          ctx.arc(pu.x - camX, pu.y - camY, pulse, 0, Math.PI * 2);
+          ctx.arc(px, py, pulse, 0, Math.PI * 2);
           ctx.fill();
 
-          // Draw the physical bottle emoji inside!
+          // Physical Chemistry/Apothecary science bottle glass structure
+          ctx.shadowBlur = 5;
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.strokeStyle = '#ffffffde';
+          ctx.lineWidth = 2;
+          ctx.fillStyle = pu.color + '35'; // glowing liquid color fill
+
+          ctx.beginPath();
+          // Top lip
+          ctx.moveTo(px - 6, py - 15);
+          ctx.lineTo(px + 6, py - 15);
+          // Neck left
+          ctx.moveTo(px - 4, py - 15);
+          ctx.lineTo(px - 4, py - 6);
+          // Bulb body left
+          ctx.quadraticCurveTo(px - 14, py - 2, px - 14, py + 8);
+          // Base bottom
+          ctx.lineTo(px - 10, py + 15);
+          ctx.lineTo(px + 10, py + 15);
+          // Bulb body right
+          ctx.lineTo(px + 14, py + 8);
+          ctx.quadraticCurveTo(px + 14, py - 2, px + 4, py - 6);
+          // Neck right
+          ctx.lineTo(px + 4, py - 15);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Cork stopper
+          ctx.fillStyle = '#b45309'; // woody brown rustic stopper
+          ctx.fillRect(px - 5, py - 19, 10, 5);
+
+          // Render the glowing emoji centered inside the glass bulb!
           ctx.shadowBlur = 0;
-          ctx.font = '16px Arial';
+          ctx.font = '13px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(pu.emoji, pu.x - camX, pu.y - camY);
+          ctx.fillText(pu.emoji, px, py + 3);
 
-          // Render overhead tag
-          ctx.fillStyle = pu.color;
-          ctx.font = 'bold 8px Courier New, monospace';
-          ctx.fillText(pu.type.toUpperCase(), pu.x - camX, pu.y - camY - 24);
+          // Render overhead scientific tag
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = pu.color;
+          ctx.font = 'black 9px Courier New, monospace';
+          ctx.fillText(pu.type.toUpperCase(), px, py - 26);
 
           ctx.restore();
         }
@@ -1244,7 +1362,7 @@ export default function SnakeGame({
         // Body (Render from tail to head)
         for (let j = bot.segments.length - 1; j > 0; j--) {
           const seg = bot.segments[j];
-          const r = Math.max(5, 12 * (1 - j / bot.segments.length));
+          const r = 18; // Constant equal size for bots
           
           drawSnakeSegment(
             ctx,
@@ -1265,7 +1383,7 @@ export default function SnakeGame({
         // Head
         const bHead = bot.segments[0];
         ctx.beginPath();
-        ctx.arc(bHead.x - camX, bHead.y - camY, 13, 0, Math.PI * 2);
+        ctx.arc(bHead.x - camX, bHead.y - camY, 20, 0, Math.PI * 2);
         ctx.fillStyle = bot.headColor;
         ctx.fill();
 
@@ -1308,7 +1426,7 @@ export default function SnakeGame({
       // Draw body
       for (let j = player.segments.length - 1; j > 0; j--) {
         const seg = player.segments[j];
-        const r = Math.max(5, 13 * (1 - j / player.segments.length));
+        const r = 21; // Constant equal size for player (larger and thicker)
         
         drawSnakeSegment(
           ctx,
@@ -1328,7 +1446,7 @@ export default function SnakeGame({
 
       // Draw head
       ctx.beginPath();
-      ctx.arc(currentHead.x - camX, currentHead.y - camY, 14, 0, Math.PI * 2);
+      ctx.arc(currentHead.x - camX, currentHead.y - camY, 23, 0, Math.PI * 2);
       ctx.fillStyle = player.headColor;
       ctx.fill();
 
@@ -1437,6 +1555,21 @@ export default function SnakeGame({
     playerRef.current.angle = Math.atan2(dy, dx);
   };
 
+  const handleTouchMoveAndSteer = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current || !isPlaying) return;
+    e.preventDefault(); // absolutely key: stops mobile browser bounce & scrolling
+    const rect = canvasRef.current.getBoundingClientRect();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const mouseX = touch.clientX - rect.left;
+    const mouseY = touch.clientY - rect.top;
+
+    const dx = mouseX - rect.width / 2;
+    const dy = mouseY - rect.height / 2;
+    
+    playerRef.current.angle = Math.atan2(dy, dx);
+  };
+
   return (
     <div className={`relative bg-[#090a0f] select-none transition-all duration-300 overflow-hidden ${
       isPlaying 
@@ -1505,6 +1638,8 @@ export default function SnakeGame({
         height={520}
         onPointerDown={handlePointerDownOrMove}
         onPointerMove={handlePointerDownOrMove}
+        onTouchStart={handleTouchMoveAndSteer}
+        onTouchMove={handleTouchMoveAndSteer}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}

@@ -16,6 +16,7 @@ import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
 import Library from './pages/Library';
 import Explorer from './pages/Explorer';
+import SnakeArena from './components/Snake/SnakeArena';
 import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeOverlay from './components/WelcomeOverlay';
@@ -44,6 +45,7 @@ const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAd
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const isSnakeFullscreen = location.pathname === '/play-snake';
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSpecialAdmin, setIsSpecialAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -820,9 +822,9 @@ export default function App() {
                 quality={siteConfig?.animQuality || 'high'} 
               />
               
-              <Watermark />
+              {!isSnakeFullscreen && <Watermark />}
               
-              {siteConfig?.showAnnouncement && (
+              {!isSnakeFullscreen && siteConfig?.showAnnouncement && (
                 <div 
                   className="w-full py-2 overflow-hidden whitespace-nowrap z-[60] relative"
                   style={{ backgroundColor: siteConfig?.announcementColor || '#00E5FF' }}
@@ -833,11 +835,13 @@ export default function App() {
                 </div>
               )}
 
-              <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />
+              {!isSnakeFullscreen && <Navbar isAdmin={isAdmin} isSpecialAdmin={isSpecialAdmin} user={userProfile} siteConfig={siteConfig} />}
               
-              <div className="pt-[64px]">
-                <NewsTicker />
-              </div>
+              {!isSnakeFullscreen && (
+                <div className="pt-[64px]">
+                  <NewsTicker />
+                </div>
+              )}
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
@@ -901,6 +905,7 @@ export default function App() {
                       <Route path="/class/:classId/subject/:subjectId" element={<SubjectDetail />} />
                       <Route path="/class/:classId/subject/:subjectId/chapter/:chapterId" element={<ChapterDetail />} />
                       <Route path="/games" element={<Games />} />
+                      <Route path="/play-snake" element={<SnakeArena />} />
                       <Route path="/live-club" element={<LiveComments />} />
                       <Route path="/tests" element={<Tests />} />
                       <Route path="/library" element={<Library />} />
@@ -920,9 +925,9 @@ export default function App() {
                 </AnimatePresence>
               </main>
 
-              <Footer siteConfig={siteConfig} />
-              <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />
-              <WhatsAppFloat />
+              {!isSnakeFullscreen && <Footer siteConfig={siteConfig} />}
+              {!isSnakeFullscreen && <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />}
+              {!isSnakeFullscreen && <WhatsAppFloat />}
 
               {/* Individual User Message / Alert Overlay */}
               <AnimatePresence>

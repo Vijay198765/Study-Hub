@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SnakeArena from '../components/Snake/SnakeArena';
 import { 
@@ -1646,11 +1647,19 @@ const ReactionTest = () => {
 // --- Main Component ---
 
 export default function Games() {
+  const navigate = useNavigate();
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+
+  const handleGameSelect = (gameId: string) => {
+    if (gameId === 'snake-io') {
+      navigate('/play-snake');
+    } else {
+      setSelectedGame(gameId);
+    }
+  };
 
   const renderGame = () => {
     switch (selectedGame) {
-      case 'snake-io': return <SnakeArena />;
       case 'math-sprint': return <MathSprint />;
       case 'memory-matrix': return <MemoryMatrix />;
       case 'reaction-test': return <ReactionTest />;
@@ -1691,7 +1700,7 @@ export default function Games() {
                     key={game.id}
                     whileHover={{ y: -5 }}
                     className="group cursor-pointer"
-                    onClick={() => setSelectedGame(game.id)}
+                    onClick={() => handleGameSelect(game.id)}
                   >
                     <div className="glass-card p-8 h-full relative overflow-hidden group-hover:neon-border transition-all">
                       <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${game.color} opacity-5 blur-3xl group-hover:opacity-20 transition-opacity`}></div>
@@ -1713,26 +1722,6 @@ export default function Games() {
                     </div>
                   </motion.div>
                 ))}
-              </div>
-            </motion.div>
-          ) : selectedGame === 'snake-io' ? (
-            <motion.div
-              key="snake-arena-view"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              className="w-full max-w-7xl mx-auto px-2"
-            >
-              <button 
-                onClick={() => setSelectedGame(null)}
-                className="flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/10 border border-white/10 bg-white/5 backdrop-blur-md px-5 py-2.5 rounded-xl transition-all mb-6 group select-none shadow-lg"
-              >
-                <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                <span className="font-semibold text-sm">Exit Arena Setup</span>
-              </button>
-
-              <div className="w-full relative z-10">
-                {renderGame()}
               </div>
             </motion.div>
           ) : (

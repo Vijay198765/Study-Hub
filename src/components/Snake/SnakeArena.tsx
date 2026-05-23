@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Gamepad2, Palette, Trophy, Award, Coins, Info, Calendar } from 'lucide-react';
+import { Gamepad2, Palette, Trophy, Award, Coins, Info, Calendar, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { SnakePlayerStats, SnakeAchievement } from './types';
@@ -142,6 +143,7 @@ function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: 
 }
 
 export default function SnakeArena() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'play' | 'shop' | 'stats' | 'leaderboard'>('play');
   
   // Current logged in user context
@@ -409,10 +411,12 @@ export default function SnakeArena() {
           skinUsed: stats.currentSkin
         });
 
-        // Submit high score on the Global Leaderboard
-        if (isNewHighScore) {
-          const scoresRef = collection(db, 'snake_scores');
-          await addDoc(scoresRef, {
+        // Submit/update high score on the Global Leaderboard under the unique userId document to ensure immediate, clean single updates
+        const userScoreRef = doc(db, 'snake_scores', userId);
+        const currentScoreSnap = await getDoc(userScoreRef);
+        
+        if (!currentScoreSnap.exists() || gameStats.score > currentScoreSnap.data()?.score) {
+          await setDoc(userScoreRef, {
             userId: userId,
             username: playerDisplayName,
             score: gameStats.score,
@@ -511,7 +515,29 @@ export default function SnakeArena() {
   const canClaimDailyReward = checkCanClaimDailyReward();
 
   return (
-    <div className="w-full">
+    <div className="w-full min-h-screen pt-4 pb-12 px-4 max-w-7xl mx-auto flex flex-col gap-4 text-white">
+      {/* Brand Header */}
+      <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-neon-blue/20 flex items-center justify-center text-neon-blue">
+            <Gamepad2 size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-display font-black uppercase tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-neon-blue via-emerald-400 to-purple-400">
+              Cosmic Slither .io Arena
+            </h1>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Standalone Fullscreen Simulator Mode</p>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => navigate('/games')}
+          className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white hover:bg-white/5 border border-white/5 px-4 py-2 rounded-xl transition-all font-semibold"
+        >
+          <ChevronLeft size={14} /> Back to Games Catalog
+        </button>
+      </div>
+
       {/* Tab Selectors header */}
       <div className="flex border-b border-white/5 mb-8 overflow-x-auto gap-2 text-sm">
         <button
