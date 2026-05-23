@@ -132,7 +132,7 @@ interface SnakeGameProps {
   onPlayingStateChange?: (isPlaying: boolean) => void;
 }
 
-const MAP_SIZE = 3500; // Large 2D virtual boundary
+const MAP_SIZE = 4200; // Larger 2D virtual boundary
 const BOT_NAMES = ['AeroSlither', 'RedViper', 'CobraCommander', 'NeonAsphalt', 'VenomDart', 'CosmicWorm', 'SlytherKing', 'Anaconda99', 'Basilisk', 'SneakySid'];
 const EMOTE_OPTIONS = ['😂', '🔥', '👑', '😡', '😜', '⚔️', '⚡', '👀'];
 const PELLET_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f43f5e', '#a7f3d0'];
@@ -478,6 +478,9 @@ export default function SnakeGame({
   const [liveScore, setLiveScore] = useState(0);
   const [liveKills, setLiveKills] = useState(0);
   const [maxLengthAchieved, setMaxLengthAchieved] = useState(1);
+  const [nicknameInput, setNicknameInput] = useState(() => {
+    return localStorage.getItem('snake_nickname') || playerDisplayName || 'Spectre';
+  });
 
   // References to keep state synced without retriggering useEffect interval loops
   const playerRef = useRef({
@@ -497,7 +500,10 @@ export default function SnakeGame({
     doubleTimer: 0,
     shieldTimer: 0,
     freezeTimer: 0,
-    maxLengthAchieved: 12
+    maxLengthAchieved: 12,
+    foodEatenCount: 0,
+    survivalFrames: 0,
+    score: 0
   });
 
   const botsRef = useRef<BotSnake[]>([]);
@@ -630,17 +636,19 @@ export default function SnakeGame({
     playerRef.current.doubleTimer = 0;
     playerRef.current.shieldTimer = 0;
     playerRef.current.freezeTimer = 0;
+    playerRef.current.foodEatenCount = 0;
+    playerRef.current.survivalFrames = 0;
 
     setLiveScore(0);
     setLiveKills(0);
     setMaxLengthAchieved(12);
 
-    // 2. Generate 150 juicy fruits and sparkling gem pellets
+    // 2. Generate 300 juicy fruits and sparkling gem pellets
     const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
     const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
     
     const pellets: Pellets[] = [];
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 300; i++) {
       const isFruit = Math.random() < 0.65;
       const emoji = isFruit 
         ? FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)] 
@@ -677,9 +685,9 @@ export default function SnakeGame({
     }
     powerUpsRef.current = powerUps;
 
-    // 3. Create 10 hostile AI bot snakes
+    // 3. Create 22 hostile AI bot snakes
     const bots: BotSnake[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 22; i++) {
       const spawnX = Math.floor(Math.random() * (MAP_SIZE - 300)) + 150;
       const spawnY = Math.floor(Math.random() * (MAP_SIZE - 300)) + 150;
       
@@ -812,6 +820,10 @@ export default function SnakeGame({
   }, [isPlaying]);
 
   const startGame = () => {
+    // Synchronize nickname immediately so guest input updates are applied
+    const activeName = (nicknameInput || playerDisplayName || 'Spectre').trim();
+    playerRef.current.displayName = activeName;
+    
     setIsGameOver(false);
     initializeGame();
     setIsPlaying(true);
@@ -846,7 +858,7 @@ export default function SnakeGame({
     // Direct computation from playerRef to avoid any React state closure staleness issues!
     const finalKills = playerRef.current.killCount;
     const finalLength = playerRef.current.maxLengthAchieved || playerRef.current.segments.length;
-    const finalScore = playerRef.current.segments.length * 15 - 180 + finalKills * 100;
+    const finalScore = playerRef.current.score || (playerRef.current.segments.length * 15 - 180 + finalKills * 100);
 
     const scoreSubmit = Math.max(0, finalScore);
     const killsSubmit = finalKills;
@@ -960,7 +972,15 @@ export default function SnakeGame({
       }
       player.segments = newSegments;
       player.maxLengthAchieved = Math.max(player.maxLengthAchieved || 12, player.segments.length);
-      const computedScore = player.segments.length * 15 - 180 + player.killCount * 100;
+      
+      // Update survival time frames
+      player.survivalFrames = (player.survivalFrames || 0) + 1;
+      const survivalLinesSec = Math.floor(player.survivalFrames / 60);
+      
+      // Score = (tail length * 15 - offset) + (kills * 100) + (food items * 10) + (survival seconds * 2)
+      const computedScore = (player.segments.length * 15 - 180) + (player.killCount * 100) + ((player.foodEatenCount || 0) * 10) + (survivalLinesSec * 2);
+      
+      player.score = computedScore;
       setLiveScore(computedScore);
       setMaxLengthAchieved(player.maxLengthAchieved);
 
@@ -1165,6 +1185,7 @@ export default function SnakeGame({
       pelletsRef.current = pelletsRef.current.filter((p) => {
         const dist = Math.hypot(p.x - currentHead.x, p.y - currentHead.y);
         if (dist < radiusPlayer + p.size) {
+          player.foodEatenCount = (player.foodEatenCount || 0) + 1;
           const growthChance = player.doubleTimer > 0 ? 0.50 : 0.25;
           if (Math.random() < growthChance) {
             const tail = player.segments[player.segments.length - 1];
@@ -1226,7 +1247,7 @@ export default function SnakeGame({
       });
 
       // Replenish pellets (juicy fruits and luxury glowing gems!)
-      while (pelletsRef.current.length < 150) {
+      while (pelletsRef.current.length < 300) {
         const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
         const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
         const isFruit = Math.random() < 0.65;
@@ -1477,7 +1498,7 @@ export default function SnakeGame({
       }
 
       // Replenish bots
-      while (remainingBots.length < 10) {
+      while (remainingBots.length < 22) {
         const spawnX = Math.floor(Math.random() * (MAP_SIZE - 300)) + 150;
         const spawnY = Math.floor(Math.random() * (MAP_SIZE - 300)) + 150;
         const botSegs: SnakeSegment[] = [];
@@ -1529,13 +1550,20 @@ export default function SnakeGame({
       });
       floatEmotesRef.current = floatEmotesRef.current.filter(em => em.timer > 0);
 
-      // --- 6. Render Map View relative to Camera (Player centered) ---
-      const camX = currentHead.x - viewSize.current.width / 2;
-      const camY = currentHead.y - viewSize.current.height / 2;
+      // --- 6. Render Map View relative to Camera (Player centered with responsive Virtual Viewport scaling) ---
+      const virtualWidth = 1000;
+      const scaleFactor = viewSize.current.width / virtualWidth;
+      const virtualHeight = viewSize.current.height / scaleFactor;
+
+      ctx.save();
+      ctx.scale(scaleFactor, scaleFactor);
+
+      const camX = currentHead.x - virtualWidth / 2;
+      const camY = currentHead.y - virtualHeight / 2;
 
       // Clear canvas
       ctx.fillStyle = '#08090d'; // Deeper space background 
-      ctx.fillRect(0, 0, viewSize.current.width, viewSize.current.height);
+      ctx.fillRect(0, 0, virtualWidth, virtualHeight);
 
       // Draw virtual map space background grid (Lines drawn relative to camera offset)
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
@@ -1544,16 +1572,16 @@ export default function SnakeGame({
       const startGridX = Math.floor(camX / gridSize) * gridSize;
       const startGridY = Math.floor(camY / gridSize) * gridSize;
 
-      for (let x = startGridX; x < startGridX + viewSize.current.width + gridSize; x += gridSize) {
+      for (let x = startGridX; x < startGridX + virtualWidth + gridSize; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x - camX, 0);
-        ctx.lineTo(x - camX, viewSize.current.height);
+        ctx.lineTo(x - camX, virtualHeight);
         ctx.stroke();
       }
-      for (let y = startGridY; y < startGridY + viewSize.current.height + gridSize; y += gridSize) {
+      for (let y = startGridY; y < startGridY + virtualHeight + gridSize; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y - camY);
-        ctx.lineTo(viewSize.current.width, y - camY);
+        ctx.lineTo(virtualWidth, y - camY);
         ctx.stroke();
       }
 
@@ -1562,24 +1590,47 @@ export default function SnakeGame({
       ctx.lineWidth = 6;
       ctx.strokeRect(-camX, -camY, MAP_SIZE, MAP_SIZE);
 
-      // Render colorful pellets (high-quality fruit and gem emojis)
+      // Periodically spawn additional bursts of bright food to make the game highly dynamic (every 3 seconds)
+      if (animId % 180 === 0 && pelletsRef.current.length < 500) {
+        const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
+        const GEM_EMOJIS = ['💎', '🌌', '⭐', '🔮', '✨', '🌀'];
+        for (let s = 0; s < 12; s++) {
+          const isFruit = Math.random() < 0.65;
+          const emoji = isFruit 
+            ? FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)] 
+            : GEM_EMOJIS[Math.floor(Math.random() * GEM_EMOJIS.length)];
+          pelletsRef.current.push({
+            id: 'spawned_' + Math.random().toString(),
+            x: Math.floor(Math.random() * (MAP_SIZE - 60)) + 30,
+            y: Math.floor(Math.random() * (MAP_SIZE - 60)) + 30,
+            size: isFruit ? 9 : 7.5,
+            color: PELLET_COLORS[Math.floor(Math.random() * PELLET_COLORS.length)],
+            points: isFruit ? 15 : 10,
+            fruitEmoji: emoji
+          });
+        }
+      }
+
+      // Render colorful pellets (high-quality fruit and gem emojis) with extra brightness and neon overlays
       pelletsRef.current.forEach((pellet) => {
         // Frustum culling (only draw elements inside player bounds)
         if (
           pellet.x - pellet.size - camX >= 0 &&
-          pellet.x + pellet.size - camX <= viewSize.current.width &&
+          pellet.x + pellet.size - camX <= virtualWidth &&
           pellet.y - pellet.size - camY >= 0 &&
-          pellet.y + pellet.size - camY <= viewSize.current.height
+          pellet.y + pellet.size - camY <= virtualHeight
         ) {
           ctx.save();
-          // Draw a soft glowing halo behind
+          // Draw a much stronger neon glowing halo behind
           ctx.beginPath();
-          ctx.arc(pellet.x - camX, pellet.y - camY, pellet.size * 1.5, 0, Math.PI * 2);
-          ctx.fillStyle = pellet.color + '15';
+          ctx.arc(pellet.x - camX, pellet.y - camY, pellet.size * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = pellet.color + '45'; // Increased glow opacity to make it brighter
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = pellet.color;
           ctx.fill();
 
           if (pellet.fruitEmoji) {
-            // Draw fruit Emoji!
+            // Draw fruit Emoji with glow
             ctx.font = `${Math.floor(pellet.size * 2.1)}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1607,9 +1658,9 @@ export default function SnakeGame({
         // Frustum culling
         if (
           pu.x - 35 - camX >= 0 &&
-          pu.x + 35 - camX <= viewSize.current.width &&
+          pu.x + 35 - camX <= virtualWidth &&
           pu.y - 35 - camY >= 0 &&
-          pu.y + 35 - camY <= viewSize.current.height
+          pu.y + 35 - camY <= virtualHeight
         ) {
           ctx.save();
           const px = pu.x - camX;
@@ -1927,6 +1978,8 @@ export default function SnakeGame({
         ctx.fillText(em.text, em.x - camX, em.y - camY);
       });
 
+      ctx.restore(); // Restore virtual viewport canvas scale
+
       if (animId % 6 === 0) {
         setTick(prev => prev + 1);
       }
@@ -2028,7 +2081,22 @@ export default function SnakeGame({
           </div>
 
           <h2 className="text-xl sm:text-3xl font-extrabold text-white font-display mb-1 tracking-tight">Snake .io Cosmic Arena</h2>
-          <p className="text-white/50 text-xs sm:text-sm max-w-sm mb-4 sm:mb-8 px-2">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
+          <p className="text-white/50 text-xs sm:text-sm max-w-sm mb-4 sm:mb-6 px-2">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
+
+          <div className="w-full max-w-xs mb-5 sm:mb-6">
+            <label className="text-[10px] text-white/40 uppercase font-black tracking-wider block mb-1.5 text-center">Gladiator Nickname</label>
+            <input 
+              type="text"
+              value={nicknameInput}
+              onChange={(e) => {
+                const val = e.target.value.slice(0, 16);
+                setNicknameInput(val);
+                localStorage.setItem('snake_nickname', val);
+              }}
+              placeholder="Enter cool nickname..."
+              className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-center text-sm font-semibold focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue/30 placeholder-white/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]"
+            />
+          </div>
 
           <button 
             onClick={startGame}
@@ -2300,10 +2368,29 @@ export default function SnakeGame({
           </div>
 
           {/* Cosmic Arena Live Lobby Top-Leaders (Free for All) */}
-          <div className="absolute top-12 sm:top-16 right-2 sm:right-5 bg-black/75 border border-white/10 p-2 sm:p-3 rounded-lg sm:rounded-xl pointer-events-none z-10 backdrop-blur-md w-36 sm:w-48 shadow-2xl animate-fade-in">
-            <span className="text-[8px] sm:text-[9px] text-amber-400 font-extrabold tracking-widest block mb-1 sm:mb-1.5 uppercase leading-none">
+          <div className="absolute top-12 sm:top-16 right-2 sm:right-5 bg-black/85 border border-white/10 p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl pointer-events-none z-10 backdrop-blur-md w-38 sm:w-52 shadow-2xl animate-fade-in">
+            <span className="text-[8px] sm:text-[9px] text-amber-400 font-extrabold tracking-widest block mb-1 sm:mb-2 uppercase leading-none">
               🏆 ARENA LEADERS
             </span>
+            
+            {/* Live Personal Session Stats Panel (Fulfilling User Request!) */}
+            <div className="flex flex-col gap-1 text-[9px] font-mono text-white/50 mb-2 pb-2 border-b border-white/10">
+              <div className="flex justify-between items-center">
+                <span>My Score:</span>
+                <span className="text-emerald-400 font-bold">{liveScore}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>My Kills:</span>
+                <span className="text-red-400 font-bold">{liveKills}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Survival:</span>
+                <span className="text-cyan-400 font-bold">
+                  {Math.floor((playerRef.current.survivalFrames || 0) / 3600)}m {Math.floor(((playerRef.current.survivalFrames || 0) % 3600) / 60)}s
+                </span>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-0.5 sm:gap-1 text-[10px] sm:text-xs">
               {leaderboardItems.map((item, idx) => {
                 const isSelf = item.id === 'self';
@@ -2321,7 +2408,7 @@ export default function SnakeGame({
                   >
                     <div className="flex items-center gap-1 min-w-0 flex-1">
                       <span className="font-mono text-[8px] sm:text-[9px] text-white/30">{idx + 1}</span>
-                      <span className="truncate max-w-[65px] sm:max-w-[100px]" title={item.name}>
+                      <span className="truncate max-w-[65px] sm:max-w-[110px]" title={item.name}>
                         {isSelf ? '⭐ You' : item.name}
                       </span>
                     </div>

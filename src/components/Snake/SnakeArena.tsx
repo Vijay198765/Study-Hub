@@ -165,8 +165,23 @@ export default function SnakeArena() {
     return () => unsubscribe();
   }, []);
 
-  const userId = currentUser?.uid || 'guest-snake-gladiator';
-  const playerDisplayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Spectre';
+  // Unique persistent Guest ID for non-logged in users
+  const [guestId] = useState(() => {
+    let gid = localStorage.getItem('snake_guest_id');
+    if (!gid) {
+      gid = 'guest-' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('snake_guest_id', gid);
+    }
+    return gid;
+  });
+
+  // Custom nickname persistent state
+  const [customNickname, setCustomNickname] = useState(() => {
+    return localStorage.getItem('snake_nickname') || '';
+  });
+
+  const userId = currentUser?.uid || guestId;
+  const playerDisplayName = customNickname || currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Spectre';
 
   // Stats status
   const [stats, setStats] = useState<SnakePlayerStats>({
@@ -407,7 +422,7 @@ export default function SnakeArena() {
     // Evaluate stats accomplishments
     evaluateProgressAchievements(updatedStats, achievements, true);
 
-    // Save to Firestore
+    // Save stats & match history to Firestore for logged-in users
     if (currentUser) {
       try {
         const statsRef = doc(db, 'snake_player_stats', userId);
@@ -427,29 +442,34 @@ export default function SnakeArena() {
           timestamp: serverTimestamp(),
           skinUsed: stats.currentSkin
         });
-
-        // Submit/update highest recorded accomplishments on the Global Leaderboard under the unique userId document to ensure immediate, clean updates
-        const userScoreRef = doc(db, 'snake_scores', userId);
-        const currentScoreSnap = await getDoc(userScoreRef);
-        
-        const existingLeaderboardScore = currentScoreSnap.exists() ? (currentScoreSnap.data()?.score || 0) : 0;
-        const existingLeaderboardKills = currentScoreSnap.exists() ? (currentScoreSnap.data()?.kills || 0) : 0;
-        const existingLeaderboardLength = currentScoreSnap.exists() ? (currentScoreSnap.data()?.longestLength || 0) : 0;
-
-        // If this game exceeded any peak values, or if no entry existed yet, update with the highest value
-        if (!currentScoreSnap.exists() || resolvedHighScore > existingLeaderboardScore || gameStats.kills > existingLeaderboardKills || resolvedLongestLength > existingLeaderboardLength) {
-          await setDoc(userScoreRef, {
-            userId: userId,
-            username: playerDisplayName,
-            score: Math.max(resolvedHighScore, existingLeaderboardScore),
-            kills: Math.max(gameStats.kills, existingLeaderboardKills),
-            longestLength: Math.max(resolvedLongestLength, existingLeaderboardLength),
-            timestamp: serverTimestamp()
-          });
-        }
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `snake_player_stats/${userId}`);
       }
+    }
+
+    // Submit/update highest recorded accomplishments on the Global Leaderboard in real-time for ALL users (Guests AND Logged-in)
+    try {
+      const userScoreRef = doc(db, 'snake_scores', userId);
+      const currentScoreSnap = await getDoc(userScoreRef);
+      
+      const existingLeaderboardScore = currentScoreSnap.exists() ? (currentScoreSnap.data()?.score || 0) : 0;
+      const existingLeaderboardKills = currentScoreSnap.exists() ? (currentScoreSnap.data()?.kills || 0) : 0;
+      const existingLeaderboardLength = currentScoreSnap.exists() ? (currentScoreSnap.data()?.longestLength || 0) : 0;
+
+      // Update with the peak values if this game exceeded any peak values, or if no entry existed yet
+      if (!currentScoreSnap.exists() || resolvedHighScore > existingLeaderboardScore || gameStats.kills > existingLeaderboardKills || resolvedLongestLength > existingLeaderboardLength) {
+        const latestName = (localStorage.getItem('snake_nickname') || playerDisplayName || 'Spectre').trim();
+        await setDoc(userScoreRef, {
+          userId: userId,
+          username: latestName,
+          score: Math.max(resolvedHighScore, existingLeaderboardScore),
+          kills: Math.max(gameStats.kills, existingLeaderboardKills),
+          longestLength: Math.max(resolvedLongestLength, existingLeaderboardLength),
+          timestamp: serverTimestamp()
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update global scoreboard document for uid/guestId:", userId, err);
     }
   };
 
@@ -631,27 +651,29 @@ export default function SnakeArena() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.2 }}
-                className={isGameRunning ? "w-full" : "grid grid-cols-1 lg:grid-cols-4 gap-6 items-start"}
+                className="w-full flex flex-col gap-4 z-10"
               >
-                <div className={isGameRunning ? "w-full" : "lg:col-span-3"}>
-                  <SnakeGame
-                    stats={stats}
-                    activeSkinId={stats.currentSkin}
-                    playerDisplayName={playerDisplayName}
-                    onMatchComplete={handleMatchComplete}
-                    onPlayingStateChange={setIsGameRunning}
-                  />
-                </div>
-                
-                {!isGameRunning && (
-                  <div className="lg:col-span-1">
-                    <SnakeCompactLeaderboard 
-                      currentUserId={userId} 
-                      currentSkinId={stats.currentSkin}
-                      onShopClick={() => setActiveTab('shop')} 
+                <div className={isGameRunning ? "w-full" : "grid grid-cols-1 lg:grid-cols-4 gap-6 items-start"}>
+                  <div className={isGameRunning ? "w-full" : "lg:col-span-3"}>
+                    <SnakeGame
+                      stats={stats}
+                      activeSkinId={stats.currentSkin}
+                      playerDisplayName={playerDisplayName}
+                      onMatchComplete={handleMatchComplete}
+                      onPlayingStateChange={setIsGameRunning}
                     />
                   </div>
-                )}
+                  
+                  {!isGameRunning && (
+                    <div className="lg:col-span-1">
+                      <SnakeCompactLeaderboard 
+                         currentUserId={userId} 
+                         currentSkinId={stats.currentSkin}
+                         onShopClick={() => setActiveTab('shop')} 
+                      />
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 

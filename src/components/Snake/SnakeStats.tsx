@@ -25,6 +25,76 @@ export default function SnakeStats({
   // Count unlocked achievements
   const unlockedAchievementsCount = achievements.filter(a => a.unlocked).length;
 
+  // Global Ranking System calculation based on Wins, Kills, High Score, Level
+  const totalKillPoints = stats.killCount * 150;
+  const totalWinPoints = stats.wins * 350;
+  const levelPoints = stats.level * 250;
+  const ratingPoints = totalKillPoints + totalWinPoints + levelPoints + stats.highScore;
+
+  // Determine Tier Rank
+  let currentTierRank = 'Bronze';
+  let tierIcon = '🥉';
+  let tierColorClass = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+  let nextTierRank = 'Silver';
+  let ptsNeededForNextTier = 2000;
+  let prevTierPts = 0;
+
+  if (ratingPoints >= 100000) {
+    currentTierRank = 'Predator';
+    tierIcon = '⚔️';
+    tierColorClass = 'text-red-400 bg-red-400/20 border-red-500/30 font-black animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]';
+    nextTierRank = 'Peak Level Maxed';
+    ptsNeededForNextTier = 100000;
+    prevTierPts = 100000;
+  } else if (ratingPoints >= 50000) {
+    currentTierRank = 'Master';
+    tierIcon = '👑';
+    tierColorClass = 'text-purple-400 bg-purple-500/20 border-purple-400/30 font-extrabold animate-pulse';
+    nextTierRank = 'Predator';
+    ptsNeededForNextTier = 100000;
+    prevTierPts = 50000;
+  } else if (ratingPoints >= 25000) {
+    currentTierRank = 'Diamond';
+    tierIcon = '🔮';
+    tierColorClass = 'text-rose-400 bg-rose-500/20 border-rose-400/30 font-bold';
+    nextTierRank = 'Master';
+    ptsNeededForNextTier = 50000;
+    prevTierPts = 25000;
+  } else if (ratingPoints >= 12000) {
+    currentTierRank = 'Platinum';
+    tierIcon = '💎';
+    tierColorClass = 'text-cyan-400 bg-cyan-500/20 border-cyan-400/30 font-bold';
+    nextTierRank = 'Diamond';
+    ptsNeededForNextTier = 25000;
+    prevTierPts = 12000;
+  } else if (ratingPoints >= 5000) {
+    currentTierRank = 'Gold';
+    tierIcon = '🥇';
+    tierColorClass = 'text-yellow-500 bg-yellow-500/25 border-yellow-500/30';
+    nextTierRank = 'Platinum';
+    ptsNeededForNextTier = 12000;
+    prevTierPts = 5000;
+  } else if (ratingPoints >= 2000) {
+    currentTierRank = 'Silver';
+    tierIcon = '🥈';
+    tierColorClass = 'text-slate-300 bg-slate-300/20 border-slate-300/30';
+    nextTierRank = 'Gold';
+    ptsNeededForNextTier = 5000;
+    prevTierPts = 2000;
+  } else {
+    currentTierRank = 'Bronze';
+    tierIcon = '🥉';
+    tierColorClass = 'text-amber-600 bg-amber-700/10 border-amber-600/20';
+    nextTierRank = 'Silver';
+    ptsNeededForNextTier = 2000;
+    prevTierPts = 0;
+  }
+
+  const rangeSpan = ptsNeededForNextTier - prevTierPts;
+  const currentProgressPct = rangeSpan > 0 
+    ? Math.min(100, Math.floor(((ratingPoints - prevTierPts) / rangeSpan) * 100))
+    : 100;
+
   return (
     <div className="w-full">
       {/* 1. Header with Level Progress */}
@@ -129,6 +199,88 @@ export default function SnakeStats({
           <Trophy className="text-yellow-500 w-6 h-6 mx-auto mb-2.5" />
           <span className="text-[10px] text-white/40 uppercase font-black uppercase tracking-wider block">Achievements</span>
           <span className="text-xl font-black font-mono mt-0.5 text-white">{unlockedAchievementsCount} / {achievements.length}</span>
+        </div>
+      </div>
+
+      {/* Dynamic League Competitive Standings (Fulfilling User Request!) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* Competitive Division standings card */}
+        <div className="glass-card p-6 border border-white/5 bg-gradient-to-b from-white/[0.01] to-white/[0.03] flex flex-col justify-between relative overflow-hidden shadow-xl">
+          <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-4">
+              <h4 className="font-bold text-white text-md flex items-center gap-1.5 uppercase tracking-wider select-none">
+                🏆 Global Competitive Tier
+              </h4>
+              <span className="text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold">Live Synced</span>
+            </div>
+            
+            <div className="flex items-center gap-4 py-2">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl border transition-all duration-300 ${tierColorClass}`}>
+                {tierIcon}
+              </div>
+              <div>
+                <div className="text-white/40 text-[10px] uppercase font-black tracking-widest leading-none">Your Arena Division</div>
+                <div className="text-xl font-black text-white mt-1 flex items-center gap-1.5">
+                  {currentTierRank}
+                  <span className="text-xs bg-white/5 border border-white/10 text-emerald-400 font-mono px-2 py-0.5 rounded-md font-bold">
+                    {ratingPoints.toLocaleString()} RP
+                  </span>
+                </div>
+                <p className="text-white/30 text-[9px] mt-1">Slay kills (150 RP) + Slay wins (350 RP) + Level points + High score.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-white/50 font-bold mb-1.5">
+              <span>Next Division: <span className="text-neon-blue">{nextTierRank}</span></span>
+              <span>{ratingPoints.toLocaleString()} / {ptsNeededForNextTier.toLocaleString()} RP</span>
+            </div>
+            <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
+              <div className="bg-gradient-to-r from-[#10b981] to-[#3b82f6] h-full rounded-full transition-all duration-500" style={{ width: `${currentProgressPct}%` }} />
+            </div>
+            <div className="flex justify-between text-[8px] text-white/30 font-mono mt-1">
+              <span>Bronze (0) &rarr; Silver (2k) &rarr; Gold (5k)</span>
+              <span>Platinum (12k) &rarr; Diamond (25k) &rarr; Master (50k) &rarr; Predator (100k+)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Seasonal Rewards card */}
+        <div className="glass-card p-6 border border-white/5 bg-gradient-to-b from-white/[0.01] to-white/[0.03] flex flex-col justify-between relative overflow-hidden shadow-xl">
+          <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-4">
+              <h4 className="font-bold text-white text-md flex items-center gap-1.5 uppercase tracking-wider select-none">
+                🌌 Seasonal Arena Tournament
+              </h4>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">May 2026 Season</span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-white/60 font-medium">May Cosmic Championship Countdown</span>
+                <span className="text-emerald-400 font-bold font-mono text-[10px] bg-emerald-400/10 px-2 py-0.5 rounded-md border border-emerald-400/20">8 Days Left</span>
+              </div>
+              
+              <div className="text-[11px] text-white/40 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+                🔥 <span className="font-bold text-white/80">Seasonal Rewards:</span> At the end of May, competitive divisions rotate. Exclusive Cosmic titles are rewarded to active Gladiators, alongside premium 
+                <span className="text-neon-blue font-bold"> Cosmic / Rainbow Skins</span> loaded into your armory!
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex -space-x-2 overflow-hidden">
+                  <span className="inline-block h-6 w-6 rounded-full bg-indigo-500/30 ring-2 ring-[#0f1118] text-center text-xs flex items-center justify-center border border-indigo-400/30" title="Galaxy skin reward">🌌</span>
+                  <span className="inline-block h-6 w-6 rounded-full bg-rose-500/30 ring-2 ring-[#0f1118] text-center text-xs flex items-center justify-center border border-rose-400/30" title="Magma skin reward">🌋</span>
+                  <span className="inline-block h-6 w-6 rounded-full bg-yellow-500/30 ring-2 ring-[#0f1118] text-center text-xs flex items-center justify-center border border-yellow-400/30" title="Championship Royal skin">👑</span>
+                </div>
+                <div className="text-[10px] text-white/50 font-bold">
+                  Exclusive seasonal skins available! Return daily to boost your survival XP.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
