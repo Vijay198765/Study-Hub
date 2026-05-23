@@ -22,7 +22,11 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
       (snapshot) => {
         const scores: SnakeScore[] = [];
         snapshot.forEach((doc) => {
-          scores.push({ id: doc.id, ...doc.data() } as SnakeScore);
+          const data = doc.data();
+          // Filter to only display my own scores
+          if (data.userId === currentUserId) {
+            scores.push({ id: doc.id, ...data } as SnakeScore);
+          }
         });
         setLeaderboard(scores);
         setLoading(false);
@@ -34,7 +38,7 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUserId]);
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Just now';
@@ -43,14 +47,14 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full font-sans">
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 border border-yellow-500/20">
+        <div className="w-12 h-12 rounded-xl bg-neon-blue/10 flex items-center justify-center text-neon-blue border border-neon-blue/20 animate-pulse">
           <Trophy size={24} />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-white font-display">Global Hall of Fame</h2>
-          <p className="text-white/40 text-sm mt-1">Universal real-time scoreboard. Do you have what it takes to grasp Rank 1?</p>
+          <h2 className="text-3xl font-bold text-white font-display">My Arena Records</h2>
+          <p className="text-white/50 text-sm mt-1">Your personal high score and peak accomplishments saved on secure cloud networks.</p>
         </div>
       </div>
 
@@ -58,13 +62,13 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-neon-blue border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-white/40 text-sm mt-4">Loading universal scores...</p>
+            <p className="text-white/40 text-sm mt-4">Loading your personal records...</p>
           </div>
         ) : leaderboard.length === 0 ? (
           <div className="text-center py-20">
-            <Trophy size={48} className="mx-auto mb-4 text-white/20" />
-            <p className="text-white/50 font-bold">No scores submitted yet!</p>
-            <p className="text-white/30 text-xs mt-1">Be the first player to conquer the arena and claim Rank 1.</p>
+            <Trophy size={48} className="mx-auto mb-4 text-white/20 animate-bounce" />
+            <p className="text-white/50 font-bold">No records saved yet!</p>
+            <p className="text-white/30 text-xs mt-1">Play inside the arena and register your peak scores on the board.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

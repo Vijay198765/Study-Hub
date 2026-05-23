@@ -27,7 +27,10 @@ function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: any[] = [];
       snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        if (data.userId === currentUserId) {
+          list.push({ id: doc.id, ...data });
+        }
       });
       setScores(list);
       setLoading(false);

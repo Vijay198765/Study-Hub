@@ -979,9 +979,9 @@ export default function SnakeGame({
         const angleDiff = bot.targetAngle - bot.angle;
         bot.angle += Math.sin(angleDiff) * turnSpeed;
 
-        // Propagate updates
-        const nextBotHeadX = botHead.x + Math.cos(bot.angle) * currentBotSpeed;
-        const nextBotHeadY = botHead.y + Math.sin(bot.angle) * currentBotSpeed;
+        // Propagate updates (and physically clamp bot coordinates inside the arena so they never die on walls)
+        const nextBotHeadX = Math.max(20, Math.min(MAP_SIZE - 20, botHead.x + Math.cos(bot.angle) * currentBotSpeed));
+        const nextBotHeadY = Math.max(20, Math.min(MAP_SIZE - 20, botHead.y + Math.sin(bot.angle) * currentBotSpeed));
         const nextBotSegs = [{ x: nextBotHeadX, y: nextBotHeadY }];
 
         for (let j = 1; j < bot.segments.length; j++) {

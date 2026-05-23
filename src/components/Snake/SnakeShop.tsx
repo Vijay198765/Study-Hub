@@ -72,7 +72,7 @@ export default function SnakeShop({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {SKINS.map((skin) => {
+        {SKINS.filter((skin, idx, self) => self.findIndex(s => s.id === skin.id) === idx).map((skin) => {
           const unlocked = isSkinUnlocked(skin);
           const active = activeSkinId === skin.id;
           const milestoneLock = skin.condition && !unlocked;
