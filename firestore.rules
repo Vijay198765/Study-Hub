@@ -670,7 +670,8 @@ service cloud.firestore {
     match /snake_scores/{scoreId} {
       allow get, list: if true;
       allow create: if isAuthenticated() && isValidSnakeScore(request.resource.data);
-      allow update, delete: if isAdmin();
+      allow update: if isAuthenticated() && scoreId == request.auth.uid && isValidSnakeScore(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /snake_match_history/{matchId} {

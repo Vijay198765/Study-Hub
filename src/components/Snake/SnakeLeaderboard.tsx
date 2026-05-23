@@ -4,6 +4,7 @@ import { Trophy, Shield, Calendar, Award } from 'lucide-react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { SnakeScore } from './types';
+import UserName from '../UserName';
 
 interface SnakeLeaderboardProps {
   currentUserId: string;
@@ -77,9 +78,7 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
                 <tr className="border-b border-white/5 text-[10px] text-white/40 uppercase tracking-wider font-bold">
                   <th className="py-4 px-6 text-center w-16">Rank</th>
                   <th className="py-4 px-6">Gladiator</th>
-                  <th className="py-4 px-6 text-right">High Score</th>
-                  <th className="py-4 px-6 text-right">Bot Slayed</th>
-                  <th className="py-4 px-6 text-right">Longest Tail</th>
+                  <th className="py-4 px-6 text-right">Game Score</th>
                   <th className="py-4 px-6 text-right hidden sm:table-cell">Date Played</th>
                 </tr>
               </thead>
@@ -119,9 +118,14 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <span className={`font-bold transition-colors ${isCurrentUser ? 'text-neon-blue' : 'text-white'}`}>
-                            {item.username}
-                          </span>
+                          <UserName 
+                            userUid={item.userId} 
+                            fallback={item.username} 
+                            fallbackPhoto={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.username}`} 
+                            showPhoto={true}
+                            className={`font-semibold text-white group-hover:text-neon-blue transition-colors`}
+                            photoClassName="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white/15 shadow-sm"
+                          />
                           {isCurrentUser && (
                             <span className="text-[8px] uppercase bg-neon-blue/20 border border-neon-blue/30 px-1.5 py-0.5 rounded text-neon-blue font-bold">
                               You
@@ -131,12 +135,6 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
                       </td>
                       <td className="py-4 px-6 text-right font-mono font-bold text-emerald-400">
                         {item.score.toLocaleString()}
-                      </td>
-                      <td className="py-4 px-6 text-right font-mono text-red-400">
-                        {item.kills}
-                      </td>
-                      <td className="py-4 px-6 text-right font-mono text-purple-400">
-                        {item.longestLength}
                       </td>
                       <td className="py-4 px-6 text-right text-white/40 font-mono text-xs hidden sm:table-cell">
                         {formatDate(item.timestamp)}

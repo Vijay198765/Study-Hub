@@ -148,6 +148,7 @@ function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: 
 export default function SnakeArena() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'play' | 'shop' | 'stats' | 'leaderboard'>('play');
+  const [isGameRunning, setIsGameRunning] = useState(false);
   
   // Current logged in user context
   const currentUser = auth.currentUser;
@@ -525,77 +526,81 @@ export default function SnakeArena() {
   return (
     <div className="w-full min-h-screen pt-4 pb-12 px-4 max-w-7xl mx-auto flex flex-col gap-4 text-white">
       {/* Brand Header */}
-      <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-neon-blue/20 flex items-center justify-center text-neon-blue">
-            <Gamepad2 size={20} />
+      {!isGameRunning && (
+        <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-neon-blue/20 flex items-center justify-center text-neon-blue">
+              <Gamepad2 size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-display font-black uppercase tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-neon-blue via-emerald-400 to-purple-400">
+                Cosmic Slither .io Arena
+              </h1>
+              <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Standalone Fullscreen Simulator Mode</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-display font-black uppercase tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-neon-blue via-emerald-400 to-purple-400">
-              Cosmic Slither .io Arena
-            </h1>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Standalone Fullscreen Simulator Mode</p>
-          </div>
+          
+          <button
+            onClick={() => navigate('/games')}
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white hover:bg-white/5 border border-white/5 px-4 py-2 rounded-xl transition-all font-semibold"
+          >
+            <ChevronLeft size={14} /> Back to Games Catalog
+          </button>
         </div>
-        
-        <button
-          onClick={() => navigate('/games')}
-          className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white hover:bg-white/5 border border-white/5 px-4 py-2 rounded-xl transition-all font-semibold"
-        >
-          <ChevronLeft size={14} /> Back to Games Catalog
-        </button>
-      </div>
+      )}
 
       {/* Tab Selectors header */}
-      <div className="flex border-b border-white/5 mb-8 overflow-x-auto gap-2 text-sm">
-        <button
-          onClick={() => setActiveTab('play')}
-          className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
-            activeTab === 'play' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
-          }`}
-        >
-          <Gamepad2 size={16} /> Slither Arena
-          {activeTab === 'play' && (
-            <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
-          )}
-        </button>
+      {!isGameRunning && (
+        <div className="flex border-b border-white/5 mb-8 overflow-x-auto gap-2 text-sm">
+          <button
+            onClick={() => setActiveTab('play')}
+            className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
+              activeTab === 'play' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <Gamepad2 size={16} /> Slither Arena
+            {activeTab === 'play' && (
+              <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab('shop')}
-          className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
-            activeTab === 'shop' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
-          }`}
-        >
-          <Palette size={16} /> Skin Shop
-          {activeTab === 'shop' && (
-            <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
-          )}
-        </button>
+          <button
+            onClick={() => setActiveTab('shop')}
+            className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
+              activeTab === 'shop' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <Palette size={16} /> Skin Shop
+            {activeTab === 'shop' && (
+              <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
-            activeTab === 'stats' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
-          }`}
-        >
-          <Award size={16} /> My Accomplishments
-          {activeTab === 'stats' && (
-            <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
-          )}
-        </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
+              activeTab === 'stats' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <Award size={16} /> My Accomplishments
+            {activeTab === 'stats' && (
+              <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab('leaderboard')}
-          className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
-            activeTab === 'leaderboard' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
-          }`}
-        >
-          <Trophy size={16} /> Hall of Fame
-          {activeTab === 'leaderboard' && (
-            <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
-          )}
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab('leaderboard')}
+            className={`px-6 py-4 font-bold flex items-center gap-2 whitespace-nowrap transition-colors relative border-0 ${
+              activeTab === 'leaderboard' ? 'text-neon-blue' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <Trophy size={16} /> Hall of Fame
+            {activeTab === 'leaderboard' && (
+              <motion.div layoutId="active-snake-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-neon-blue" />
+            )}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
@@ -612,24 +617,27 @@ export default function SnakeArena() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start"
+                className={isGameRunning ? "w-full" : "grid grid-cols-1 lg:grid-cols-4 gap-6 items-start"}
               >
-                <div className="lg:col-span-3">
+                <div className={isGameRunning ? "w-full" : "lg:col-span-3"}>
                   <SnakeGame
                     stats={stats}
                     activeSkinId={stats.currentSkin}
                     playerDisplayName={playerDisplayName}
                     onMatchComplete={handleMatchComplete}
+                    onPlayingStateChange={setIsGameRunning}
                   />
                 </div>
                 
-                <div className="lg:col-span-1">
-                  <SnakeCompactLeaderboard 
-                    currentUserId={userId} 
-                    currentSkinId={stats.currentSkin}
-                    onShopClick={() => setActiveTab('shop')} 
-                  />
-                </div>
+                {!isGameRunning && (
+                  <div className="lg:col-span-1">
+                    <SnakeCompactLeaderboard 
+                      currentUserId={userId} 
+                      currentSkinId={stats.currentSkin}
+                      onShopClick={() => setActiveTab('shop')} 
+                    />
+                  </div>
+                )}
               </motion.div>
             )}
 

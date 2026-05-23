@@ -127,6 +127,7 @@ interface SnakeGameProps {
   activeSkinId: string;
   playerDisplayName: string;
   onMatchComplete: (gameStats: { score: number; kills: number; longestLength: number }) => void;
+  onPlayingStateChange?: (isPlaying: boolean) => void;
 }
 
 const MAP_SIZE = 3500; // Large 2D virtual boundary
@@ -456,12 +457,17 @@ export default function SnakeGame({
   stats,
   activeSkinId,
   playerDisplayName,
-  onMatchComplete
+  onMatchComplete,
+  onPlayingStateChange
 }: SnakeGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
   // Game mode status
   const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    onPlayingStateChange?.(isPlaying);
+  }, [isPlaying, onPlayingStateChange]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [muted, setMuted] = useState(false);
   const [tick, setTick] = useState(0);
