@@ -128,8 +128,8 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isAuthenticated() && 
              'email' in request.auth.token && 
-             (request.auth.token.email.toLower() == "vijayninama683@gmail.com" || 
-              request.auth.token.email.toLower() == "tagoreteam2025@gmail.com");
+             (request.auth.token.email.lower() == "vijayninama683@gmail.com" || 
+              request.auth.token.email.lower() == "tagoreteam2025@gmail.com");
     }
 
     function isAdmin() {
@@ -140,8 +140,8 @@ service cloud.firestore {
            (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'special_admin' || 
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').toLower() == "vijayninama683@gmail.com" ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').toLower() == "tagoreteam2025@gmail.com"))
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').lower() == "vijayninama683@gmail.com" ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').lower() == "tagoreteam2025@gmail.com"))
         );
     }
 
@@ -544,7 +544,7 @@ service cloud.firestore {
           isSuperAdmin() || 
           (
             (
-              (isAdmin() && resource.data.get('email', '').toLower() != "vijayninama683@gmail.com") || 
+              (isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com") || 
               (request.auth.uid == userId)
             ) &&
             // Prevent non-super-admins from changing bonus time
@@ -556,8 +556,8 @@ service cloud.firestore {
           )
         ) && isValidUser(request.resource.data);
       allow delete: if isAdmin() && 
-        resource.data.get('email', '').toLower() != "vijayninama683@gmail.com" &&
-        resource.data.get('email', '').toLower() != "tagoreteam2025@gmail.com";
+        resource.data.get('email', '').lower() != "vijayninama683@gmail.com" &&
+        resource.data.get('email', '').lower() != "tagoreteam2025@gmail.com";
     }
 
     match /userProgress/{progressId} {

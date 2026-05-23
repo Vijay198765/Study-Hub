@@ -1,4 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00f2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Premium Neon Gradients -->
+    <linearGradient id="gradient-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2ff" />
+      <stop offset="100%" stop-color="#9d4edd" />
+    </linearGradient>
+    <linearGradient id="gradient-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff007f" />
+      <stop offset="100%" stop-color="#7122fa" />
+    </linearGradient>
+    <linearGradient id="gradient-glow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2ff" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#ff007f" stop-opacity="0" />
+    </linearGradient>
+    
+    <!-- Outer Glow Filter -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Elegant Dark Space Background Disk -->
+  <rect width="512" height="512" rx="128" fill="#070814" />
+  
+  <!-- Subtle Cosmic Background Grid/Ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#gradient-glow)" stroke-width="2" stroke-dasharray="10 15" opacity="0.3" />
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#00f2ff" stroke-width="1" opacity="0.1" />
+
+  <!-- Outer Glowing Orbit Ring -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#gradient-primary)" stroke-width="4" stroke-dasharray="200 40" transform="rotate(-45 256 256)" filter="url(#neon-glow)" />
+
+  <!-- Main Futuristic Floating Emblem -->
+  <g transform="translate(0, -10)" filter="url(#neon-glow)">
+    <!-- Base Layer Shield -->
+    <path d="M256,120 L380,240 L340,380 L256,410 L172,380 L132,240 Z" fill="none" stroke="url(#gradient-accent)" stroke-width="2" stroke-linejoin="round" opacity="0.4" />
+    
+    <!-- Isometric Faceted Academic Cap / Gateway -->
+    <!-- Top Cap Rhombus -->
+    <polygon points="256,150 370,205 256,260 142,205" fill="#090a1f" stroke="url(#gradient-primary)" stroke-width="12" stroke-linejoin="round" />
+    <polygon points="256,162 344,205 256,248 168,205" fill="none" stroke="url(#gradient-accent)" stroke-width="3" opacity="0.8" />
+    
+    <!-- Front Cap Facet Under-bevel -->
+    <path d="M142,205 L142,230 C142,230 200,285 256,285 C312,285 370,230 370,230 L370,205 L256,260 Z" fill="url(#gradient-accent)" opacity="0.15" />
+    
+    <!-- Under Support Base (Cap Body / Portal) -->
+    <path d="M190,230 L190,290 C190,290 215,325 256,325 C297,325 322,290 322,290 L322,230" fill="none" stroke="url(#gradient-primary)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Tassel & Ornament -->
+    <path d="M256,205 L310,235 L310,310 C310,320 300,330 290,330 C285,330 285,315 290,315" fill="none" stroke="url(#gradient-accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Glowing Nexus Core / Knowledge Orb -->
+    <circle cx="256" cy="205" r="14" fill="#ffffff" filter="url(#neon-glow)" />
+    <circle cx="256" cy="205" r="8" fill="#00f2ff" />
+    
+    <!-- Modern Tech Accent Dots -->
+    <circle cx="256" cy="365" r="6" fill="#00f2ff" />
+    <circle cx="220" cy="355" r="4" fill="#9d4edd" />
+    <circle cx="292" cy="355" r="4" fill="#9d4edd" />
+  </g>
 </svg>
