@@ -411,17 +411,22 @@ export default function SnakeArena() {
           skinUsed: stats.currentSkin
         });
 
-        // Submit/update high score on the Global Leaderboard under the unique userId document to ensure immediate, clean single updates
+        // Submit/update highest recorded accomplishments on the Global Leaderboard under the unique userId document to ensure immediate, clean updates
         const userScoreRef = doc(db, 'snake_scores', userId);
         const currentScoreSnap = await getDoc(userScoreRef);
         
-        if (!currentScoreSnap.exists() || gameStats.score > currentScoreSnap.data()?.score) {
+        const existingLeaderboardScore = currentScoreSnap.exists() ? (currentScoreSnap.data()?.score || 0) : 0;
+        const existingLeaderboardKills = currentScoreSnap.exists() ? (currentScoreSnap.data()?.kills || 0) : 0;
+        const existingLeaderboardLength = currentScoreSnap.exists() ? (currentScoreSnap.data()?.longestLength || 0) : 0;
+
+        // If this game exceeded any peak values, or if no entry existed yet, update with the highest value
+        if (!currentScoreSnap.exists() || resolvedHighScore > existingLeaderboardScore || gameStats.kills > existingLeaderboardKills || resolvedLongestLength > existingLeaderboardLength) {
           await setDoc(userScoreRef, {
             userId: userId,
             username: playerDisplayName,
-            score: gameStats.score,
-            kills: gameStats.kills,
-            longestLength: gameStats.longestLength,
+            score: Math.max(resolvedHighScore, existingLeaderboardScore),
+            kills: Math.max(gameStats.kills, existingLeaderboardKills),
+            longestLength: Math.max(resolvedLongestLength, existingLeaderboardLength),
             timestamp: serverTimestamp()
           });
         }

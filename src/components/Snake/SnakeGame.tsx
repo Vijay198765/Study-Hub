@@ -596,7 +596,12 @@ export default function SnakeGame({
       const botSegs: SnakeSegment[] = [];
       const botSkin = SKINS[Math.floor(Math.random() * SKINS.length)];
       const startAngle = Math.random() * Math.PI * 2;
-      const botLen = Math.floor(Math.random() * 15) + 8;
+      
+      // Some start as massive bosses!
+      const isGiant = Math.random() < 0.25;
+      const botLen = isGiant 
+        ? Math.floor(Math.random() * 35) + 35 
+        : Math.floor(Math.random() * 15) + 8;
 
       for (let j = 0; j < botLen; j++) {
         botSegs.push({
@@ -605,9 +610,15 @@ export default function SnakeGame({
         });
       }
 
+      let botName = BOT_NAMES[i % BOT_NAMES.length];
+      if (isGiant) {
+        const prefixes = ['👑 BOSS ', '🔥 OMEGA ', '⚡ TITAN ', '🌟 CHIEF ', '💀 REAPER '];
+        botName = prefixes[Math.floor(Math.random() * prefixes.length)] + botName;
+      }
+
       bots.push({
         id: Math.random().toString(),
-        name: BOT_NAMES[i % BOT_NAMES.length],
+        name: botName,
         segments: botSegs,
         angle: startAngle,
         speed: 3.5,
@@ -615,7 +626,7 @@ export default function SnakeGame({
         headColor: botSkin.headColor,
         isBoosting: false,
         targetAngle: startAngle,
-        changeDirectionTimer: Math.floor(Math.random() * 50) + 10,
+        changeDirectionTimer: Math.floor(Math.random() * 40) + 10,
         skinId: botSkin.id
       });
     }
@@ -711,12 +722,33 @@ export default function SnakeGame({
     setIsGameOver(false);
     initializeGame();
     setIsPlaying(true);
+
+    // Effortless standard browser-level fullscreen projection if supported
+    try {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if ((docEl as any).webkitRequestFullscreen) {
+        (docEl as any).webkitRequestFullscreen();
+      }
+    } catch (e) {
+      console.warn("Fullscreen request not allowed or supported inside iframe context:", e);
+    }
   };
 
   const triggerDeath = () => {
     setIsPlaying(false);
     setIsGameOver(true);
     audio.playDeath();
+
+    // Reset standard browser-level fullscreen smoothly if active
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Could not exit fullscreen context:", e);
+    }
 
     const scoreSubmit = liveScore;
     const killsSubmit = liveKills;
@@ -839,12 +871,25 @@ export default function SnakeGame({
         const botHead = bot.segments[0];
         bot.changeDirectionTimer--;
 
-        // Steer bots towards closest food pellets or steer randomly
+        // Determine if bot should boost (speed increases when trying to attack/escape)
+        const playerDist = Math.hypot(player.segments[0].x - botHead.x, player.segments[0].y - botHead.y);
+        
+        // Boost conditions: If close to player or another giant snake, and has enough length
+        if (bot.segments.length > 15 && (playerDist < 350 || Math.random() < 0.05)) {
+          // 35% chance of active boosting to make it action-packed
+          bot.isBoosting = Math.random() < 0.35;
+        } else {
+          bot.isBoosting = false;
+        }
+
+        const currentBotSpeed = (bot.isBoosting ? 5.5 : 3.2) * botSpeedMult;
+
+        // 1. Basic Pellet Seeking or Random steering
         if (bot.changeDirectionTimer <= 0) {
-          bot.changeDirectionTimer = Math.floor(Math.random() * 80) + 30;
+          bot.changeDirectionTimer = Math.floor(Math.random() * 40) + 20; // quicker re-steering for harder bots
           
           let closestPellet: Pellets | null = null;
-          let minDist = 220;
+          let minDist = 350; // wider view range
           pelletsRef.current.forEach((p) => {
             const dist = Math.hypot(p.x - botHead.x, p.y - botHead.y);
             if (dist < minDist) {
@@ -856,23 +901,87 @@ export default function SnakeGame({
           if (closestPellet) {
             bot.targetAngle = Math.atan2((closestPellet as any).y - botHead.y, (closestPellet as any).x - botHead.x);
           } else {
-            bot.targetAngle += (Math.random() * 2 - 1);
+            bot.targetAngle += (Math.random() * 1.6 - 0.8);
           }
         }
 
-        // Steer away from walls
-        if (botHead.x < 150) bot.targetAngle = 0;
-        else if (botHead.x > MAP_SIZE - 150) bot.targetAngle = Math.PI;
-        if (botHead.y < 150) bot.targetAngle = Math.PI / 2;
-        else if (botHead.y > MAP_SIZE - 150) bot.targetAngle = -Math.PI / 2;
+        // 2. ACTIVE OBSTACLE AVOIDANCE (Smarter Collision evasion of bodies!)
+        // Project a collision ray ahead of the bot head
+        const checkDist = bot.isBoosting ? 130 : 85;
+        const rayEndX = botHead.x + Math.cos(bot.angle) * checkDist;
+        const rayEndY = botHead.y + Math.sin(bot.angle) * checkDist;
 
-        // Smoothly interpolate bots angles
+        let needsEvasion = false;
+        let evasionAngle = 0;
+
+        // Check player body
+        for (let k = 0; k < player.segments.length; k++) {
+          const seg = player.segments[k];
+          const distToRay = Math.hypot(seg.x - rayEndX, seg.y - rayEndY);
+          if (distToRay < 55) { // danger zone
+            needsEvasion = true;
+            const angleToSeg = Math.atan2(seg.y - botHead.y, seg.x - botHead.x);
+            const relativeAngle = Math.atan2(Math.sin(angleToSeg - bot.angle), Math.cos(angleToSeg - bot.angle));
+            evasionAngle = relativeAngle > 0 ? bot.angle - Math.PI / 2.5 : bot.angle + Math.PI / 2.5;
+            break;
+          }
+        }
+
+        // Check other bot bodies
+        if (!needsEvasion) {
+          for (let bIdx = 0; bIdx < botsRef.current.length; bIdx++) {
+            const other = botsRef.current[bIdx];
+            if (other.id === bot.id) continue;
+            for (let k = 0; k < other.segments.length; k++) {
+              const seg = other.segments[k];
+              const distToRay = Math.hypot(seg.x - rayEndX, seg.y - rayEndY);
+              if (distToRay < 55) {
+                needsEvasion = true;
+                const angleToSeg = Math.atan2(seg.y - botHead.y, seg.x - botHead.x);
+                const relativeAngle = Math.atan2(Math.sin(angleToSeg - bot.angle), Math.cos(angleToSeg - bot.angle));
+                evasionAngle = relativeAngle > 0 ? bot.angle - Math.PI / 2.5 : bot.angle + Math.PI / 2.5;
+                break;
+              }
+            }
+            if (needsEvasion) break;
+          }
+        }
+
+        if (needsEvasion) {
+          bot.targetAngle = evasionAngle;
+          bot.changeDirectionTimer = 15; // Hold avoidance action briefly
+        }
+
+        // 3. SECURE SMOOTH WALL AVOIDANCE (Steer away dynamically before crashing)
+        let avoidForceX = 0;
+        let avoidForceY = 0;
+        const wallBuffer = 300; // start avoiding 300px away from the boundary
+        if (botHead.x < wallBuffer) {
+          avoidForceX = (wallBuffer - botHead.x) / wallBuffer;
+        } else if (botHead.x > MAP_SIZE - wallBuffer) {
+          avoidForceX = -((botHead.x - (MAP_SIZE - wallBuffer)) / wallBuffer);
+        }
+        if (botHead.y < wallBuffer) {
+          avoidForceY = (wallBuffer - botHead.y) / wallBuffer;
+        } else if (botHead.y > MAP_SIZE - wallBuffer) {
+          avoidForceY = -((botHead.y - (MAP_SIZE - wallBuffer)) / wallBuffer);
+        }
+
+        if (avoidForceX !== 0 || avoidForceY !== 0) {
+          // Blend current heading with avoidance force vector smoothly
+          const targetAvoidAngle = Math.atan2(Math.sin(bot.angle) + avoidForceY * 2.8, Math.cos(bot.angle) + avoidForceX * 2.8);
+          bot.targetAngle = targetAvoidAngle;
+          bot.angle += Math.sin(targetAvoidAngle - bot.angle) * 0.18;
+        }
+
+        // Smoothly interpolate bots angles (faster turnrate when boosting or escaping)
+        const turnSpeed = (bot.isBoosting || needsEvasion) ? 0.18 : 0.08;
         const angleDiff = bot.targetAngle - bot.angle;
-        bot.angle += Math.sin(angleDiff) * 0.1;
+        bot.angle += Math.sin(angleDiff) * turnSpeed;
 
         // Propagate updates
-        const nextBotHeadX = botHead.x + Math.cos(bot.angle) * bot.speed * botSpeedMult;
-        const nextBotHeadY = botHead.y + Math.sin(bot.angle) * bot.speed * botSpeedMult;
+        const nextBotHeadX = botHead.x + Math.cos(bot.angle) * currentBotSpeed;
+        const nextBotHeadY = botHead.y + Math.sin(bot.angle) * currentBotSpeed;
         const nextBotSegs = [{ x: nextBotHeadX, y: nextBotHeadY }];
 
         for (let j = 1; j < bot.segments.length; j++) {
@@ -890,6 +999,20 @@ export default function SnakeGame({
             nextBotSegs.push({ ...cur });
           }
         }
+
+        // If the bot is actively speed boosting, spawn pellet crumbs occasionally at their tail segment
+        if (bot.isBoosting && bot.segments.length > 8 && animId % 15 === 0) {
+          const last = bot.segments[bot.segments.length - 1];
+          pelletsRef.current.push({
+            id: Math.random().toString(),
+            x: last.x + (Math.random() * 20 - 10),
+            y: last.y + (Math.random() * 20 - 10),
+            size: 4,
+            color: bot.color,
+            points: 5
+          });
+        }
+
         bot.segments = nextBotSegs;
       });
 
@@ -1162,7 +1285,12 @@ export default function SnakeGame({
         const botSegs: SnakeSegment[] = [];
         const botSkin = SKINS[Math.floor(Math.random() * SKINS.length)];
         const startAngle = Math.random() * Math.PI * 2;
-        const botLen = Math.floor(Math.random() * 15) + 8;
+        
+        // 25% of bots replenish as huge behemoths!
+        const isGiant = Math.random() < 0.25;
+        const botLen = isGiant 
+          ? Math.floor(Math.random() * 35) + 35 
+          : Math.floor(Math.random() * 15) + 8;
 
         for (let j = 0; j < botLen; j++) {
           botSegs.push({
@@ -1171,9 +1299,15 @@ export default function SnakeGame({
           });
         }
 
+        let botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+        if (isGiant) {
+          const prefixes = ['👑 BOSS ', '🔥 OMEGA ', '⚡ TITAN ', '🌟 CHIEF ', '💀 REAPER '];
+          botName = prefixes[Math.floor(Math.random() * prefixes.length)] + botName;
+        }
+
         remainingBots.push({
           id: Math.random().toString(),
-          name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+          name: botName,
           segments: botSegs,
           angle: startAngle,
           speed: 3.5,
@@ -1181,7 +1315,7 @@ export default function SnakeGame({
           headColor: botSkin.headColor,
           isBoosting: false,
           targetAngle: startAngle,
-          changeDirectionTimer: Math.floor(Math.random() * 50) + 10,
+          changeDirectionTimer: Math.floor(Math.random() * 40) + 10,
           skinId: botSkin.id
         });
       }

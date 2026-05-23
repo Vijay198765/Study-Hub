@@ -104,6 +104,17 @@ export const SKINS: SnakeSkin[] = [
     pattern: 'dragon'
   },
   {
+    id: 'tiger-stripes',
+    name: 'Tiger Fury',
+    colorGrade: 'linear-gradient(to right, #f97316, #7c2d12)',
+    headColor: '#ea580c',
+    bodyColor: '#f97316',
+    accentColor: '#111827',
+    isGradient: true,
+    cost: 500,
+    pattern: 'stripes'
+  },
+  {
     id: 'rainbow-aurora',
     name: 'Prismatic Aurora',
     colorGrade: 'linear-gradient(to right, #ff007f, #7f00ff, #00ffff)',
@@ -114,5 +125,17 @@ export const SKINS: SnakeSkin[] = [
     cost: 1500,
     condition: 'Reach Level 5',
     pattern: 'rainbow'
+  },
+  {
+    id: 'ouroboros-god',
+    name: '👑 Ouroboros Deity (GOD SKIN)',
+    colorGrade: 'linear-gradient(to right, #ffffff, #eab308, #ca8a04)',
+    headColor: '#facc15',
+    bodyColor: '#fafaf9',
+    accentColor: '#ca8a04',
+    isGradient: true,
+    cost: 3000,
+    condition: 'Reach a High Score of 5,000',
+    pattern: 'royal'
   }
 ];

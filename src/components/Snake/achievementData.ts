@@ -79,6 +79,17 @@ export const DEFAULT_ACHIEVEMENTS: SnakeAchievement[] = [
     type: 'length'
   },
   {
+    id: 'length_100',
+    title: 'Ouroboros Spine',
+    description: 'Grow your snake tail length to an ultra long 100 segments!',
+    icon: '🌀',
+    unlocked: false,
+    progress: 0,
+    maxProgress: 100,
+    rewardCoins: 1000,
+    type: 'length'
+  },
+  {
     id: 'level_5',
     title: 'Rising Star',
     description: 'Advance your player level to Rank 5.',
@@ -88,5 +99,38 @@ export const DEFAULT_ACHIEVEMENTS: SnakeAchievement[] = [
     maxProgress: 5,
     rewardCoins: 200,
     type: 'level'
+  },
+  {
+    id: 'level_15',
+    title: 'Gladiator General',
+    description: 'Advance your player level to Rank 15!',
+    icon: '🌌',
+    unlocked: false,
+    progress: 1,
+    maxProgress: 15,
+    rewardCoins: 800,
+    type: 'level'
+  },
+  {
+    id: 'slayer_grandmaster',
+    title: 'Universe Purger',
+    description: 'Defeat 100 total opponent snakes in the arena.',
+    icon: '💥',
+    unlocked: false,
+    progress: 0,
+    maxProgress: 100,
+    rewardCoins: 1200,
+    type: 'kills'
+  },
+  {
+    id: 'score_god',
+    title: 'Astral Legend',
+    description: 'Reach an unbelievable cosmic high score of 5,000!',
+    icon: '🏛️',
+    unlocked: false,
+    progress: 0,
+    maxProgress: 5000,
+    rewardCoins: 2000,
+    type: 'score'
   }
 ];
