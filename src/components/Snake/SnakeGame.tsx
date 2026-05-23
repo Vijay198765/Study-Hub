@@ -1920,28 +1920,69 @@ export default function SnakeGame({
     playerRef.current.angle = Math.atan2(dy, dx);
   };
 
+  // Compute top 8 snakes on active arena tick recursively
+  const leaderboardItems = (() => {
+    const items: Array<{ id: string; name: string; score: number; isPlayer: boolean; isBot: boolean }> = [];
+    
+    // 1. Current player (self)
+    items.push({
+      id: 'self',
+      name: playerRef.current.displayName || 'You',
+      score: liveScore,
+      isPlayer: true,
+      isBot: false,
+    });
+
+    // 2. Real-time online players in the same arena collection
+    multiplayerPlayersRef.current.forEach((mp) => {
+      items.push({
+        id: mp.id,
+        name: mp.username,
+        score: mp.score || 0,
+        isPlayer: true,
+        isBot: false,
+      });
+    });
+
+    // 3. Automated bot snakes inside the arena
+    botsRef.current.forEach((bot) => {
+      // Calculate continuous score for bot snakes proportional to size
+      const botScore = Math.max(10, bot.segments.length * 15 - 180);
+      items.push({
+        id: bot.id,
+        name: bot.name,
+        score: botScore,
+        isPlayer: false,
+        isBot: true,
+      });
+    });
+
+    // Sort descending by score and slice the top 8 positions
+    return items.sort((a, b) => b.score - a.score).slice(0, 8);
+  })();
+
   return (
     <div className={`relative bg-[#090a0f] select-none transition-all duration-300 overflow-hidden ${
       isPlaying 
         ? 'fixed inset-0 w-screen h-screen z-[100] rounded-none border-0' 
-        : 'w-full h-[540px] rounded-2xl border border-white/5 shadow-2xl'
+        : 'w-full h-[320px] xs:h-[380px] sm:h-[460px] md:h-[540px] rounded-2xl border border-white/5 shadow-2xl'
     }`}>
       
       {/* 1. Play Now Screen Overlay */}
       {!isPlaying && !isGameOver && (
-        <div className="absolute inset-0 bg-black/85 z-20 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-blue to-purple-500 flex items-center justify-center text-white text-3xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] mb-6 animate-bounce">
+        <div className="absolute inset-0 bg-black/85 z-20 flex flex-col items-center justify-center p-4 sm:p-8 text-center animate-fade-in">
+          <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-neon-blue to-purple-500 flex items-center justify-center text-white text-xl sm:text-3xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] mb-3 sm:mb-6 animate-bounce">
             🐍
           </div>
 
-          <h2 className="text-3xl font-extrabold text-white font-display mb-1 tracking-tight">Snake .io Cosmic Arena</h2>
-          <p className="text-white/50 text-sm max-w-sm mb-8">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
+          <h2 className="text-xl sm:text-3xl font-extrabold text-white font-display mb-1 tracking-tight">Snake .io Cosmic Arena</h2>
+          <p className="text-white/50 text-xs sm:text-sm max-w-sm mb-4 sm:mb-8 px-2">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
 
           <button 
             onClick={startGame}
-            className="btn-neon px-12 py-4 text-lg font-bold flex items-center gap-2 tracking-wide transform hover:scale-105 active:scale-95 transition-all"
+            className="btn-neon px-8 py-3 sm:px-12 sm:py-4 text-sm sm:text-lg font-bold flex items-center gap-2 tracking-wide transform hover:scale-105 active:scale-95 transition-all"
           >
-            <Play size={20} className="fill-slate-900 stroke-none" /> Join Space Arena
+            <Play size={16} className="fill-slate-900 stroke-none" /> Join Space Arena
           </button>
         </div>
       )}
@@ -1951,24 +1992,24 @@ export default function SnakeGame({
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
-          className="absolute inset-0 bg-black/95 z-20 flex flex-col items-center justify-center p-8 text-center"
+          className="absolute inset-0 bg-black/95 z-20 flex flex-col items-center justify-center p-4 sm:p-8 text-center"
         >
-          <div className="text-5xl mb-4 text-red-500 animate-pulse">💀</div>
-          <h2 className="text-4xl font-black text-white font-display mb-2">Eliminated!</h2>
-          <p className="text-white/40 text-xs mb-8">Your head crashed into an opponent's slither flank.</p>
+          <div className="text-3xl sm:text-5xl mb-3 sm:mb-4 text-red-500 animate-pulse">💀</div>
+          <h2 className="text-2xl sm:text-4xl font-black text-white font-display mb-1 sm:mb-2">Eliminated!</h2>
+          <p className="text-white/40 text-[11px] sm:text-xs mb-4 sm:mb-8">Your head crashed into an opponent's slither flank.</p>
 
-          <div className="grid grid-cols-3 gap-6 max-w-sm w-full bg-white/5 p-5 rounded-2xl border border-white/5 mb-8">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-xs sm:max-w-sm w-full bg-white/5 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-white/5 mb-6 sm:mb-8 animate-fade-in">
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-bold">Your Score</div>
-              <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">{liveScore}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Your Score</div>
+              <div className="text-sm sm:text-lg font-bold text-emerald-400 font-mono mt-0.5">{liveScore}</div>
             </div>
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-bold">Bot Slayed</div>
-              <div className="text-lg font-bold text-red-400 font-mono mt-0.5">{liveKills}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Bot Slayed</div>
+              <div className="text-sm sm:text-lg font-bold text-red-400 font-mono mt-0.5">{liveKills}</div>
             </div>
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-bold">Tail size</div>
-              <div className="text-lg font-bold text-purple-400 font-mono mt-0.5">{maxLengthAchieved}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Tail size</div>
+              <div className="text-sm sm:text-lg font-bold text-purple-400 font-mono mt-0.5">{maxLengthAchieved}</div>
             </div>
           </div>
 
@@ -2015,26 +2056,35 @@ export default function SnakeGame({
             onClick={() => {
               triggerDeath();
             }}
-            className="absolute top-5 right-5 bg-red-600/30 hover:bg-red-600/70 text-red-100 border border-red-500/30 font-bold text-xs rounded-xl px-4 py-2 pointer-events-auto backdrop-blur-md transition-all select-none shadow-lg z-50 flex items-center gap-1.5"
+            className="absolute top-2 right-2 sm:top-5 sm:right-5 bg-red-600/30 hover:bg-red-600/70 text-red-100 border border-red-500/30 font-bold text-[10px] sm:text-xs rounded-lg sm:rounded-xl px-2.5 py-1.5 sm:px-4 sm:py-2 pointer-events-auto backdrop-blur-md transition-all select-none shadow-lg z-50 flex items-center gap-1"
           >
             Quit Arena 🚪
           </button>
 
           {/* Live Score stats layout */}
-          <div className="absolute top-5 left-5 bg-black/60 border border-white/10 p-4 rounded-xl flex items-center gap-6 pointer-events-none z-10 backdrop-blur-md">
+          <div className="absolute top-2 left-2 sm:top-5 sm:left-5 bg-black/60 border border-white/10 p-2 sm:p-4 rounded-lg sm:rounded-xl flex items-center gap-3 sm:gap-6 pointer-events-none z-10 backdrop-blur-md max-w-[calc(100vw-110px)] sm:max-w-none">
             <div>
-              <span className="text-[9px] text-white/40 uppercase font-bold tracking-wider">High Score Record</span>
-              <div className="text-xl font-bold font-mono text-emerald-400 leading-none mt-0.5">{liveScore}</div>
+              <span className="text-[8px] sm:text-[9px] text-white/30 uppercase font-black tracking-wider block leading-none">
+                <span className="inline sm:hidden">Score</span>
+                <span className="hidden sm:inline">High Score Record</span>
+              </span>
+              <div className="text-sm sm:text-xl font-bold font-mono text-emerald-400 leading-none mt-1 sm:mt-0.5">{liveScore}</div>
             </div>
-            <div className="w-[1px] h-6 bg-white/10" />
+            <div className="w-[1px] h-4 sm:h-6 bg-white/10" />
             <div>
-              <span className="text-[9px] text-white/40 uppercase font-bold tracking-wider">Bots Defeated</span>
-              <div className="text-xl font-bold font-mono text-red-400 leading-none mt-0.5">{liveKills}</div>
+              <span className="text-[8px] sm:text-[9px] text-white/30 uppercase font-black tracking-wider block leading-none">
+                <span className="inline sm:hidden">Kills</span>
+                <span className="hidden sm:inline">Bots Defeated</span>
+              </span>
+              <div className="text-sm sm:text-xl font-bold font-mono text-red-400 leading-none mt-1 sm:mt-0.5">{liveKills}</div>
             </div>
-            <div className="w-[1px] h-6 bg-white/10" />
+            <div className="w-[1px] h-4 sm:h-6 bg-white/10" />
             <div>
-              <span className="text-[9px] text-white/40 uppercase font-bold tracking-wider">Tail length</span>
-              <div className="text-xl font-bold font-mono text-purple-400 leading-none mt-0.5">{playerRef.current.segments.length}</div>
+              <span className="text-[8px] sm:text-[9px] text-white/30 uppercase font-black tracking-wider block leading-none">
+                <span className="inline sm:hidden">Tail</span>
+                <span className="hidden sm:inline">Tail length</span>
+              </span>
+              <div className="text-sm sm:text-xl font-bold font-mono text-purple-400 leading-none mt-1 sm:mt-0.5">{playerRef.current.segments.length}</div>
             </div>
           </div>
 
@@ -2044,8 +2094,8 @@ export default function SnakeGame({
             playerRef.current.doubleTimer > 0 ||
             playerRef.current.shieldTimer > 0 ||
             playerRef.current.freezeTimer > 0) && (
-            <div className="absolute top-24 left-5 bg-black/75 border border-white/10 p-3.5 rounded-xl flex flex-col gap-2.5 z-10 backdrop-blur-md min-w-[170px] pointer-events-none">
-              <span className="text-[9px] text-white/50 uppercase font-bold tracking-wider block">Active Power-Ups 🧪</span>
+            <div className="absolute top-[56px] sm:top-24 left-2 sm:left-5 bg-black/75 border border-white/10 p-2 sm:p-3.5 rounded-lg sm:rounded-xl flex flex-col gap-1.5 sm:gap-2.5 z-10 backdrop-blur-md min-w-[135px] sm:min-w-[170px] pointer-events-none">
+              <span className="text-[8px] sm:text-[9px] text-white/50 uppercase font-bold tracking-wider block leading-none">Active Buffs 🧪</span>
               {playerRef.current.speedTimer > 0 && (
                 <div className="flex flex-col gap-0.5">
                   <div className="flex justify-between text-[10px] font-bold text-sky-400">
@@ -2105,16 +2155,16 @@ export default function SnakeGame({
           )}
 
           {/* Chat Emotes drawer overlay selector */}
-          <div className="absolute bottom-5 left-5 flex items-center gap-2 z-10">
-            <div className="bg-black/60 border border-white/10 p-2.5 rounded-xl flex items-center gap-1.5 backdrop-blur-md">
-              <span className="text-[10px] text-white/30 uppercase font-bold mr-1.5 hidden sm:inline-flex items-center gap-1">
-                <MessageSquare size={12} /> Hotkey Emotes:
+          <div className="absolute bottom-2 left-2 sm:bottom-5 sm:left-5 flex items-center gap-2 z-10">
+            <div className="bg-black/60 border border-white/10 p-1.5 sm:p-2.5 rounded-xl flex flex-wrap max-w-[130px] sm:max-w-none items-center gap-1 sm:gap-1.5 backdrop-blur-md">
+              <span className="text-[10px] text-white/30 uppercase font-bold mr-1 hidden sm:inline-flex items-center gap-1">
+                <MessageSquare size={12} /> Emotes:
               </span>
               {EMOTE_OPTIONS.map((em, idx) => (
                 <button
                   key={em}
                   onClick={() => handleEmoteClick(em)}
-                  className="hover:scale-125 hover:-translate-y-1 transition-all duration-200 text-lg w-7 h-7 flex items-center justify-center p-0"
+                  className="hover:scale-125 hover:-translate-y-1 transition-all duration-200 text-sm sm:text-lg w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center p-0"
                   title={`Press ${idx + 1}`}
                 >
                   {em}
@@ -2123,23 +2173,38 @@ export default function SnakeGame({
             </div>
           </div>
 
-          {/* Minimap radar corner rendering */}
-          <div className="absolute bottom-5 right-5 w-24 h-24 rounded-xl border border-white/15 bg-black/80 z-10 overflow-hidden pointer-events-none backdrop-blur-md flex items-center justify-center shadow-lg">
-            <div className="relative w-20 h-20 bg-white/[0.02] border border-white/5 rounded-full overflow-hidden">
-              {/* Player dot */}
+          {/* Minimap radar corner rendering with highlighted other real players */}
+          <div className="absolute bottom-2 right-2 sm:bottom-5 sm:right-5 w-20 h-20 sm:w-24 sm:h-24 rounded-lg sm:rounded-xl border border-white/15 bg-black/80 z-10 overflow-hidden pointer-events-none backdrop-blur-md flex items-center justify-center shadow-lg animate-fade-in" id="minimap-radar">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white/[0.02] border border-white/5 rounded-full overflow-hidden">
+              {/* Player (self) dot - Cyan */}
               <div 
-                className="absolute w-2 h-2 rounded-full bg-neon-blue animate-pulse"
+                className="absolute w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-neon-blue animate-pulse z-20"
                 style={{
                   left: `${(playerRef.current.segments[0].x / MAP_SIZE) * 100}%`,
                   top: `${(playerRef.current.segments[0].y / MAP_SIZE) * 100}%`,
                   transform: 'translate(-50%, -50%)'
                 }}
               />
-              {/* Bots dot indicators */}
+              {/* Other Active Multiplayer Users - Highlighted Bright Yellow */}
+              {multiplayerPlayersRef.current.map((mp) => {
+                if (!mp.segments || mp.segments.length === 0) return null;
+                return (
+                  <div 
+                    key={mp.id}
+                    className="absolute w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_#facc15] animate-pulse z-15"
+                    style={{
+                      left: `${(mp.segments[0].x / MAP_SIZE) * 100}%`,
+                      top: `${(mp.segments[0].y / MAP_SIZE) * 100}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
+                );
+              })}
+              {/* Bots dot indicators - Red */}
               {botsRef.current.map((bot) => (
                 <div 
                   key={bot.id}
-                  className="absolute w-1 h-1 rounded-full bg-red-400"
+                  className="absolute w-1 h-1 rounded-full bg-red-500/80 z-10"
                   style={{
                     left: `${(bot.segments[0].x / MAP_SIZE) * 100}%`,
                     top: `${(bot.segments[0].y / MAP_SIZE) * 100}%`,
@@ -2151,35 +2216,73 @@ export default function SnakeGame({
           </div>
 
           {/* Mobile Speed Boost button indicator */}
-          <div className="absolute bottom-5 right-[145px] z-20 pointer-events-auto">
+          <div className="absolute bottom-2 right-[114px] sm:bottom-5 sm:right-[145px] z-20 pointer-events-auto flex flex-col items-center">
             <button
               onPointerDown={() => { playerRef.current.isBoosting = true; }}
               onPointerUp={() => { playerRef.current.isBoosting = false; }}
               onPointerLeave={() => { playerRef.current.isBoosting = false; }}
               onTouchStart={(e) => { e.preventDefault(); playerRef.current.isBoosting = true; }}
               onTouchEnd={(e) => { e.preventDefault(); playerRef.current.isBoosting = false; }}
-              className="w-14 h-14 rounded-full bg-sky-500/20 active:scale-90 border border-sky-400/50 hover:neon-border flex items-center justify-center text-white text-xl font-bold transition-all shadow-[0_0_15px_rgba(59,130,246,0.25)] touch-none select-none"
+              className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-sky-500/20 active:scale-90 border border-sky-400/50 hover:neon-border flex items-center justify-center text-white text-base sm:text-xl font-bold transition-all shadow-[0_0_15px_rgba(59,130,246,0.25)] touch-none select-none"
               title="Hold to Boost Speed"
             >
               ⚡
             </button>
-            <div className="text-[8px] text-center text-sky-400/60 font-bold mt-1 uppercase">Hold Boost</div>
+            <div className="text-[7px] sm:text-[8px] text-center text-sky-400/60 font-bold mt-0.5 sm:mt-1 uppercase">Boost</div>
           </div>
 
-          {/* Live System Kill feed logging */}
-          <div className="absolute top-20 right-5 flex flex-col gap-1.5 z-10 pointer-events-none">
-            {killFeedRef.current.map((log) => (
+          {/* Live System Kill feed logging in top center */}
+          <div className="absolute top-14 sm:top-5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-15 pointer-events-none max-w-[200px] sm:max-w-xs text-center backdrop-blur-xs">
+            {killFeedRef.current.slice(-3).map((log) => (
               <motion.div 
                 key={log.id} 
-                initial={{ opacity: 0, x: 50 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                className="bg-black/60 border border-white/5 px-3 py-1.5 rounded-lg text-[10px] text-white/50 backdrop-blur-md flex items-center gap-1.5 text-right font-medium"
+                initial={{ opacity: 0, y: -20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="bg-black/85 border border-white/5 shadow-xl px-2.5 py-1 rounded text-[8px] sm:text-[10px] text-white/50 backdrop-blur-md flex items-center gap-1.5 justify-center font-semibold"
               >
-                <span className="text-neon-blue font-bold">{log.killer}</span>
-                <span className="text-white/30 font-bold">slayed</span>
-                <span className="text-red-400 font-bold">{log.victim}!</span>
+                <span className="text-neon-blue font-bold truncate max-w-[50px] sm:max-w-none">{log.killer}</span>
+                <span className="text-white/30 text-[9px]">⚔️ slayed</span>
+                <span className="text-red-400 font-bold truncate max-w-[50px] sm:max-w-none">{log.victim}</span>
               </motion.div>
             ))}
+          </div>
+
+          {/* Cosmic Arena Live Lobby Top-Leaders (Free for All) */}
+          <div className="absolute top-12 sm:top-16 right-2 sm:right-5 bg-black/75 border border-white/10 p-2 sm:p-3 rounded-lg sm:rounded-xl pointer-events-none z-10 backdrop-blur-md w-36 sm:w-48 shadow-2xl animate-fade-in">
+            <span className="text-[8px] sm:text-[9px] text-amber-400 font-extrabold tracking-widest block mb-1 sm:mb-1.5 uppercase leading-none">
+              🏆 ARENA LEADERS
+            </span>
+            <div className="flex flex-col gap-0.5 sm:gap-1 text-[10px] sm:text-xs">
+              {leaderboardItems.map((item, idx) => {
+                const isSelf = item.id === 'self';
+                const isRealPlayer = item.isPlayer && !isSelf;
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`flex items-center justify-between px-1.5 py-0.5 sm:py-1 rounded gap-1.5 ${
+                      isSelf 
+                        ? 'bg-neon-blue/20 text-neon-blue border border-neon-blue/25 font-bold' 
+                        : isRealPlayer 
+                          ? 'bg-yellow-400/10 text-yellow-300 border border-yellow-400/10 font-medium animate-pulse' 
+                          : 'text-white/50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                      <span className="font-mono text-[8px] sm:text-[9px] text-white/30">{idx + 1}</span>
+                      <span className="truncate max-w-[65px] sm:max-w-[100px]" title={item.name}>
+                        {isSelf ? '⭐ You' : item.name}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[8px] sm:text-[9px] text-white/80 shrink-0">
+                      {item.score}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-[7px] sm:text-[8px] text-white/30 text-center uppercase font-mono mt-1.5 pt-1.5 border-t border-white/5">
+              Unified Galaxy Arena
+            </div>
           </div>
 
           {/* Boost floating instruction tooltips */}
@@ -2192,9 +2295,9 @@ export default function SnakeGame({
       {/* 5. Sound muters buttons */}
       <button 
         onClick={toggleMute}
-        className="absolute bottom-5 right-[245px] w-10 h-10 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/60 hover:text-white z-10 backdrop-blur-md select-none"
+        className="absolute bottom-2 right-[76px] sm:bottom-5 sm:right-[245px] w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/60 hover:text-white z-10 backdrop-blur-md select-none"
       >
-        {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
       </button>
 
     </div>
