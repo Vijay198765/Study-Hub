@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Play, RotateCcw, Volume2, VolumeX, MessageSquare, ShieldAlert } from 'lucide-react';
 import { SnakeSegment, BotSnake, Pellets, KillRecord, FloatingEmote, SnakePlayerStats, SnakeSkin, PowerUpItem } from './types';
 import { SKINS } from './skinData';
+import { auth, db } from '../../firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 // Sound Helper using Web Audio API
 class AudioSynth {
@@ -464,11 +466,11 @@ export default function SnakeGame({
   
   // Game mode status
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
-    onPlayingStateChange?.(isPlaying);
-  }, [isPlaying, onPlayingStateChange]);
-  const [isGameOver, setIsGameOver] = useState(false);
+    onPlayingStateChange?.(isPlaying || isGameOver);
+  }, [isPlaying, isGameOver, onPlayingStateChange]);
   const [muted, setMuted] = useState(false);
   const [tick, setTick] = useState(0);
 
@@ -504,6 +506,22 @@ export default function SnakeGame({
   const floatEmotesRef = useRef<FloatingEmote[]>([]);
   const mouseRef = useRef({ x: 0, y: 0 });
 
+  // Live real-time multiplayer states & references
+  const myPlayerDocId = useRef(
+    auth.currentUser?.uid || 'guest-' + (playerDisplayName || 'Spectre').replace(/\s+/g, '_') + '-' + Math.random().toString().slice(2, 6)
+  ).current;
+  const multiplayerPlayersRef = useRef<{
+    id: string;
+    username: string;
+    segments: SnakeSegment[];
+    angle: number;
+    skinId: string;
+    score: number;
+    lastActive: number;
+    headColor: string;
+    color: string;
+  }[]>([]);
+
   // Load selected skin assets
   const currentSkin = SKINS.find(s => s.id === activeSkinId) || SKINS[0];
 
@@ -517,6 +535,64 @@ export default function SnakeGame({
     playerRef.current.headColor = currentSkin.headColor;
     playerRef.current.accentColor = currentSkin.accentColor;
   }, [playerDisplayName, activeSkinId, currentSkin]);
+
+  // --- REAL-TIME MULTIPLAYER FIREBASE SYNCHRONIZER ---
+  useEffect(() => {
+    if (!isPlaying) {
+      // Clean up self from live players collection immediately if not in-game
+      const cleanupMyPresence = async () => {
+        try {
+          await deleteDoc(doc(db, 'snake_arena_live_players', myPlayerDocId));
+        } catch (e) {
+          // Ignore
+        }
+      };
+      cleanupMyPresence();
+      return;
+    }
+
+    // Subscribe in real-time to other live players in the arena
+    const playersColRef = collection(db, 'snake_arena_live_players');
+    const unsubscribe = onSnapshot(playersColRef, (snapshot) => {
+      const list: typeof multiplayerPlayersRef.current = [];
+      const now = Date.now();
+      snapshot.forEach((doc) => {
+        if (doc.id === myPlayerDocId) return; // skip self
+        const data = doc.data();
+        
+        // Render layers that are active within the last 12 seconds (stale cleanup)
+        if (data.lastActive && now - data.lastActive < 12000) {
+          list.push({
+            id: doc.id,
+            username: data.username || 'Spectre',
+            segments: data.segments || [],
+            angle: data.angle || 0,
+            skinId: data.skinId || 'default',
+            score: data.score || 0,
+            lastActive: data.lastActive,
+            headColor: data.headColor || '#2563eb',
+            color: data.color || '#3b82f6'
+          });
+        }
+      });
+      multiplayerPlayersRef.current = list;
+    }, (err) => {
+      console.error("Firestore Multiplayer Subscription error:", err);
+    });
+
+    return () => {
+      unsubscribe();
+      // clean up presence on component unmount
+      const cleanupMyPresence = async () => {
+        try {
+          await deleteDoc(doc(db, 'snake_arena_live_players', myPlayerDocId));
+        } catch (e) {
+          // Ignore
+        }
+      };
+      cleanupMyPresence();
+    };
+  }, [isPlaying, myPlayerDocId]);
 
   // Handle Mute setting
   const toggleMute = () => {
@@ -867,8 +943,28 @@ export default function SnakeGame({
         }
       }
       player.segments = newSegments;
-      setLiveScore(player.segments.length * 15 - 180 + player.killCount * 100);
+      const computedScore = player.segments.length * 15 - 180 + player.killCount * 100;
+      setLiveScore(computedScore);
       setMaxLengthAchieved(prev => Math.max(prev, player.segments.length));
+
+      // Publish coords to Firebase live multiplayer arena collection at highly optimized rate
+      if (animId % 10 === 0 && isPlaying) {
+        try {
+          setDoc(doc(db, 'snake_arena_live_players', myPlayerDocId), {
+            userId: myPlayerDocId,
+            username: player.displayName,
+            segments: player.segments,
+            angle: player.angle,
+            skinId: player.skinId,
+            score: computedScore,
+            lastActive: Date.now(),
+            headColor: player.headColor,
+            color: player.color
+          });
+        } catch (e) {
+          // Fail silently
+        }
+      }
 
       // --- 3. Update AI Bots Steering (Bots are slowed by 65% when Ice freeze bottle is active!) ---
       const botSpeedMult = player.freezeTimer > 0 ? 0.35 : 1.0;
@@ -1178,6 +1274,34 @@ export default function SnakeGame({
         }
       });
 
+      // Check if player runs into any other real multiplayer player body
+      multiplayerPlayersRef.current.forEach((mp) => {
+        if (!mp.segments || mp.segments.length === 0) return;
+        // Skip head index [0] to prevent dual head locks
+        for (let j = 1; j < mp.segments.length; j++) {
+          const segCoords = mp.segments[j];
+          if (!segCoords) continue;
+          const dist = Math.hypot(headCoords.x - segCoords.x, headCoords.y - segCoords.y);
+          if (dist < 22) { // Collision threshold
+            if (player.shieldTimer > 0) {
+              // Shield absorbed! Bounce the snake head back
+              player.angle = player.angle + Math.PI;
+              player.shieldTimer = Math.max(0, player.shieldTimer - 150);
+              floatEmotesRef.current.push({
+                id: Math.random().toString(),
+                x: headCoords.x,
+                y: headCoords.y - 35,
+                text: '🛡️ SHIELD BLOCKED COLLISION!',
+                opacity: 1,
+                timer: 50
+              });
+            } else {
+              playerDied = true;
+            }
+          }
+        }
+      });
+
       if (playerDied) {
         triggerDeath();
         return;
@@ -1215,6 +1339,7 @@ export default function SnakeGame({
         }
 
         // Hit other bots body?
+        let killerName = '';
         botsRef.current.forEach((otherBot) => {
           if (otherBot.id === bot.id) return;
           for (let k = 0; k < otherBot.segments.length; k++) {
@@ -1222,6 +1347,21 @@ export default function SnakeGame({
             const dist = Math.hypot(botHead.x - bSeg.x, botHead.y - bSeg.y);
             if (dist < 22) {
               botCrashed = true;
+              killerName = otherBot.name;
+            }
+          }
+        });
+
+        // Hit other real players' bodies?
+        multiplayerPlayersRef.current.forEach((mp) => {
+          if (!mp.segments) return;
+          for (let k = 0; k < mp.segments.length; k++) {
+            const pSeg = mp.segments[k];
+            if (!pSeg) continue;
+            const dist = Math.hypot(botHead.x - pSeg.x, botHead.y - pSeg.y);
+            if (dist < 22) {
+              botCrashed = true;
+              killerName = mp.username;
             }
           }
         });
@@ -1266,7 +1406,7 @@ export default function SnakeGame({
           } else {
             killFeedRef.current.push({
               id: Math.random().toString(),
-              killer: 'Arena Wall',
+              killer: killerName || 'Battle Crash',
               victim: bot.name,
               timestamp: Date.now()
             });
@@ -1559,6 +1699,76 @@ export default function SnakeGame({
         ctx.fillText(bot.name, bHead.x - camX, bHead.y - camY - 20);
       });
 
+      // Render other real-time multiplayer players in the same arena!
+      multiplayerPlayersRef.current.forEach((mp) => {
+        if (!mp.segments || mp.segments.length === 0) return;
+        ctx.shadowBlur = 0;
+        const mpSkinObj = SKINS.find(s => s.id === mp.skinId) || SKINS[0];
+        const mpPattern = mpSkinObj.pattern;
+
+        // Draw body (Render from tail to head)
+        for (let j = mp.segments.length - 1; j > 0; j--) {
+          const seg = mp.segments[j];
+          if (!seg) continue;
+          const r = 21; // Match player size for true human presence
+
+          drawSnakeSegment(
+            ctx,
+            seg.x - camX,
+            seg.y - camY,
+            r,
+            j,
+            mp.segments.length,
+            mp.color,
+            mp.headColor,
+            mpSkinObj.accentColor || '#ffffff',
+            mpPattern,
+            false,
+            false
+          );
+        }
+
+        // Draw head
+        const mpHead = mp.segments[0];
+        if (mpHead) {
+          ctx.beginPath();
+          ctx.arc(mpHead.x - camX, mpHead.y - camY, 23, 0, Math.PI * 2);
+          ctx.fillStyle = mp.headColor;
+          ctx.fill();
+
+          // Head Cosmetics based on skin pattern
+          ctx.save();
+          ctx.translate(mpHead.x - camX, mpHead.y - camY);
+          ctx.rotate(mp.angle || 0);
+          drawSnakeHeadDecorations(ctx, mpPattern, mp.headColor, mpSkinObj.accentColor || '#ffffff');
+          ctx.restore();
+
+          // Eyes
+          ctx.save();
+          ctx.translate(mpHead.x - camX, mpHead.y - camY);
+          ctx.rotate(mp.angle || 0);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(6, -6, 4, 0, Math.PI * 2);
+          ctx.arc(6, 6, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#000000';
+          ctx.beginPath();
+          ctx.arc(8, -6, 2, 0, Math.PI * 2);
+          ctx.arc(8, 6, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Dynamic Name tag for real human opponents
+          ctx.fillStyle = '#38bdf8'; // Sky blue for real players
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`🎮 ${mp.username} (${mp.score})`, mpHead.x - camX, mpHead.y - camY - 24);
+        }
+      });
+
       // Render player snake
       ctx.shadowBlur = 0;
       const playerPattern = currentSkin.pattern;
@@ -1762,12 +1972,23 @@ export default function SnakeGame({
             </div>
           </div>
 
-          <button 
-            onClick={startGame}
-            className="btn-neon px-8 py-3 font-bold flex items-center gap-2"
-          >
-            <RotateCcw size={16} /> Slither Again
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              onClick={startGame}
+              className="btn-neon px-8 py-3 font-bold flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              <RotateCcw size={16} /> Slither Again
+            </button>
+            <button 
+              onClick={() => {
+                setIsGameOver(false);
+                setIsPlaying(false);
+              }}
+              className="px-8 py-3 font-bold flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl transition-all w-full sm:w-auto justify-center"
+            >
+              Exit to Lobby
+            </button>
+          </div>
         </motion.div>
       )}
 

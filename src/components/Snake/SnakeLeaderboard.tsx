@@ -24,10 +24,7 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
         const scores: SnakeScore[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          // Filter to only display my own scores
-          if (data.userId === currentUserId) {
-            scores.push({ id: doc.id, ...data } as SnakeScore);
-          }
+          scores.push({ id: doc.id, ...data } as SnakeScore);
         });
         setLeaderboard(scores);
         setLoading(false);
@@ -54,8 +51,8 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
           <Trophy size={24} />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-white font-display">My Arena Records</h2>
-          <p className="text-white/50 text-sm mt-1">Your personal high score and peak accomplishments saved on secure cloud networks.</p>
+          <h2 className="text-3xl font-bold text-white font-display">Global Gladiator Leaderboard</h2>
+          <p className="text-white/50 text-sm mt-1">Real-time rank list of premium snake survivors and peak gaming accomplishments.</p>
         </div>
       </div>
 
@@ -63,7 +60,7 @@ export default function SnakeLeaderboard({ currentUserId }: SnakeLeaderboardProp
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-neon-blue border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-white/40 text-sm mt-4">Loading your personal records...</p>
+            <p className="text-white/40 text-sm mt-4">Loading active gladiator records...</p>
           </div>
         ) : leaderboard.length === 0 ? (
           <div className="text-center py-20">

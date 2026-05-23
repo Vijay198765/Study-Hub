@@ -14,6 +14,7 @@ import SnakeLeaderboard from './SnakeLeaderboard';
 
 // Alert Confetti
 import confetti from 'canvas-confetti';
+import UserName from '../UserName';
 
 // Compact live leaderboard component for the play sidebar
 function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: { currentUserId: string, onShopClick: () => void, currentSkinId: string }) {
@@ -28,9 +29,7 @@ function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: 
       const list: any[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.userId === currentUserId) {
-          list.push({ id: doc.id, ...data });
-        }
+        list.push({ id: doc.id, ...data });
       });
       setScores(list);
       setLoading(false);
@@ -91,13 +90,18 @@ function SnakeCompactLeaderboard({ currentUserId, onShopClick, currentSkinId }: 
                     isCurrentUser ? 'bg-neon-blue/15 border border-neon-blue/40 shadow-[0_0_10px_rgba(59,130,246,0.15)]' : 'bg-white/[0.01] hover:bg-white/5 border border-transparent'
                   }`}
                 >
-                  <div className="flex items-center gap-2 max-w-[65%]">
+                  <div className="flex items-center gap-2 max-w-[65%] min-w-0">
                     <div className={`w-5.5 h-5.5 rounded-lg text-[10px] font-bold font-mono flex items-center justify-center ${rankBg} ${rankColor} shrink-0`}>
                       {rank}
                     </div>
-                    <span className={`text-xs font-bold truncate ${isCurrentUser ? 'text-neon-blue' : 'text-white/80'}`}>
-                      {item.username}
-                    </span>
+                    <UserName 
+                      userUid={item.userId} 
+                      fallback={item.username} 
+                      fallbackPhoto={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.username}`} 
+                      showPhoto={true}
+                      className={`text-xs font-bold truncate ${isCurrentUser ? 'text-neon-blue' : 'text-white/80'}`}
+                      photoClassName="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-white/10 shadow-sm"
+                    />
                   </div>
                   <div className="text-right flex flex-col items-end">
                     <span className="font-mono text-xs font-bold text-emerald-400 leading-none">
@@ -442,10 +446,11 @@ export default function SnakeArena() {
 
   // Buy a lock skin in the custom Shop tab
   const handlePurchaseSkin = async (skinId: string, cost: number) => {
+    if (unlockedSkins.includes(skinId)) return; // Prevent double purchases
     if (stats.coins < cost) return;
 
     const updatedCoins = stats.coins - cost;
-    const updatedSkinsList = [...unlockedSkins, skinId];
+    const updatedSkinsList = Array.from(new Set([...unlockedSkins, skinId]));
 
     setStats(prev => ({
       ...prev,

@@ -2417,48 +2417,7 @@ export default function AdminPanel() {
                   <Trash2 size={20} />
                   Clear Anonymous Data
                 </button>
-                <button 
-                  onClick={() => {
-                    setConfirmAction({
-                      title: 'Purge Secret Login Info',
-                      message: 'Are you sure you want to delete ALL saved information of secret logins across user records and history logs? This is irreversible.',
-                      onConfirm: async () => {
-                        try {
-                          // Query all user docs to find any containing secret fields
-                          const collectionRef = collection(db, 'users');
-                          const querySnap = await getDocs(collectionRef);
-                          const userPurges: Promise<any>[] = [];
-                          querySnap.forEach(docSnap => {
-                            const u = docSnap.data();
-                            if (u.isSecret || u.secretLoginLogged || u.role === 'secret_admin' || u.role === 'secret_student' || docSnap.id === 'special-admin-vijay' || docSnap.id === 'special-vijay-admin') {
-                              userPurges.push(removeUser(docSnap.id));
-                            }
-                          });
-                          
-                          // Query all activity logs
-                          const logsSnap = await getDocs(collection(db, 'activityLogs'));
-                          const logPurges: Promise<any>[] = [];
-                          logsSnap.forEach(docSnap => {
-                            const l = docSnap.data();
-                            if (l.isSecret) {
-                              logPurges.push(deleteDoc(doc(db, 'activityLogs', docSnap.id)));
-                            }
-                          });
-                          
-                          await Promise.all([...userPurges, ...logPurges]);
-                          setToast({ message: `Successfully purged secret profile data!`, type: 'success' });
-                        } catch (err) {
-                          setToast({ message: 'Failed to purge secret login info.', type: 'error' });
-                        }
-                        setConfirmAction(null);
-                      }
-                    });
-                  }}
-                  className="btn-neon bg-pink-500/10 text-pink-500 border border-pink-500/20 px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto hover:bg-pink-500/20"
-                >
-                  <Trash2 size={20} />
-                  Purge Secret Info
-                </button>
+
               </div>
 
               <div className="overflow-x-auto">
