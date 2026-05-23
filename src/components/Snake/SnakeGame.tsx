@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Play, RotateCcw, Volume2, VolumeX, MessageSquare, ShieldAlert } from 'lucide-react';
 import { SnakeSegment, BotSnake, Pellets, KillRecord, FloatingEmote, SnakePlayerStats, SnakeSkin, PowerUpItem } from './types';
@@ -496,7 +496,8 @@ export default function SnakeGame({
     magnetTimer: 0,
     doubleTimer: 0,
     shieldTimer: 0,
-    freezeTimer: 0
+    freezeTimer: 0,
+    maxLengthAchieved: 12
   });
 
   const botsRef = useRef<BotSnake[]>([]);
@@ -506,10 +507,20 @@ export default function SnakeGame({
   const floatEmotesRef = useRef<FloatingEmote[]>([]);
   const mouseRef = useRef({ x: 0, y: 0 });
 
-  // Live real-time multiplayer states & references
-  const myPlayerDocId = useRef(
-    auth.currentUser?.uid || 'guest-' + (playerDisplayName || 'Spectre').replace(/\s+/g, '_') + '-' + Math.random().toString().slice(2, 6)
-  ).current;
+  // Stable suffix for guest ID session to avoid regeneration on every render
+  const guestSuffixRef = useRef<string>('');
+  if (!guestSuffixRef.current) {
+    guestSuffixRef.current = Math.random().toString().slice(2, 6);
+  }
+
+  // Obtain the multiplayer document ID dynamically, adapting if user logs in late or as an anonymous user
+  const myPlayerDocId = useMemo(() => {
+    if (auth.currentUser?.uid) {
+      return auth.currentUser.uid;
+    }
+    const cleanName = (playerDisplayName || 'Spectre').trim().replace(/\s+/g, '_') || 'Spectre';
+    return `guest-${cleanName}-${guestSuffixRef.current}`;
+  }, [playerDisplayName]);
   const multiplayerPlayersRef = useRef<{
     id: string;
     username: string;
@@ -832,9 +843,14 @@ export default function SnakeGame({
       console.warn("Could not exit fullscreen context:", e);
     }
 
-    const scoreSubmit = liveScore;
-    const killsSubmit = liveKills;
-    const lengthSubmit = maxLengthAchieved;
+    // Direct computation from playerRef to avoid any React state closure staleness issues!
+    const finalKills = playerRef.current.killCount;
+    const finalLength = playerRef.current.maxLengthAchieved || playerRef.current.segments.length;
+    const finalScore = playerRef.current.segments.length * 15 - 180 + finalKills * 100;
+
+    const scoreSubmit = Math.max(0, finalScore);
+    const killsSubmit = finalKills;
+    const lengthSubmit = finalLength;
 
     // Save permanently in database
     onMatchComplete({
@@ -943,9 +959,10 @@ export default function SnakeGame({
         }
       }
       player.segments = newSegments;
+      player.maxLengthAchieved = Math.max(player.maxLengthAchieved || 12, player.segments.length);
       const computedScore = player.segments.length * 15 - 180 + player.killCount * 100;
       setLiveScore(computedScore);
-      setMaxLengthAchieved(prev => Math.max(prev, player.segments.length));
+      setMaxLengthAchieved(player.maxLengthAchieved);
 
       // Publish coords to Firebase live multiplayer arena collection at highly optimized rate
       if (animId % 10 === 0 && isPlaying) {
@@ -1298,6 +1315,41 @@ export default function SnakeGame({
             } else {
               playerDied = true;
             }
+          }
+        }
+      });
+
+      // Check if other real players crash into our body segments on our screen
+      multiplayerPlayersRef.current.forEach((mp) => {
+        if (!mp.segments || mp.segments.length === 0) return;
+        const mpHead = mp.segments[0];
+        if (!mpHead) return;
+        
+        // Skip check if we already recorded a kill on this player to prevent multiple credits
+        if ((mp as any).alreadyKilledByMe) return;
+
+        // Check against all OUR segments except our head index [0]
+        for (let k = 1; k < player.segments.length; k++) {
+          const pSeg = player.segments[k];
+          const dist = Math.hypot(mpHead.x - pSeg.x, mpHead.y - pSeg.y);
+          if (dist < 22) {
+            (mp as any).alreadyKilledByMe = true;
+            player.killCount++;
+            setLiveKills(player.killCount);
+            audio.playKill();
+
+            // Add to live kill feed
+            const logId = Math.random().toString();
+            killFeedRef.current.push({
+              id: logId,
+              killer: player.displayName,
+              victim: mp.username,
+              timestamp: Date.now()
+            });
+            if (killFeedRef.current.length > 4) {
+              killFeedRef.current.shift();
+            }
+            break;
           }
         }
       });

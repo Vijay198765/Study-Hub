@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gamepad2, Palette, Trophy, Award, Coins, Info, Calendar, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { SnakePlayerStats, SnakeAchievement } from './types';
@@ -154,8 +155,16 @@ export default function SnakeArena() {
   const [activeTab, setActiveTab] = useState<'play' | 'shop' | 'stats' | 'leaderboard'>('play');
   const [isGameRunning, setIsGameRunning] = useState(false);
   
-  // Current logged in user context
-  const currentUser = auth.currentUser;
+  // Current logged in user context with real-time state adaptation
+  const [currentUser, setCurrentUser] = useState<any>(auth.currentUser);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const userId = currentUser?.uid || 'guest-snake-gladiator';
   const playerDisplayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Spectre';
 
