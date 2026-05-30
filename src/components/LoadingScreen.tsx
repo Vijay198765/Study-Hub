@@ -431,7 +431,7 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
               transition={{ delay: 0.3, duration: 0.8 }}
             >
               <Logo 
-                siteLogo={siteConfig?.siteLogo}
+                siteLogo={siteConfig?.faviconUrl || siteConfig?.siteLogo}
                 faviconUrl={siteConfig?.faviconUrl}
                 logoColor={siteConfig?.logoColor}
                 logoColorSecondary={siteConfig?.logoColorSecondary}
