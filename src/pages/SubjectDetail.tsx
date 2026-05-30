@@ -41,6 +41,15 @@ export default function SubjectDetail() {
   const currentClass = classes.find(c => c.id === classId);
   const subject = subjects.find(s => s.id === subjectId);
 
+  useEffect(() => {
+    if (subject) {
+      document.title = `${subject.name} | Study-hub`;
+    }
+    return () => {
+      document.title = 'Study-hub';
+    };
+  }, [subject]);
+
   if (loading) return <div className="pt-32 text-center text-white/40">Loading subject details...</div>;
   if (!subject) return <div className="pt-32 text-center text-white/40">Subject not found</div>;
 
@@ -188,7 +197,7 @@ export default function SubjectDetail() {
             >
               {currentClass?.name} • Subject
             </motion.div>
-            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 break-words tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 break-words tracking-tight">
               {subject.name}
             </h1>
             <p className="text-white/40 text-xl max-w-2xl mx-auto">

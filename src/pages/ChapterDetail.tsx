@@ -147,6 +147,15 @@ export default function ChapterDetail() {
   const subject = subjects.find(s => s.id === subjectId);
   const chapter = chapters.find(c => c.id === chapterId);
 
+  useEffect(() => {
+    if (chapter) {
+      document.title = `${chapter.name} | Study-hub`;
+    }
+    return () => {
+      document.title = 'Study-hub';
+    };
+  }, [chapter]);
+
   // Get effective quiz (either from chapter or default)
   const getEffectiveQuiz = (): QuizQuestion[] => {
     if (!chapter) return [];
@@ -434,45 +443,45 @@ export default function ChapterDetail() {
               <div 
                 key={res.id} 
                 onClick={() => handlePreview(res.url)}
-                className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
+                className="glass-card p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4 cursor-pointer hover:neon-border transition-all"
               >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 w-full">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-neon-blue/10 transition-colors">
                     {getResourceIcon(res.type)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
-                    <p className="text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
+                    <h3 className="font-bold text-white text-sm sm:text-base capitalize truncate group-hover:neon-text transition-colors" title={res.title}>{res.title}</h3>
+                    <p className="text-[9px] sm:text-[10px] text-white/40 group-hover:text-neon-blue uppercase tracking-widest transition-all font-bold">
                       {res.type}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button 
                     onClick={() => handlePreview(res.url)}
-                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center gap-2 px-3"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-blue/20 hover:text-neon-blue transition-all flex items-center justify-center gap-1.5 px-2.5 sm:px-3"
                     title="Preview"
                   >
-                    <Eye size={16} />
-                    <span className="text-xs font-bold">Preview</span>
+                    <Eye size={15} />
+                    <span className="text-xs font-bold hidden lg:inline">Preview</span>
                   </button>
                   <a 
                     href={getPreviewUrl(res.url).replace('&embedded=true', '').replace('/preview', '/view')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center gap-2 px-3"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-purple/20 hover:text-neon-purple transition-all flex items-center justify-center gap-1.5 px-2.5 sm:px-3"
                     title="Open in New Tab"
                   >
-                    <ExternalLink size={16} />
-                    <span className="text-xs font-bold hidden sm:inline">Open</span>
+                    <ExternalLink size={15} />
+                    <span className="text-xs font-bold hidden lg:inline">Open</span>
                   </a>
                   <button 
                     onClick={() => handleDownload(res.url, res.title)}
-                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center gap-2 px-3"
+                    className="p-2 rounded-lg bg-white/5 hover:bg-neon-green/20 hover:text-green-400 transition-all flex items-center justify-center gap-1.5 px-2.5 sm:px-3"
                     title="Download"
                   >
-                    <Download size={16} />
-                    <span className="text-xs font-bold hidden sm:inline">Save</span>
+                    <Download size={15} />
+                    <span className="text-xs font-bold hidden lg:inline">Save</span>
                   </button>
                 </div>
               </div>
@@ -516,7 +525,7 @@ export default function ChapterDetail() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-3xl md:text-4xl font-display font-bold break-words">{chapter.name}</h1>
+                <h1 className="text-3xl md:text-4xl font-display font-bold text-white break-words">{chapter.name}</h1>
                  {siteConfig?.studyTimerEnabled && (
                   <button 
                     onClick={() => setShowTimer(!showTimer)}
