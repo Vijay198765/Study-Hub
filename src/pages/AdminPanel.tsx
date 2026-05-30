@@ -4157,7 +4157,7 @@ export default function AdminPanel() {
                              onChange={(e) => saveSiteConfig({ faviconUrl: e.target.value })}
                              placeholder="https://..."
                            />
-                           <p className="text-[10px] text-white/20 mt-1">This is the icon shown on browser tabs and the loading screen.</p>
+                           <p className="text-[10px] text-white/20 mt-1">This is the icon shown on browser tabs.</p>
                         </div>
                         <div className="space-y-2">
                            <label className="text-xs font-medium text-white/60 uppercase tracking-widest leading-relaxed">Main Logo URL (Site Logo)</label>
@@ -4168,7 +4168,7 @@ export default function AdminPanel() {
                              onChange={(e) => saveSiteConfig({ siteLogo: e.target.value })}
                              placeholder="https://..."
                            />
-                           <p className="text-[10px] text-white/20 mt-1">This is the main logo used in the Navigation Bar and other pages.</p>
+                           <p className="text-[10px] text-white/20 mt-1">This is the main logo used in the Navigation Bar, Loading Screen, and other pages.</p>
                         </div>
                       </div>
 

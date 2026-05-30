@@ -698,7 +698,7 @@ export default function App() {
 
   // Update dynamic favicon from siteConfig
   useEffect(() => {
-    const faviconToUse = siteConfig?.faviconUrl || siteConfig?.siteLogo;
+    const faviconToUse = siteConfig?.siteLogo || siteConfig?.faviconUrl;
     if (faviconToUse) {
       const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
       if (link) {
