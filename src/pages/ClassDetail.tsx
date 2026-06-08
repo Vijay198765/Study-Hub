@@ -17,20 +17,18 @@ export default function ClassDetail() {
   const [adminUser, setAdminUser] = useState<{ photoURL?: string; name?: string } | null>(null);
 
   useEffect(() => {
-    // Listen to all users with admin role in real-time
+    // Direct query by email to avoid any role mapping issues
     const q = query(
       collection(db, 'users'),
-      where('role', 'in', ['admin', 'superadmin', 'super_admin'])
+      where('email', 'in', ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'])
     );
     const unsubscribe = onSnapshot(q, (snap) => {
       if (!snap.empty) {
-        // Try finding 'vijayninama683@gmail.com' case-insensitively
         let matchDoc = snap.docs.find(d => {
           const email = (d.data().email || '').toLowerCase();
           return email === 'vijayninama683@gmail.com';
         });
         
-        // Fallback to tagoreteam2025@gmail.com
         if (!matchDoc) {
           matchDoc = snap.docs.find(d => {
             const email = (d.data().email || '').toLowerCase();
@@ -45,17 +43,18 @@ export default function ClassDetail() {
         
         setAdminUser({
           photoURL: docData.photoURL || '',
-          name: docData.name || 'Vijay'
+          name: docData.name || 'Vijay Ninama'
         });
       } else {
-        // Fallback to searching without role filters
-        getDocs(collection(db, 'users')).then((allSnap) => {
-          const matchDoc = allSnap.docs.find(d => {
-            const email = (d.data().email || '').toLowerCase();
-            return email === 'vijayninama683@gmail.com' || email === 'tagoreteam2025@gmail.com';
-          });
-          if (matchDoc) {
-            const docData = matchDoc.data();
+        // Fallback to searching with role filters
+        const fallbackQ = query(
+          collection(db, 'users'),
+          where('role', 'in', ['admin', 'superadmin', 'super_admin'])
+        );
+        getDocs(fallbackQ).then((fallbackSnap) => {
+          if (!fallbackSnap.empty) {
+            const adminDoc = fallbackSnap.docs[0];
+            const docData = adminDoc.data();
             setAdminUser({
               photoURL: docData.photoURL || '',
               name: docData.name || 'Vijay'

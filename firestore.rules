@@ -352,6 +352,12 @@ service cloud.firestore {
              (!('showFooterCredit' in data) || data.showFooterCredit is bool) &&
              (!('leaderboardVisible' in data) || data.leaderboardVisible is bool) &&
              (!('registrationEnabled' in data) || data.registrationEnabled is bool) &&
+              (!('surpriseButtonEnabled' in data) || data.surpriseButtonEnabled is bool) &&
+              (!('surpriseButtonText' in data) || (data.surpriseButtonText is string && data.surpriseButtonText.size() < 200)) &&
+              (!('surpriseDriveLinks' in data) || data.surpriseDriveLinks is list) &&
+              (!('surpriseDriveLinksDesktop' in data) || data.surpriseDriveLinksDesktop is list) &&
+              (!('surpriseDriveLinksMobile' in data) || data.surpriseDriveLinksMobile is list) &&
+              (!('surpriseAutoRedirectDesktop' in data) || data.surpriseAutoRedirectDesktop is bool) &&
              (!('notificationDuration' in data) || data.notificationDuration is number) &&
              (!('watermarkText' in data) || (data.watermarkText is string && data.watermarkText.size() < 500)) &&
              (!('watermarkEnabled' in data) || data.watermarkEnabled is bool) &&
@@ -501,9 +507,15 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if false;
     }
 
     match /classes/{classId} {
@@ -616,7 +628,7 @@ service cloud.firestore {
     match /config/{docId} {
       allow read: if true;
       allow create, update: if isAdmin() && isValidConfig(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if false; // Deny deletion to prevent loss of critical system configurations
     }
 
     match /music/{songId} {

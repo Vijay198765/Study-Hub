@@ -232,6 +232,12 @@
         "showFooterCredit": { "type": "boolean" },
         "leaderboardVisible": { "type": "boolean" },
         "registrationEnabled": { "type": "boolean" },
+        "surpriseButtonEnabled": { "type": "boolean" },
+        "surpriseButtonText": { "type": "string" },
+        "surpriseDriveLinks": { "type": "array", "items": { "type": "string" } },
+        "surpriseDriveLinksDesktop": { "type": "array", "items": { "type": "string" } },
+        "surpriseDriveLinksMobile": { "type": "array", "items": { "type": "string" } },
+        "surpriseAutoRedirectDesktop": { "type": "boolean" },
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
     },

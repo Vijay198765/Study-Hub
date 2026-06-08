@@ -4932,7 +4932,7 @@ export default function AdminPanel() {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-white">Enable Surprise Button</p>
-                            <p className="text-[10px] text-white/40">Shows surprise button on home page before best learning platform heading</p>
+                            <p className="text-[10px] text-white/40">Shows surprise button on home page below best learning platform heading</p>
                           </div>
                         </div>
                         <button 
@@ -4941,6 +4941,25 @@ export default function AdminPanel() {
                           className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.surpriseButtonEnabled ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
                         >
                           <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.surpriseButtonEnabled ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                            <Sparkles size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Desktop Auto Redirect</p>
+                            <p className="text-[10px] text-white/40">Automatically opens surprise link preview on web load for desktop users</p>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => saveImmediate({ surpriseAutoRedirectDesktop: !editingConfig?.surpriseAutoRedirectDesktop })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.surpriseAutoRedirectDesktop ? 'bg-neon-blue shadow-[0_0_15px_rgba(0,242,255,0.4)]' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.surpriseAutoRedirectDesktop ? 'right-1' : 'left-1'}`} />
                         </button>
                       </div>
 

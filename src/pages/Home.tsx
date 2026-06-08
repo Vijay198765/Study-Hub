@@ -11,7 +11,7 @@ import LeaderboardScroller from '../components/LeaderboardScroller';
 
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 
 export default function Home({ siteConfig }: { siteConfig?: any }) {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -21,8 +21,61 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
   const [recentChapters, setRecentChapters] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>('');
+  const [adminUser, setAdminUser] = useState<{ photoURL?: string; name?: string } | null>(null);
   const location = useLocation();
   const fullText = siteConfig?.siteSubtitle || "The Future of Learning is Here.";
+
+  useEffect(() => {
+    // Direct query by email to avoid any role mapping issues
+    const q = query(
+      collection(db, 'users'),
+      where('email', 'in', ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'])
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        let matchDoc = snap.docs.find(d => {
+          const email = (d.data().email || '').toLowerCase();
+          return email === 'vijayninama683@gmail.com';
+        });
+        
+        if (!matchDoc) {
+          matchDoc = snap.docs.find(d => {
+            const email = (d.data().email || '').toLowerCase();
+            return email === 'tagoreteam2025@gmail.com';
+          });
+        }
+        
+        const adminDoc = matchDoc || snap.docs[0];
+        const docData = adminDoc.data();
+        
+        setAdminUser({
+          photoURL: docData.photoURL || '',
+          name: docData.name || 'Vijay Ninama'
+        });
+      } else {
+        // Ultimate fallback to check all admin roles
+        const fallbackQ = query(
+          collection(db, 'users'),
+          where('role', 'in', ['admin', 'superadmin', 'super_admin'])
+        );
+        getDocs(fallbackQ).then((fallbackSnap) => {
+          if (!fallbackSnap.empty) {
+            const adminDoc = fallbackSnap.docs[0];
+            const docData = adminDoc.data();
+            setAdminUser({
+              photoURL: docData.photoURL || '',
+              name: docData.name || 'Vijay'
+            });
+          }
+        }).catch(err => {
+          console.warn('Fallback users query failed:', err);
+        });
+      }
+    }, (error) => {
+      console.warn('Admin user listener error:', error);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -40,6 +93,40 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && siteConfig?.surpriseButtonEnabled && siteConfig?.surpriseAutoRedirectDesktop) {
+      // Check if we are on desktop
+      const isMobileSize = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobile = isMobileSize || isMobileUA;
+
+      if (!isMobile) {
+        const alreadyTriggered = sessionStorage.getItem('desktop_surprise_redirect_done');
+        if (!alreadyTriggered) {
+          sessionStorage.setItem('desktop_surprise_redirect_done', 'true');
+
+          let links = siteConfig.surpriseDriveLinksDesktop || [];
+          if (links.length === 0) {
+            links = siteConfig.surpriseDriveLinks || [];
+          }
+
+          if (links.length > 0) {
+            const randomIndex = Math.floor(Math.random() * links.length);
+            const rawUrl = links[randomIndex] || '';
+            let previewUrl = rawUrl;
+            if (rawUrl.includes('drive.google.com')) {
+              const fileIdMatch = rawUrl.match(/\/d\/([^/&?]+)/) || rawUrl.match(/id=([^&?#]+)/);
+              if (fileIdMatch && fileIdMatch[1]) {
+                previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+              }
+            }
+            window.open(previewUrl, '_blank');
+          }
+        }
+      }
+    }
+  }, [siteConfig]);
 
   const [allData, setAllData] = useState<{
     classes: Class[];
@@ -187,11 +274,19 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
       {/* Hero Section */}
       <section className="bg-transparent pt-2 pb-8 px-4 mb-4">
         <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-4"
+          >
+            🚀 Best Learning Platform for Class 6-10 by Vijay Ninama
+          </motion.div>
+          
           {siteConfig?.surpriseButtonEnabled && (
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: -10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              className="mb-4 flex justify-center animate-pulse hover:animate-none"
+              className="mb-6 flex justify-center animate-pulse hover:animate-none"
             >
               <button
                 type="button"
@@ -242,14 +337,6 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
               </button>
             </motion.div>
           )}
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-block px-4 py-1 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-4"
-          >
-            🚀 Best Learning Platform for Class 6-10 by Vijay Ninama
-          </motion.div>
           
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -374,9 +461,29 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         {/* Recently Viewed */}
         {recentChapters.length > 0 && (
         <section className="max-w-7xl mx-auto mb-8 -mt-8">
-          <div className="flex items-center gap-3 mb-4">
-            <History className="text-neon-purple" size={20} />
-            <h2 className="text-xl font-display font-bold">Continue Studying</h2>
+          <div className="flex items-center gap-4 mb-5">
+            {/* Main Admin DP */}
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 p-[1.5px] shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform duration-200">
+              <div className="w-full h-full rounded-full bg-zinc-950 overflow-hidden relative">
+                <img 
+                  src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
+                  alt="Vijay Avatar" 
+                  className="w-full h-full object-cover object-center aspect-square rounded-full"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay";
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <History className="text-neon-purple" size={16} />
+                <h2 className="text-xl font-display font-bold text-white">Continue Studying</h2>
+              </div>
+              <p className="text-xs text-white/40 font-medium">Guided by {adminUser?.name || 'Vijay Ninama'}</p>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recentChapters.slice(0, 2).map((chapter, idx) => (

@@ -243,6 +243,7 @@ export interface SiteConfig {
   surpriseDriveLinks?: string[];
   surpriseDriveLinksDesktop?: string[];
   surpriseDriveLinksMobile?: string[];
+  surpriseAutoRedirectDesktop?: boolean;
   lastUpdated?: any;
 }
 

@@ -345,12 +345,7 @@ export default function App() {
             const updates: any = {};
             if (profileData.ip !== detectedIp) updates.ip = detectedIp;
             if (activeUser.photoURL && profileData.photoURL !== activeUser.photoURL && !profileData.photoURLOverridden) {
-              if (!isMainAdmin || !profileData.photoURL) {
-                updates.photoURL = convertDriveUrl(activeUser.photoURL);
-              }
-            }
-            if (isMainAdmin && !profileData.photoURLOverridden) {
-              updates.photoURLOverridden = true;
+              updates.photoURL = convertDriveUrl(activeUser.photoURL);
             }
             if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
@@ -612,11 +607,12 @@ export default function App() {
       // Use both visibilityState and a simple focus check for more accurate "study time"
       if (document.visibilityState === 'visible' && document.hasFocus()) {
         const userRef = doc(db, 'users', user.uid);
+        const isMainAdmin = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
         try {
-          // Use increment(1) to be more accurate and avoid unnecessary getDoc calls
+          // Use increment(1) (or increment(2) if admin) to be more accurate and avoid unnecessary getDoc calls
           // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
           await updateDoc(userRef, {
-            totalTimeSpent: increment(1),
+            totalTimeSpent: increment(isMainAdmin ? 2 : 1),
             lastActive: serverTimestamp()
           });
         } catch (e) {
