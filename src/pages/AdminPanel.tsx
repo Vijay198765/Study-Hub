@@ -7,7 +7,8 @@ import {
   AlertCircle, ExternalLink, FileText, HelpCircle,
   ArrowUp, ArrowDown, Info, Upload, RefreshCcw, Eye, Copy,
   MessageSquare, ClipboardList, Trophy, Palette, Layout, LayoutDashboard, Zap, Type, Download, LogOut, Lock, Unlock, UserPlus, Folder as FolderIcon, FolderPlus, FolderTree,
-  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity
+  Star, Shield, Globe, Bell, Settings, Clock, Gamepad2, Sun, Moon, CloudRain, Cloud, Smartphone, Crown, Fingerprint, ShieldAlert, Image, ShieldCheck, Activity,
+  Gift, Sparkles
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Logo from '../components/Logo';
@@ -439,6 +440,13 @@ export default function AdminPanel() {
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [editingConfig, setEditingConfig] = useState<Partial<SiteConfig>>({});
   const [hasUnsavedSiteChanges, setHasUnsavedSiteChanges] = useState(false);
+
+  // Sync editingConfig with real-time siteConfig when there are no unsaved changes
+  useEffect(() => {
+    if (siteConfig && !hasUnsavedSiteChanges) {
+      setEditingConfig(siteConfig);
+    }
+  }, [siteConfig, hasUnsavedSiteChanges]);
 
   const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
 
@@ -4903,6 +4911,115 @@ export default function AdminPanel() {
                         )}
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* 🎁 Surprise Button Config */}
+                <div className="space-y-6 p-6 bg-white/5 border border-white/10 rounded-2xl lg:col-span-2">
+                  <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    <Sparkles size={20} className="text-yellow-400 animate-pulse" />
+                    🎁 Surprise Button Configuration
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Left Column: Toggle & Button Text */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
+                            <Gift size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Enable Surprise Button</p>
+                            <p className="text-[10px] text-white/40">Shows surprise button on home page before best learning platform heading</p>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => saveImmediate({ surpriseButtonEnabled: !editingConfig?.surpriseButtonEnabled })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.surpriseButtonEnabled ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.surpriseButtonEnabled ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest pl-1 leading-relaxed">Surprise Button Text</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 🎁 Click for a Surprise!"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-neon-blue outline-none transition-all"
+                          value={editingConfig?.surpriseButtonText || ''}
+                          onChange={(e) => saveSiteConfig({ surpriseButtonText: e.target.value })}
+                        />
+                        <p className="text-[10px] text-white/20 mt-1">If blank, defaults to "🎁 Guess What? Click Me!"</p>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Google Drive Links Management */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-white/60 uppercase tracking-widest block pl-1">Drive Preview Links</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            id="new-drive-link"
+                            placeholder="Paste Google Drive preview link here..."
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue placeholder:text-white/25"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const input = document.getElementById('new-drive-link') as HTMLInputElement;
+                                if (input && input.value.trim()) {
+                                  const currentLinks = editingConfig?.surpriseDriveLinks || [];
+                                  saveSiteConfig({ surpriseDriveLinks: [...currentLinks, input.value.trim()] });
+                                  input.value = '';
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.getElementById('new-drive-link') as HTMLInputElement;
+                              if (input && input.value.trim()) {
+                                const currentLinks = editingConfig?.surpriseDriveLinks || [];
+                                saveSiteConfig({ surpriseDriveLinks: [...currentLinks, input.value.trim()] });
+                                input.value = '';
+                              }
+                            }}
+                            className="px-4 py-2 bg-neon-blue text-black font-bold rounded-xl text-xs hover:opacity-90 active:scale-95 transition-all uppercase tracking-wider shrink-0"
+                          >
+                            Add Link
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Displaying Current Links */}
+                      <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 subtle-scrollbar border border-white/5 rounded-xl p-3 bg-black/20">
+                        {editingConfig?.surpriseDriveLinks && editingConfig.surpriseDriveLinks.length > 0 ? (
+                          editingConfig.surpriseDriveLinks.map((link: string, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-xs">
+                              <span className="truncate text-white/60 max-w-[80%] font-mono" title={link}>
+                                {link}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = editingConfig.surpriseDriveLinks.filter((_: any, i: number) => i !== idx);
+                                  saveSiteConfig({ surpriseDriveLinks: updated });
+                                }}
+                                className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[10px] text-white/30 italic text-center py-4">No drive links configured. Surprise button will not trigger anything.</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

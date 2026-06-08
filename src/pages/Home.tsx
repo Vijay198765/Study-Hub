@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History } from 'lucide-react';
+import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History, Gift, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Class, Subject, Chapter } from '../types';
+import { convertDriveUrl } from '../lib/utils';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
 import { ClassCardSkeleton } from '../components/Skeleton';
 import Leaderboard from '../components/Leaderboard';
@@ -186,6 +187,43 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
       {/* Hero Section */}
       <section className="bg-transparent pt-2 pb-8 px-4 mb-4">
         <div className="max-w-7xl mx-auto text-center">
+          {siteConfig?.surpriseButtonEnabled && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: -10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="mb-4 flex justify-center animate-pulse hover:animate-none"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  const links = siteConfig.surpriseDriveLinks || [];
+                  if (links.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * links.length);
+                    const rawUrl = links[randomIndex] || '';
+                    
+                    let previewUrl = rawUrl;
+                    if (rawUrl.includes('drive.google.com')) {
+                      const fileIdMatch = rawUrl.match(/\/d\/([^/&?]+)/) || rawUrl.match(/id=([^&?#]+)/);
+                      if (fileIdMatch && fileIdMatch[1]) {
+                        previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+                      }
+                    }
+                    
+                    window.open(previewUrl, '_blank');
+                  } else {
+                    // Fallback to Google Drive in case no link is configured yet
+                    window.open('https://drive.google.com', '_blank');
+                  }
+                }}
+                className="relative group px-6 py-2.5 rounded-full bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 border border-yellow-500/40 hover:border-yellow-400 text-yellow-300 font-bold text-xs tracking-wider uppercase flex items-center gap-2 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_25px_rgba(245,158,11,0.3)] z-10"
+              >
+                <Sparkles className="text-yellow-400 group-hover:animate-spin" size={14} />
+                <span>{siteConfig.surpriseButtonText || "🎁 Guess What? Click Me!"}</span>
+                <Gift className="text-yellow-400 animate-bounce" size={14} />
+              </button>
+            </motion.div>
+          )}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

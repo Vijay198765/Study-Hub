@@ -298,6 +298,60 @@ const SceneContent = ({ isMobile }: { isMobile: boolean }) => {
   );
 };
 
+class CanvasErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode; onError?: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.warn("Canvas rendering error caught - falling back gracefully", error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError();
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+const FlatFallbackBackground = () => {
+  return (
+    <div className="absolute inset-0 bg-zinc-950 overflow-hidden pointer-events-none">
+      {/* Floating neon blobs */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[120px] animate-pulse" />
+      <div 
+        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" 
+        style={{ animationDelay: '1.5s' }} 
+      />
+      
+      {/* Grid line overlay */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:32px_32px]" />
+      
+      {/* Rotating geometric ambient rings */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-30">
+        <div className="w-[320px] h-[320px] border border-sky-500/20 rounded-full animate-spin" style={{ animationDuration: '25s' }} />
+        <div 
+          className="absolute w-[480px] h-[480px] border border-indigo-500/10 rounded-full animate-spin" 
+          style={{ animationDuration: '40s', animationDirection: 'reverse' }} 
+        />
+        <div 
+          className="absolute w-[640px] h-[640px] border border-pink-500/5 border-dashed rounded-full animate-spin" 
+          style={{ animationDuration: '60s' }} 
+        />
+      </div>
+    </div>
+  );
+};
+
 export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
   const { theme } = useTheme();
   const [isMobile, setIsMobile] = useState(() => {
@@ -305,9 +359,26 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
     return false;
   });
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [webGlSupported, setWebGlSupported] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
+    // Detect WebGL support
+    try {
+      const canvas = document.createElement('canvas');
+      const supported = !!(
+        window.WebGLRenderingContext && 
+        (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+      );
+      setWebGlSupported(supported);
+      if (!supported) {
+        setIsCanvasReady(true);
+      }
+    } catch (e) {
+      setWebGlSupported(false);
+      setIsCanvasReady(true);
+    }
+
     const handleResize = () => {
       if (typeof window !== 'undefined') {
         setIsMobile(window.innerWidth < 768);
@@ -344,51 +415,60 @@ export const LoadingScreen = ({ siteConfig }: { siteConfig?: any }) => {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="absolute inset-0"
       >
-        <Canvas 
-          shadows
-          dpr={[1, isMobile ? 1.5 : 2]} 
-          gl={{ antialias: false, alpha: true, stencil: false, depth: true }}
-          camera={{ position: [0, 2, 8], fov: 50 }}
-          onCreated={({ gl }) => {
-            if (gl) {
-              gl.shadowMap.enabled = true;
-              gl.shadowMap.type = THREE.PCFShadowMap;
-            }
-            requestAnimationFrame(() => setIsCanvasReady(true));
-          }}
-        >
-          <PerspectiveCamera 
-            makeDefault 
-            position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
-            fov={isMobile ? 70 : 50} 
-          />
-          
-          <ambientLight intensity={0.8} />
-          <pointLight position={[10, 10, 10]} intensity={2} />
-          
-          <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
-          <Sparkles count={100} scale={5} size={2} speed={0.4} color={theme?.neonBlue || "#00f2ff"} />
-          <DataPoints />
-          
-          <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-            <FloatingIsland />
-            <Robot />
-            
-            <FloatingBook position={[0.8, 1.2, 0.5]} color="#ef4444" />
-            <FloatingBook position={[-0.7, 1.5, -0.3]} color="#8b5cf6" />
-            <FloatingBook position={[0.4, 1.8, -0.8]} color="#f59e0b" />
+        {!webGlSupported ? (
+          <FlatFallbackBackground />
+        ) : (
+          <CanvasErrorBoundary 
+            fallback={<FlatFallbackBackground />}
+            onError={() => setIsCanvasReady(true)}
+          >
+            <Canvas 
+              shadows
+              dpr={[1, isMobile ? 1.5 : 2]} 
+              gl={{ antialias: false, alpha: true, stencil: false, depth: true }}
+              camera={{ position: [0, 2, 8], fov: 50 }}
+              onCreated={({ gl }) => {
+                if (gl) {
+                  gl.shadowMap.enabled = true;
+                  gl.shadowMap.type = THREE.PCFShadowMap;
+                }
+                requestAnimationFrame(() => setIsCanvasReady(true));
+              }}
+            >
+              <PerspectiveCamera 
+                makeDefault 
+                position={[0, isMobile ? 4 : 2, isMobile ? 12 : 8]} 
+                fov={isMobile ? 70 : 50} 
+              />
+              
+              <ambientLight intensity={0.8} />
+              <pointLight position={[10, 10, 10]} intensity={2} />
+              
+              <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
+              <Sparkles count={100} scale={5} size={2} speed={0.4} color={theme?.neonBlue || "#00f2ff"} />
+              <DataPoints />
+              
+              <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                <FloatingIsland />
+                <Robot />
+                
+                <FloatingBook position={[0.8, 1.2, 0.5]} color="#ef4444" />
+                <FloatingBook position={[-0.7, 1.5, -0.3]} color="#8b5cf6" />
+                <FloatingBook position={[0.4, 1.8, -0.8]} color="#f59e0b" />
 
-            <BouncingIcon position={[-1.2, 0.8, 0.8]} color="#00f2ff" type="sphere" />
-            <BouncingIcon position={[1.5, 0.6, -0.5]} color="#ff00ff" type="box" />
-            <BouncingIcon position={[0, 2.2, 0]} color="#bc13fe" type="torus" />
-          </Float>
+                <BouncingIcon position={[-1.2, 0.8, 0.8]} color="#00f2ff" type="sphere" />
+                <BouncingIcon position={[1.5, 0.6, -0.5]} color="#ff00ff" type="box" />
+                <BouncingIcon position={[0, 2.2, 0]} color="#bc13fe" type="torus" />
+              </Float>
 
-          <OrbitingPlanet color="#f87171" distance={5} speed={0.5} size={0.3} />
-          <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
-          <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
-          
-          <Rig />
-        </Canvas>
+              <OrbitingPlanet color="#f87171" distance={5} speed={0.5} size={0.3} />
+              <OrbitingPlanet color="#60a5fa" distance={8} speed={0.3} size={0.5} />
+              <OrbitingPlanet color="#facc15" distance={12} speed={0.2} size={0.4} />
+              
+              <Rig />
+            </Canvas>
+          </CanvasErrorBoundary>
+        )}
       </motion.div>
       
       {/* Background Decor */}

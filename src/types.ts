@@ -238,6 +238,9 @@ export interface SiteConfig {
   customFooterText?: string;
   announcementColor?: string;
   verifyUserEmail?: boolean;
+  surpriseButtonEnabled?: boolean;
+  surpriseButtonText?: string;
+  surpriseDriveLinks?: string[];
   lastUpdated?: any;
 }
 

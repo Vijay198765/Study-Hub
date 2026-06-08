@@ -467,10 +467,12 @@ export default function SnakeGame({
   // Game mode status
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isTimeOut, setIsTimeOut] = useState(false);
+  const [gameMode, setGameMode] = useState<'classic' | 'battleRoyale' | 'timeAttack' | 'offline'>('classic');
 
   useEffect(() => {
-    onPlayingStateChange?.(isPlaying || isGameOver);
-  }, [isPlaying, isGameOver, onPlayingStateChange]);
+    onPlayingStateChange?.(isPlaying || isGameOver || isTimeOut);
+  }, [isPlaying, isGameOver, isTimeOut, onPlayingStateChange]);
   const [muted, setMuted] = useState(false);
   const [tick, setTick] = useState(0);
 
@@ -481,6 +483,31 @@ export default function SnakeGame({
   const [nicknameInput, setNicknameInput] = useState(() => {
     return localStorage.getItem('snake_nickname') || playerDisplayName || 'Spectre';
   });
+
+  // Juice & Physics Refs
+  const particlesRef = useRef<Array<{
+    x: number;
+    y: number;
+    color: string;
+    vx: number;
+    vy: number;
+    alpha: number;
+    size: number;
+    timer: number;
+    type?: 'spark' | 'bubble' | 'dust';
+  }>>([]);
+  const shakeRef = useRef(0);
+  const stormRef = useRef({
+    radius: MAP_SIZE / 1.4,
+    centerX: MAP_SIZE / 2,
+    centerY: MAP_SIZE / 2,
+    shrinkRate: 0.12,
+    minRadius: 400
+  });
+  const timeAttackRef = useRef({
+    framesRemaining: 90 * 60, // 90 seconds
+  });
+  const nearDeathRef = useRef(false);
 
   // References to keep state synced without retriggering useEffect interval loops
   const playerRef = useRef({
@@ -555,7 +582,7 @@ export default function SnakeGame({
 
   // --- REAL-TIME MULTIPLAYER FIREBASE SYNCHRONIZER ---
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || gameMode === 'offline') {
       // Clean up self from live players collection immediately if not in-game
       const cleanupMyPresence = async () => {
         try {
@@ -565,6 +592,9 @@ export default function SnakeGame({
         }
       };
       cleanupMyPresence();
+      if (gameMode === 'offline') {
+        multiplayerPlayersRef.current = [];
+      }
       return;
     }
 
@@ -609,7 +639,7 @@ export default function SnakeGame({
       };
       cleanupMyPresence();
     };
-  }, [isPlaying, myPlayerDocId]);
+  }, [isPlaying, myPlayerDocId, gameMode]);
 
   // Handle Mute setting
   const toggleMute = () => {
@@ -642,6 +672,21 @@ export default function SnakeGame({
     setLiveScore(0);
     setLiveKills(0);
     setMaxLengthAchieved(12);
+
+    // Reset game mode values
+    stormRef.current = {
+      radius: MAP_SIZE / 1.4,
+      centerX: MAP_SIZE / 2,
+      centerY: MAP_SIZE / 2,
+      shrinkRate: 0.12,
+      minRadius: 400
+    };
+    timeAttackRef.current = {
+      framesRemaining: 90 * 60, // 90 seconds
+    };
+    nearDeathRef.current = false;
+    particlesRef.current = [];
+    shakeRef.current = 0;
 
     // 2. Generate 300 juicy fruits and sparkling gem pellets
     const FRUIT_EMOJIS = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍍', '🍊', '🥝', '🍑', '🍋'];
@@ -872,6 +917,22 @@ export default function SnakeGame({
     });
   };
 
+  const triggerTimeAttackEnd = () => {
+    setIsPlaying(false);
+    setIsTimeOut(true);
+    audio.playKill();
+
+    const finalKills = playerRef.current.killCount;
+    const finalLength = playerRef.current.segments.length;
+    const finalScore = playerRef.current.score || (playerRef.current.segments.length * 15 - 180 + finalKills * 105);
+
+    onMatchComplete({
+      score: Math.max(0, finalScore),
+      kills: finalKills,
+      longestLength: finalLength
+    });
+  };
+
   // Loop runner inside canvas
   useEffect(() => {
     if (!isPlaying) return;
@@ -907,9 +968,99 @@ export default function SnakeGame({
       const player = playerRef.current;
       const head = player.segments[0];
 
+      // Update near death slow motion indicator
+      let nearDeath = false;
+      const myHead = player.segments[0];
+      if (myHead) {
+        botsRef.current.forEach((bot) => {
+          const bHead = bot.segments[0];
+          const dist = Math.hypot(myHead.x - bHead.x, myHead.y - bHead.y);
+          if (dist < 80) nearDeath = true;
+        });
+
+        multiplayerPlayersRef.current.forEach((mp) => {
+          if (!mp.segments || mp.segments.length === 0) return;
+          const mpHead = mp.segments[0];
+          const dist = Math.hypot(myHead.x - mpHead.x, myHead.y - mpHead.y);
+          if (dist < 80) nearDeath = true;
+        });
+      }
+      nearDeathRef.current = nearDeath;
+      const slowMoMultiplier = nearDeath ? 0.45 : 1.0;
+
+      // Update particles
+      particlesRef.current.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.timer--;
+        p.alpha = Math.max(0, p.timer / 40);
+      });
+      particlesRef.current = particlesRef.current.filter((p) => p.timer > 0);
+
+      // Spawn trail particles when player is boosting
+      if (player.isBoosting && animId % 3 === 0) {
+        const lastSeg = player.segments[player.segments.length - 1];
+        if (lastSeg) {
+          for (let pi = 0; pi < 3; pi++) {
+            particlesRef.current.push({
+              x: lastSeg.x,
+              y: lastSeg.y,
+              color: player.headColor,
+              vx: (Math.random() - 0.5) * 3,
+              vy: (Math.random() - 0.5) * 3,
+              alpha: 1.0,
+              size: Math.random() * 3 + 1.5,
+              timer: 30
+            });
+          }
+        }
+      }
+
+      // Time Attack frame updates
+      if (gameMode === 'timeAttack') {
+        timeAttackRef.current.framesRemaining--;
+        if (timeAttackRef.current.framesRemaining <= 0) {
+          triggerTimeAttackEnd();
+          return;
+        }
+      }
+
+      // Battle Royale shrinking toxic storm ring
+      if (gameMode === 'battleRoyale') {
+        const storm = stormRef.current;
+        // Shrink slowly over frames
+        if (storm.radius > storm.minRadius) {
+          storm.radius -= storm.shrinkRate * slowMoMultiplier;
+        }
+
+        // Damage the player if outside
+        if (myHead) {
+          const distToCenter = Math.hypot(myHead.x - storm.centerX, myHead.y - storm.centerY);
+          if (distToCenter > storm.radius) {
+            if (animId % 20 === 0) {
+              if (player.segments.length > 5) {
+                player.segments.pop();
+                audio.playBoost(); // alert beep
+                floatEmotesRef.current.push({
+                  id: Math.random().toString(),
+                  x: myHead.x,
+                  y: myHead.y - 45,
+                  text: '☢️ OUTSIDE STORM ZONE! -1 SEGMENT',
+                  opacity: 1,
+                  timer: 40
+                });
+              } else {
+                triggerDeath();
+                return;
+              }
+            }
+          }
+        }
+      }
+
       // --- 1. Settle speed parameters (speed powerup offers free high-velocity slithering) ---
       const isSpeedActive = player.speedTimer > 0;
-      let playerSpeed = (player.isBoosting || isSpeedActive) ? 6 : 3.5;
+      let playerSpeed = ((player.isBoosting || isSpeedActive) ? 6 : 3.5) * slowMoMultiplier;
       
       if (player.isBoosting && player.segments.length > 6 && animId % 10 === 0) {
         if (!isSpeedActive) {
@@ -1440,6 +1591,26 @@ export default function SnakeGame({
         });
 
         if (botCrashed) {
+          // Screen Shake on bot crashes! More severe shake if killed by player!
+          shakeRef.current = killedByPlayer ? 24 : 10;
+
+          // Spawn a gorgeous burst of explosion particles in bot's skin color!
+          const explosionCount = 22;
+          for (let pIdx = 0; pIdx < explosionCount; pIdx++) {
+            const pAngle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 5 + 3;
+            particlesRef.current.push({
+              x: botHead.x,
+              y: botHead.y,
+              color: bot.color,
+              vx: Math.cos(pAngle) * velocity,
+              vy: Math.sin(pAngle) * velocity,
+              alpha: 1.0,
+              size: Math.random() * 4 + 2,
+              timer: Math.floor(Math.random() * 30) + 20
+            });
+          }
+
           // turn bot into colorful food pellets
           bot.segments.forEach((seg, idx) => {
             if (idx % 2 === 0) {
@@ -1551,15 +1722,29 @@ export default function SnakeGame({
       floatEmotesRef.current = floatEmotesRef.current.filter(em => em.timer > 0);
 
       // --- 6. Render Map View relative to Camera (Player centered with responsive Virtual Viewport scaling) ---
-      const virtualWidth = 1000;
+      // Dynamic Zoom: scale down (increase virtualWidth) as player snake grows larger!
+      const playerLengthRatio = Math.min(1.0, Math.max(0, (player.segments.length - 12) / 120));
+      const virtualWidth = 1000 + playerLengthRatio * 700; // zoom out up to 1700px width
       const scaleFactor = viewSize.current.width / virtualWidth;
       const virtualHeight = viewSize.current.height / scaleFactor;
+
+      // Screen Shake offset
+      let shakeOffsetX = 0;
+      let shakeOffsetY = 0;
+      if (shakeRef.current > 0) {
+        shakeOffsetX = (Math.random() - 0.5) * shakeRef.current;
+        shakeOffsetY = (Math.random() - 0.5) * shakeRef.current;
+        shakeRef.current *= 0.9; // decay
+        if (shakeRef.current < 0.5) {
+          shakeRef.current = 0;
+        }
+      }
 
       ctx.save();
       ctx.scale(scaleFactor, scaleFactor);
 
-      const camX = currentHead.x - virtualWidth / 2;
-      const camY = currentHead.y - virtualHeight / 2;
+      const camX = currentHead.x - virtualWidth / 2 + shakeOffsetX;
+      const camY = currentHead.y - virtualHeight / 2 + shakeOffsetY;
 
       // Clear canvas
       ctx.fillStyle = '#08090d'; // Deeper space background 
@@ -1589,6 +1774,27 @@ export default function SnakeGame({
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 6;
       ctx.strokeRect(-camX, -camY, MAP_SIZE, MAP_SIZE);
+
+      // Render glowing trail/explosion particles
+      particlesRef.current.forEach((p) => {
+        // Frustum culling
+        if (
+          p.x - p.size - camX >= 0 &&
+          p.x + p.size - camX <= virtualWidth &&
+          p.y - p.size - camY >= 0 &&
+          p.y + p.size - camY <= virtualHeight
+        ) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(p.x - camX, p.y - camY, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = p.color;
+          ctx.fill();
+          ctx.restore();
+        }
+      });
 
       // Periodically spawn additional bursts of bright food to make the game highly dynamic (every 3 seconds)
       if (animId % 180 === 0 && pelletsRef.current.length < 500) {
@@ -1964,6 +2170,84 @@ export default function SnakeGame({
       ctx.fill();
       ctx.restore();
 
+      // Render Evolution decorations on player’s head!
+      // Tier 3: >= 3000, Tier 2: >= 1200, Tier 1: >= 300
+      const getEvoTier = (scoreVal: number) => {
+        if (scoreVal >= 3000) return 3;
+        if (scoreVal >= 1200) return 2;
+        if (scoreVal >= 300) return 1;
+        return 0;
+      };
+      const evoTier = getEvoTier(computedScore);
+      if (evoTier >= 1) {
+        ctx.save();
+        ctx.translate(currentHead.x - camX, currentHead.y - camY);
+        ctx.rotate(player.angle);
+        
+        // Tier 1: Golden Antennae
+        if (evoTier === 1) {
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(12, -8);
+          ctx.quadraticCurveTo(24, -18, 20, -22);
+          ctx.moveTo(12, 8);
+          ctx.quadraticCurveTo(24, 18, 20, 22);
+          ctx.stroke();
+
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(20, -22, 4, 0, Math.PI * 2);
+          ctx.arc(20, 22, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // Tier 2: Pink Wings + Energy Ring
+        if (evoTier === 2) {
+          ctx.strokeStyle = '#ec4899';
+          ctx.lineWidth = 3.5;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#ec4899';
+          ctx.beginPath();
+          ctx.arc(0, 0, 26, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#f472b6';
+          ctx.beginPath();
+          ctx.moveTo(-6, -14);
+          ctx.lineTo(-15, -28);
+          ctx.lineTo(-4, -24);
+          ctx.moveTo(-6, 14);
+          ctx.lineTo(-15, 28);
+          ctx.lineTo(-4, 24);
+          ctx.fill();
+        }
+        
+        // Tier 3: Golden Crown + Fiery aura
+        if (evoTier === 3) {
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 4;
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(0, 0, 28 + Math.sin(Date.now() / 90) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.moveTo(-10, -6);
+          ctx.lineTo(-14, -15);
+          ctx.lineTo(-6, -11);
+          ctx.lineTo(0, -19);
+          ctx.lineTo(6, -11);
+          ctx.lineTo(14, -15);
+          ctx.lineTo(10, -6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       // Draw Player Name tag
       ctx.fillStyle = '#34d399';
       ctx.font = 'bold 11px Inter, sans-serif';
@@ -1979,6 +2263,50 @@ export default function SnakeGame({
       });
 
       ctx.restore(); // Restore virtual viewport canvas scale
+
+      // Viewport-space HUD layers (Near death warning, Time countdown, Storm indicator)
+      if (nearDeathRef.current) {
+        ctx.save();
+        const pulse = 0.3 + Math.sin(Date.now() / 80) * 0.15;
+        ctx.strokeStyle = `rgba(239, 68, 68, ${pulse})`;
+        ctx.lineWidth = 14;
+        ctx.strokeRect(0, 0, viewSize.current.width, viewSize.current.height);
+
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+        ctx.fillRect(0, 0, viewSize.current.width, viewSize.current.height);
+
+        ctx.font = 'bold 14px monospace';
+        ctx.fillStyle = '#ef4444';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ef4444';
+        ctx.fillText('⚠️ SLOW-MOTION NEAR DEATH WARNING! ⚠️', viewSize.current.width / 2, 40);
+        ctx.restore();
+      }
+
+      if (gameMode === 'timeAttack') {
+        ctx.save();
+        const remSecs = Math.max(0, Math.ceil(timeAttackRef.current.framesRemaining / 60));
+        ctx.font = 'bold 15px Courier New, monospace';
+        ctx.fillStyle = remSecs <= 15 ? '#ef4444' : '#f59e0b';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = remSecs <= 15 ? '#ef4444' : '#f59e0b';
+        ctx.fillText(`⏱️ TIME REMAINING: ${remSecs}s`, viewSize.current.width / 2, nearDeathRef.current ? 70 : 40);
+        ctx.restore();
+      }
+
+      if (gameMode === 'battleRoyale') {
+        ctx.save();
+        ctx.font = 'bold 15px Courier New, monospace';
+        ctx.fillStyle = '#f43f5e';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#f43f5e';
+        const roundedRadius = Math.round(stormRef.current.radius);
+        ctx.fillText(`☣️ TOXIC ZONE Ø ${roundedRadius}m`, viewSize.current.width / 2, nearDeathRef.current ? 70 : 40);
+        ctx.restore();
+      }
 
       if (animId % 6 === 0) {
         setTick(prev => prev + 1);
@@ -2083,7 +2411,7 @@ export default function SnakeGame({
           <h2 className="text-xl sm:text-3xl font-extrabold text-white font-display mb-1 tracking-tight">Snake .io Cosmic Arena</h2>
           <p className="text-white/50 text-xs sm:text-sm max-w-sm mb-4 sm:mb-6 px-2">Slither smoothly, absorb fruit pellets & gems, capture powerup flasks, trap bot snakes & conquer the leaderboard!</p>
 
-          <div className="w-full max-w-xs mb-5 sm:mb-6">
+          <div className="w-full max-w-xs mb-4 sm:mb-5">
             <label className="text-[10px] text-white/40 uppercase font-black tracking-wider block mb-1.5 text-center">Gladiator Nickname</label>
             <input 
               type="text"
@@ -2096,6 +2424,63 @@ export default function SnakeGame({
               placeholder="Enter cool nickname..."
               className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-center text-sm font-semibold focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue/30 placeholder-white/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]"
             />
+          </div>
+
+          {/* New Game Mode Selection cards */}
+          <div className="w-full max-w-sm mb-5 sm:mb-6">
+            <label className="text-[10px] text-white/40 uppercase font-black tracking-wider block mb-2 text-center">Arena Mode</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setGameMode('classic')}
+                className={`py-2 px-2 sm:px-3 rounded-lg text-[11px] font-semibold border transition-all ${
+                  gameMode === 'classic'
+                    ? 'bg-blue-500/20 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                🌌 Classic Online
+              </button>
+              <button
+                type="button"
+                onClick={() => setGameMode('battleRoyale')}
+                className={`py-2 px-2 sm:px-3 rounded-lg text-[11px] font-semibold border transition-all ${
+                  gameMode === 'battleRoyale'
+                    ? 'bg-red-500/20 border-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                ☢️ Toxic Storm (BR)
+              </button>
+              <button
+                type="button"
+                onClick={() => setGameMode('timeAttack')}
+                className={`py-2 px-2 sm:px-3 rounded-lg text-[11px] font-semibold border transition-all ${
+                  gameMode === 'timeAttack'
+                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                ⏱️ 90s Time Attack
+              </button>
+              <button
+                type="button"
+                onClick={() => setGameMode('offline')}
+                className={`py-2 px-2 sm:px-3 rounded-lg text-[11px] font-semibold border transition-all ${
+                  gameMode === 'offline'
+                    ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                📴 Offline Practice
+              </button>
+            </div>
+            <p className="text-[10px] text-white/40 mt-2 text-center h-5 leading-tight">
+              {gameMode === 'classic' && "The standard slither field. Real-time multiplayer synchronization."}
+              {gameMode === 'battleRoyale' && "Avoid the deadly radiation ring storm closing down over time!"}
+              {gameMode === 'timeAttack' && "Race against the clock to score as high as possible!"}
+              {gameMode === 'offline' && "Zero-latencies, no database reads or writes, pure practice arena."}
+            </p>
           </div>
 
           <button 
@@ -2143,6 +2528,57 @@ export default function SnakeGame({
             <button 
               onClick={() => {
                 setIsGameOver(false);
+                setIsPlaying(false);
+              }}
+              className="px-8 py-3 font-bold flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl transition-all w-full sm:w-auto justify-center"
+            >
+              Exit to Lobby
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* 2.5 Time Out screen overlay */}
+      {isTimeOut && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="absolute inset-0 bg-black/95 z-20 flex flex-col items-center justify-center p-4 sm:p-8 text-center animate-fade-in"
+        >
+          <div className="text-3xl sm:text-5xl mb-3 sm:mb-4 text-amber-400 animate-pulse">⏱️</div>
+          <h2 className="text-2xl sm:text-4xl font-black text-white font-display mb-1 sm:mb-2">Time Expired!</h2>
+          <p className="text-white/40 text-[11px] sm:text-xs mb-4 sm:mb-8">Your 90s Time Attack challenge is complete!</p>
+
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-xs sm:max-w-sm w-full bg-white/5 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-white/5 mb-6 sm:mb-8">
+            <div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Final Score</div>
+              <div className="text-sm sm:text-lg font-bold text-emerald-400 font-mono mt-0.5">{liveScore}</div>
+            </div>
+            <div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Bot Slayed</div>
+              <div className="text-sm sm:text-lg font-bold text-red-400 font-mono mt-0.5">{liveKills}</div>
+            </div>
+            <div>
+              <div className="text-[9px] sm:text-[10px] text-white/40 uppercase font-black tracking-wider">Tail size</div>
+              <div className="text-sm sm:text-lg font-bold text-purple-400 font-mono mt-0.5">{maxLengthAchieved}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              type="button"
+              onClick={() => {
+                setIsTimeOut(false);
+                startGame();
+              }}
+              className="btn-neon px-8 py-3 font-bold flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              <RotateCcw size={16} /> Slither Again
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                setIsTimeOut(false);
                 setIsPlaying(false);
               }}
               className="px-8 py-3 font-bold flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl transition-all w-full sm:w-auto justify-center"

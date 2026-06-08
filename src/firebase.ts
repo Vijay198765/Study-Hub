@@ -25,7 +25,8 @@ export const auth = getAuth(app);
 
 // Use initializeFirestore with persistentLocalCache to support offline mode and reduce network errors
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  experimentalForceLongPolling: true,
 }, import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)');
 
 export const storage = getStorage(app);
