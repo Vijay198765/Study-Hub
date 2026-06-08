@@ -241,6 +241,8 @@ export interface SiteConfig {
   surpriseButtonEnabled?: boolean;
   surpriseButtonText?: string;
   surpriseDriveLinks?: string[];
+  surpriseDriveLinksDesktop?: string[];
+  surpriseDriveLinksMobile?: string[];
   lastUpdated?: any;
 }
 

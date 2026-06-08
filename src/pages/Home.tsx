@@ -196,7 +196,26 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
               <button
                 type="button"
                 onClick={() => {
-                  const links = siteConfig.surpriseDriveLinks || [];
+                  // Detect user platform/device dynamically
+                  const isMobileSize = window.innerWidth < 768;
+                  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                  const isMobile = isMobileSize || isMobileUA;
+
+                  // Target appropriate link selection
+                  let links = isMobile 
+                    ? (siteConfig.surpriseDriveLinksMobile || [])
+                    : (siteConfig.surpriseDriveLinksDesktop || []);
+                  
+                  // Secondary Fallbacks
+                  if (links.length === 0) {
+                    links = isMobile 
+                      ? (siteConfig.surpriseDriveLinksDesktop || [])
+                      : (siteConfig.surpriseDriveLinksMobile || []);
+                  }
+                  if (links.length === 0) {
+                    links = siteConfig.surpriseDriveLinks || [];
+                  }
+
                   if (links.length > 0) {
                     const randomIndex = Math.floor(Math.random() * links.length);
                     const rawUrl = links[randomIndex] || '';

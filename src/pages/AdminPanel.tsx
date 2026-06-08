@@ -440,6 +440,7 @@ export default function AdminPanel() {
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [editingConfig, setEditingConfig] = useState<Partial<SiteConfig>>({});
   const [hasUnsavedSiteChanges, setHasUnsavedSiteChanges] = useState(false);
+  const [surpriseLinkMode, setSurpriseLinkMode] = useState<'desktop' | 'mobile'>('desktop');
 
   // Sync editingConfig with real-time siteConfig when there are no unsaved changes
   useEffect(() => {
@@ -4958,21 +4959,53 @@ export default function AdminPanel() {
 
                     {/* Right Column: Google Drive Links Management */}
                     <div className="space-y-4">
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <label className="text-xs font-medium text-white/60 uppercase tracking-widest block pl-1">Drive Preview Links</label>
+                        <p className="text-[10px] text-white/40 pl-1 mb-2">Configure different links for desktop and mobile devices.</p>
+                      </div>
+
+                      {/* Device Selection Tabs */}
+                      <div className="flex gap-2 p-1 bg-black/30 border border-white/5 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setSurpriseLinkMode('desktop')}
+                          className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${surpriseLinkMode === 'desktop' ? 'bg-neon-blue text-black font-bold shadow-lg shadow-neon-blue/20' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                          <span>🖥️</span> Desktop Links
+                          <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-[10px] text-white">
+                            {(editingConfig?.surpriseDriveLinksDesktop || []).length}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSurpriseLinkMode('mobile')}
+                          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${surpriseLinkMode === 'mobile' ? 'bg-neon-pink text-white font-bold shadow-lg shadow-neon-pink/20' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                          <span>📱</span> Mobile Links
+                          <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-[10px] text-white">
+                            {(editingConfig?.surpriseDriveLinksMobile || []).length}
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
                         <div className="flex gap-2">
                           <input 
                             type="text" 
                             id="new-drive-link"
-                            placeholder="Paste Google Drive preview link here..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue placeholder:text-white/25"
+                            placeholder={surpriseLinkMode === 'desktop' ? "Paste Desktop Google Drive link here..." : "Paste Mobile Google Drive link here..."}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-neon-blue placeholder:text-white/25"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
                                 const input = document.getElementById('new-drive-link') as HTMLInputElement;
                                 if (input && input.value.trim()) {
-                                  const currentLinks = editingConfig?.surpriseDriveLinks || [];
-                                  saveSiteConfig({ surpriseDriveLinks: [...currentLinks, input.value.trim()] });
+                                  const isDesktop = surpriseLinkMode === 'desktop';
+                                  const currentLinks = isDesktop 
+                                    ? (editingConfig?.surpriseDriveLinksDesktop || [])
+                                    : (editingConfig?.surpriseDriveLinksMobile || []);
+                                  const updateKey = isDesktop ? 'surpriseDriveLinksDesktop' : 'surpriseDriveLinksMobile';
+                                  saveSiteConfig({ [updateKey]: [...currentLinks, input.value.trim()] });
                                   input.value = '';
                                 }
                               }
@@ -4983,12 +5016,16 @@ export default function AdminPanel() {
                             onClick={() => {
                               const input = document.getElementById('new-drive-link') as HTMLInputElement;
                               if (input && input.value.trim()) {
-                                const currentLinks = editingConfig?.surpriseDriveLinks || [];
-                                saveSiteConfig({ surpriseDriveLinks: [...currentLinks, input.value.trim()] });
+                                const isDesktop = surpriseLinkMode === 'desktop';
+                                const currentLinks = isDesktop 
+                                  ? (editingConfig?.surpriseDriveLinksDesktop || [])
+                                  : (editingConfig?.surpriseDriveLinksMobile || []);
+                                const updateKey = isDesktop ? 'surpriseDriveLinksDesktop' : 'surpriseDriveLinksMobile';
+                                saveSiteConfig({ [updateKey]: [...currentLinks, input.value.trim()] });
                                 input.value = '';
                               }
                             }}
-                            className="px-4 py-2 bg-neon-blue text-black font-bold rounded-xl text-xs hover:opacity-90 active:scale-95 transition-all uppercase tracking-wider shrink-0"
+                            className={`px-4 py-2 font-bold rounded-xl text-xs hover:opacity-90 active:scale-95 transition-all uppercase tracking-wider shrink-0 cursor-pointer ${surpriseLinkMode === 'desktop' ? 'bg-neon-blue text-black' : 'bg-neon-pink text-white'}`}
                           >
                             Add Link
                           </button>
@@ -4997,26 +5034,50 @@ export default function AdminPanel() {
 
                       {/* Displaying Current Links */}
                       <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 subtle-scrollbar border border-white/5 rounded-xl p-3 bg-black/20">
-                        {editingConfig?.surpriseDriveLinks && editingConfig.surpriseDriveLinks.length > 0 ? (
-                          editingConfig.surpriseDriveLinks.map((link: string, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-xs">
-                              <span className="truncate text-white/60 max-w-[80%] font-mono" title={link}>
-                                {link}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = editingConfig.surpriseDriveLinks.filter((_: any, i: number) => i !== idx);
-                                  saveSiteConfig({ surpriseDriveLinks: updated });
-                                }}
-                                className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))
+                        {surpriseLinkMode === 'desktop' ? (
+                          editingConfig?.surpriseDriveLinksDesktop && editingConfig.surpriseDriveLinksDesktop.length > 0 ? (
+                            editingConfig.surpriseDriveLinksDesktop.map((link: string, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-xs">
+                                <span className="truncate text-white/60 max-w-[80%] font-mono" title={link}>
+                                  {link}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = editingConfig.surpriseDriveLinksDesktop!.filter((_: any, i: number) => i !== idx);
+                                    saveSiteConfig({ surpriseDriveLinksDesktop: updated });
+                                  }}
+                                  className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-white/30 italic text-center py-4">No Desktop links configured. Fallback to generic links will be used.</p>
+                          )
                         ) : (
-                          <p className="text-[10px] text-white/30 italic text-center py-4">No drive links configured. Surprise button will not trigger anything.</p>
+                          editingConfig?.surpriseDriveLinksMobile && editingConfig.surpriseDriveLinksMobile.length > 0 ? (
+                            editingConfig.surpriseDriveLinksMobile.map((link: string, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-xs">
+                                <span className="truncate text-white/60 max-w-[80%] font-mono" title={link}>
+                                  {link}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = editingConfig.surpriseDriveLinksMobile!.filter((_: any, i: number) => i !== idx);
+                                    saveSiteConfig({ surpriseDriveLinksMobile: updated });
+                                  }}
+                                  className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-white/30 italic text-center py-4">No Mobile links configured. Fallback to generic links will be used.</p>
+                          )
                         )}
                       </div>
                     </div>
