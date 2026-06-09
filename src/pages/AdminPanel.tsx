@@ -591,8 +591,11 @@ export default function AdminPanel() {
   const saveSiteConfig = updateEditingConfig;
 
   const saveImmediate = (updates: Partial<SiteConfig>) => {
-    updateEditingConfig(updates);
-    saveSiteConfigToFirebase({ ...editingConfig, ...updates });
+    setEditingConfig(prev => {
+      const merged = { ...prev, ...updates };
+      saveSiteConfigToFirebase(merged);
+      return merged;
+    });
   };
 
   const downloadBackup = async () => {
@@ -5024,7 +5027,7 @@ export default function AdminPanel() {
                                     ? (editingConfig?.surpriseDriveLinksDesktop || [])
                                     : (editingConfig?.surpriseDriveLinksMobile || []);
                                   const updateKey = isDesktop ? 'surpriseDriveLinksDesktop' : 'surpriseDriveLinksMobile';
-                                  saveSiteConfig({ [updateKey]: [...currentLinks, input.value.trim()] });
+                                  saveImmediate({ [updateKey]: [...currentLinks, input.value.trim()] });
                                   input.value = '';
                                 }
                               }
@@ -5040,7 +5043,7 @@ export default function AdminPanel() {
                                   ? (editingConfig?.surpriseDriveLinksDesktop || [])
                                   : (editingConfig?.surpriseDriveLinksMobile || []);
                                 const updateKey = isDesktop ? 'surpriseDriveLinksDesktop' : 'surpriseDriveLinksMobile';
-                                saveSiteConfig({ [updateKey]: [...currentLinks, input.value.trim()] });
+                                saveImmediate({ [updateKey]: [...currentLinks, input.value.trim()] });
                                 input.value = '';
                               }
                             }}
@@ -5063,8 +5066,8 @@ export default function AdminPanel() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const updated = editingConfig.surpriseDriveLinksDesktop!.filter((_: any, i: number) => i !== idx);
-                                    saveSiteConfig({ surpriseDriveLinksDesktop: updated });
+                                    const updated = (editingConfig.surpriseDriveLinksDesktop || []).filter((_: any, i: number) => i !== idx);
+                                    saveImmediate({ surpriseDriveLinksDesktop: updated });
                                   }}
                                   className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
                                 >
@@ -5085,8 +5088,8 @@ export default function AdminPanel() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const updated = editingConfig.surpriseDriveLinksMobile!.filter((_: any, i: number) => i !== idx);
-                                    saveSiteConfig({ surpriseDriveLinksMobile: updated });
+                                    const updated = (editingConfig.surpriseDriveLinksMobile || []).filter((_: any, i: number) => i !== idx);
+                                    saveImmediate({ surpriseDriveLinksMobile: updated });
                                   }}
                                   className="text-red-400 hover:text-red-300 font-bold px-2 py-1 text-[10px] uppercase cursor-pointer transition-colors"
                                 >
