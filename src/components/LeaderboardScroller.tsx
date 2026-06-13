@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Crown, Clock } from 'lucide-react';
+import { Trophy, Crown, Clock, CheckCircle } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
@@ -94,47 +94,56 @@ export default function LeaderboardScroller() {
           {/* 5-at-a-time viewport */}
           <div className="h-[300px] overflow-y-auto custom-scrollbar snap-y snap-mandatory touch-pan-y">
             <div className="flex flex-col">
-              {topUsers.map((user, idx) => (
-                <div 
-                  key={user.uid} 
-                  className="grid grid-cols-[50px_1fr_110px] items-center px-4 sm:px-8 py-3 hover:bg-white/[0.04] transition-all group border-b border-white/[0.02] last:border-0 snap-start min-h-[4.5rem]"
-                >
-                  {/* Avatar & Rank Group */}
-                  <div className="relative shrink-0">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full overflow-hidden border-2 transition-all group-hover:scale-105",
-                      idx === 0 ? "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]" : "border-white/10"
-                    )}>
-                      <img 
-                        src={convertDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
-                        alt={`${user.name || 'Scholar'} profile picture`} 
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
+              {topUsers.map((user, idx) => {
+                const isVijay = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
+                return (
+                  <div 
+                    key={user.uid} 
+                    className="grid grid-cols-[50px_1fr_110px] items-center px-4 sm:px-8 py-3 hover:bg-white/[0.04] transition-all group border-b border-white/[0.02] last:border-0 snap-start min-h-[4.5rem]"
+                  >
+                    {/* Avatar & Rank Group */}
+                    <div className="relative shrink-0">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full overflow-hidden border-2 transition-all group-hover:scale-105 relative z-10",
+                        isVijay ? "border-transparent bg-gradient-to-tr from-cyan-400 via-emerald-400 to-yellow-300 p-[1.5px]" :
+                        idx === 0 ? "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]" : "border-white/10"
+                      )}>
+                        <img 
+                          src={convertDriveUrl(user.photoURL) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                          alt={`${user.name || 'Scholar'} profile picture`} 
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      {/* Rank Overlay - Top Left of Photo */}
+                      <div className={cn(
+                        "absolute -top-1 -left-1 w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-black border border-black z-10",
+                        idx === 0 ? "bg-yellow-400 text-black" : 
+                        idx === 1 ? "bg-gray-300 text-black" :
+                        idx === 2 ? "bg-amber-600 text-white" : "bg-white/20 text-white"
+                      )}>
+                        {idx + 1}
+                      </div>
+                      {idx === 0 && <Crown className="absolute -top-3 -left-3 text-yellow-500 rotate-[-15deg] z-20" size={12} />}
                     </div>
-                    {/* Rank Overlay - Top Left of Photo */}
-                    <div className={cn(
-                      "absolute -top-1 -left-1 w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-black border border-black z-10",
-                      idx === 0 ? "bg-yellow-400 text-black" : 
-                      idx === 1 ? "bg-gray-300 text-black" :
-                      idx === 2 ? "bg-amber-600 text-white" : "bg-white/20 text-white"
-                    )}>
-                      {idx + 1}
-                    </div>
-                    {idx === 0 && <Crown className="absolute -top-3 -left-3 text-yellow-500 rotate-[-15deg] z-20" size={12} />}
-                  </div>
 
-                  {/* Scholar Name - In the middle */}
-                  <div className="flex flex-col px-3 min-w-0 py-1">
-                    <span className={cn(
-                      "text-sm font-display font-black text-white uppercase italic tracking-tight whitespace-normal break-words group-hover:text-neon-blue leading-tight",
-                      idx === 0 && "h-[18px] w-[480px] max-w-full font-mono no-underline text-left text-[16px]"
-                    )}>
-                      {user.name || 'Anonymous Scholar'}
-                    </span>
-                    {idx === 0 && <span className="text-[7px] text-yellow-400 font-bold uppercase tracking-widest mt-0.5">Top Contributor</span>}
-                  </div>
+                    {/* Scholar Name - In the middle */}
+                    <div className="flex flex-col px-3 min-w-0 py-1">
+                      <span className={cn(
+                        "text-sm font-display font-black text-white uppercase italic tracking-tight whitespace-normal break-words group-hover:text-neon-blue leading-tight flex items-center gap-1.5 flex-wrap",
+                        idx === 0 && "font-mono no-underline text-left text-[16px]"
+                      )}>
+                        <span>{user.name || 'Anonymous Scholar'}</span>
+                        {isVijay && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[8px] text-emerald-400 font-extrabold tracking-wide uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)] select-none shrink-0">
+                            <CheckCircle size={8} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
+                            <span>Admin</span>
+                          </span>
+                        )}
+                      </span>
+                      {idx === 0 && <span className="text-[7px] text-yellow-400 font-bold uppercase tracking-widest mt-0.5">Top Contributor</span>}
+                    </div>
 
                   {/* Study Time - In the right */}
                   <div className="flex flex-col items-end shrink-0">
@@ -151,7 +160,7 @@ export default function LeaderboardScroller() {
                     <span className="text-[7px] text-white/20 uppercase tracking-widest mt-0.5 font-bold">Time</span>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           </div>
         </div>

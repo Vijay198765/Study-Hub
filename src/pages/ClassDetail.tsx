@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Book, ArrowLeft, ChevronRight, GraduationCap } from 'lucide-react';
+import { Book, ArrowLeft, ChevronRight, GraduationCap, Sparkles, CheckCircle } from 'lucide-react';
 import { Class, Subject } from '../types';
 import { getClasses, getSubjectsByClass } from '../services/dataService';
 import { Skeleton } from '../components/Skeleton';
@@ -146,24 +146,40 @@ export default function ClassDetail() {
               </div>
               
               <div className="flex items-center gap-4 bg-zinc-950/80 border border-white/5 hover:border-emerald-500/20 px-5 py-3 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(52,211,153,0.05)] transition-all">
-                {/* User's DP profile logo to the left of the Gmail icons */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 p-[1.5px] shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform duration-200">
-                  <div className="w-full h-full rounded-full bg-zinc-950 overflow-hidden relative">
+                {/* User's DP profile logo with Most Highlighted Ring */}
+                <div className="relative w-14 h-14 shrink-0 group hover:scale-105 transition-transform duration-200">
+                  {/* Middle Perfect Gold & Green Gradient Ring */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-400 via-emerald-400 to-yellow-300 p-[2.5px] shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    <div className="w-full h-full rounded-full bg-zinc-950" />
+                  </div>
+                  {/* Inner Avatar Image */}
+                  <div className="absolute inset-[2.5px] rounded-full bg-zinc-950 overflow-hidden z-10">
                     <img 
                       src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
                       alt="Vijay Avatar" 
-                      className="w-full h-full object-cover object-center aspect-square rounded-full"
+                      className="w-full h-full object-cover object-center aspect-square rounded-full transition-transform duration-300 group-hover:scale-110"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay";
                       }}
                     />
                   </div>
+                  {/* Sparkle badge indicator */}
+                  <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black p-0.5 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)] border border-black z-20 animate-bounce">
+                    <Sparkles size={8} className="text-black fill-current animate-spin" />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.2)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm text-white font-bold hover:text-neon-blue transition-colors font-sans">{adminUser?.name || 'Vijay Ninama'}</span>
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[8px] text-emerald-400 font-extrabold tracking-wide uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                      <CheckCircle size={8} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
+                      <span>Admin</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.2)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" fill="#F2F2F2" />
                       <path d="M20 4H16V14L20 11V4Z" fill="#C5221F" />
                       <path d="M4 4H8V14L4 11V4Z" fill="#B31412" />
@@ -171,15 +187,14 @@ export default function ClassDetail() {
                       <path d="M2 6V18C2 19.1 2.9 20 4 20H8V11L2 6Z" fill="#4285F4" />
                       <path d="M22 6V18C2 19.1 21.1 20 20 20H16V11L22 6Z" fill="#34A853" />
                     </svg>
-                    <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Support</span>
+                    <a 
+                      href="mailto:tagoreteam2025@gmail.com" 
+                      className="text-xs font-mono font-medium text-white/50 hover:text-neon-blue transition-all"
+                      title="Contact Support via Gmail"
+                    >
+                      tagoreteam2025@gmail.com
+                    </a>
                   </div>
-                  <a 
-                    href="mailto:tagoreteam2025@gmail.com" 
-                    className="text-xs font-mono font-medium text-white/80 hover:text-neon-blue transition-all"
-                    title="Contact Support via Gmail"
-                  >
-                    tagoreteam2025@gmail.com
-                  </a>
                 </div>
               </div>
             </div>

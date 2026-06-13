@@ -16,6 +16,7 @@ import LiveComments from './pages/LiveComments';
 import Tests from './pages/Tests';
 import Library from './pages/Library';
 import Explorer from './pages/Explorer';
+import SurprisePreview from './pages/SurprisePreview';
 import SnakeArena from './components/Snake/SnakeArena';
 import NewsTicker from './components/NewsTicker';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -906,6 +907,7 @@ export default function App() {
                       <Route path="/tests" element={<Tests />} />
                       <Route path="/library" element={<Library />} />
                       <Route path="/explorer" element={<Explorer />} />
+                      <Route path="/surprise-preview" element={<SurprisePreview />} />
                       <Route path="/login" element={<Login />} />
                       <Route 
                         path="/admin" 

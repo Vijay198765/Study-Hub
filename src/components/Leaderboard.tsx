@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Crown, Clock } from 'lucide-react';
+import { Trophy, Crown, Clock, CheckCircle } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc, limit } from 'firebase/firestore';
 import { UserProfile, SiteConfig } from '../types';
@@ -84,59 +84,81 @@ export default function Leaderboard() {
 
       <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
         <div className="grid grid-cols-1 gap-3">
-          {topUsers.map((user, idx) => (
-            <motion.div
-              key={user.uid}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: Math.min(idx * 0.05, 0.5) }}
-              className="relative group"
-            >
-              <div className={cn(
-                "glass-card p-4 flex items-center justify-between gap-4 border-l-4 transition-all hover:neon-border",
-                idx === 0 ? "border-yellow-400 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]" : 
-                idx === 1 ? "border-slate-300 bg-slate-300/5" : 
-                idx === 2 ? "border-amber-600 bg-amber-600/5" : "border-white/10"
-              )}>
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex-shrink-0 relative">
-                    <div className={cn(
-                      "w-12 h-12 rounded-full overflow-hidden border-2",
-                      idx === 0 ? "border-yellow-400/50" : "border-white/10"
-                    )}>
-                      {user.photoURL ? (
-                        <img 
-                          src={convertDriveUrl(user.photoURL)} 
-                          alt={user.name} 
-                          className="w-full h-full object-cover" 
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'S')}&background=random&color=fff`;
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center text-white/40 text-lg font-bold">
-                          {user.name?.charAt(0) || 'S'}
-                        </div>
-                      )}
+          {topUsers.map((user, idx) => {
+            const isVijay = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
+            return (
+              <motion.div
+                key={user.uid}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: Math.min(idx * 0.05, 0.5) }}
+                className="relative group"
+              >
+                <div className={cn(
+                  "glass-card p-4 flex items-center justify-between gap-4 border-l-4 transition-all hover:neon-border",
+                  idx === 0 ? "border-yellow-400 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]" : 
+                  idx === 1 ? "border-slate-300 bg-slate-300/5" : 
+                  idx === 2 ? "border-amber-600 bg-amber-600/5" : "border-white/10"
+                )}>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex-shrink-0 relative">
+                      <div className={cn(
+                        "w-12 h-12 rounded-full overflow-hidden border-2 relative z-10",
+                        isVijay ? "border-transparent bg-gradient-to-tr from-cyan-400 via-emerald-400 to-yellow-300 p-[1.5px]" :
+                        idx === 0 ? "border-yellow-400/50" : "border-white/10"
+                      )}>
+                        {isVijay ? (
+                          <div className="w-full h-full rounded-full bg-zinc-950 overflow-hidden">
+                            <img 
+                              src={convertDriveUrl(user.photoURL) || "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
+                              alt={user.name} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay`;
+                              }}
+                            />
+                          </div>
+                        ) : user.photoURL ? (
+                          <img 
+                            src={convertDriveUrl(user.photoURL)} 
+                            alt={user.name} 
+                            className="w-full h-full object-cover" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'S')}&background=random&color=fff`;
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center text-white/40 text-lg font-bold">
+                            {user.name?.charAt(0) || 'S'}
+                          </div>
+                        )}
+                      </div>
+                      <div className={cn(
+                        "absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-xl border-2 border-black z-20",
+                        isVijay ? "bg-emerald-500 text-black" :
+                        idx === 0 ? "bg-yellow-400 text-black" : 
+                        idx === 1 ? "bg-slate-300 text-black" : 
+                        idx === 2 ? "bg-amber-600 text-white" : "bg-white/20 text-white"
+                      )}>
+                        {idx + 1}
+                      </div>
                     </div>
-                    <div className={cn(
-                      "absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-xl border-2 border-black",
-                      idx === 0 ? "bg-yellow-400 text-black" : 
-                      idx === 1 ? "bg-slate-300 text-black" : 
-                      idx === 2 ? "bg-amber-600 text-white" : "bg-white/20 text-white"
-                    )}>
-                      {idx + 1}
-                    </div>
-                  </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-sm truncate group-hover:text-neon-blue transition-colors">
-                        {user.name || 'Scholar'}
-                      </h3>
-                      {idx === 0 && <Crown size={14} className="text-yellow-400 flex-shrink-0 animate-pulse" />}
-                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-bold text-sm truncate group-hover:text-neon-blue transition-colors flex items-center gap-1">
+                          {user.name || 'Scholar'}
+                        </h3>
+                        {isVijay && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[8px] text-emerald-400 font-extrabold tracking-wide uppercase shadow-[0_0_8px_rgba(16,185,129,0.25)] shrink-0">
+                            <CheckCircle size={8} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
+                            <span>Admin</span>
+                          </span>
+                        )}
+                        {idx === 0 && <Crown size={14} className="text-yellow-400 flex-shrink-0 animate-pulse" />}
+                      </div>
                     <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-wider">
                       <span className="bg-white/5 px-2 py-0.5 rounded-full border border-white/5">Rank #{idx + 1}</span>
                     </div>
@@ -158,7 +180,7 @@ export default function Leaderboard() {
                 </div>
               </div>
             </motion.div>
-          ))}
+          ); })}
         </div>
       </div>
     </section>

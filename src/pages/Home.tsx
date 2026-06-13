@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History, Gift, Sparkles } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Search, GraduationCap, ArrowRight, BookOpen, Star, Clock, History, Gift, Sparkles, CheckCircle } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Class, Subject, Chapter } from '../types';
 import { convertDriveUrl } from '../lib/utils';
 import { getClasses, getSubjectsByClass, getChaptersBySubject } from '../services/dataService';
@@ -14,6 +14,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 
 export default function Home({ siteConfig }: { siteConfig?: any }) {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,7 +122,7 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
                 previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
               }
             }
-            window.open(previewUrl, '_blank');
+            navigate('/surprise-preview?url=' + encodeURIComponent(previewUrl));
           }
         }
       }
@@ -323,10 +324,10 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
                       }
                     }
                     
-                    window.open(previewUrl, '_blank');
+                    navigate('/surprise-preview?url=' + encodeURIComponent(previewUrl));
                   } else {
-                    // Fallback to Google Drive in case no link is configured yet
-                    window.open('https://drive.google.com', '_blank');
+                    // Fallback to empty preview screen if no links are configured yet
+                    navigate('/surprise-preview');
                   }
                 }}
                 className="relative group px-6 py-2.5 rounded-full bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 border border-yellow-500/40 hover:border-yellow-400 text-yellow-300 font-bold text-xs tracking-wider uppercase flex items-center gap-2 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_25px_rgba(245,158,11,0.3)] z-10"
@@ -462,27 +463,43 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
         {recentChapters.length > 0 && (
         <section className="max-w-7xl mx-auto mb-8 -mt-8">
           <div className="flex items-center gap-4 mb-5">
-            {/* Main Admin DP */}
-            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 p-[1.5px] shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform duration-200">
-              <div className="w-full h-full rounded-full bg-zinc-950 overflow-hidden relative">
+            {/* Main Admin DP with Most Highlighted Ring */}
+            <div className="relative w-14 h-14 shrink-0 group hover:scale-105 transition-transform duration-200">
+              {/* Middle Perfect Gold & Green Gradient Ring */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-400 via-emerald-400 to-yellow-300 p-[2.5px] shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                <div className="w-full h-full rounded-full bg-zinc-950" />
+              </div>
+              {/* Inner Avatar Image */}
+              <div className="absolute inset-[2.5px] rounded-full bg-zinc-950 overflow-hidden z-10 font-sans">
                 <img 
                   src={adminUser?.photoURL ? convertDriveUrl(adminUser.photoURL) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay"} 
                   alt="Vijay Avatar" 
-                  className="w-full h-full object-cover object-center aspect-square rounded-full"
+                  className="w-full h-full object-cover object-center aspect-square rounded-full transition-transform duration-300 group-hover:scale-110"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Vijay";
                   }}
                 />
               </div>
+              {/* Sparkle badge indicator */}
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black p-0.5 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)] border border-black z-20 animate-bounce">
+                <Sparkles size={8} className="text-black fill-current" />
+              </div>
             </div>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <History className="text-neon-purple" size={16} />
+                <History className="text-neon-purple shrink-0" size={16} />
                 <h2 className="text-xl font-display font-bold text-white">Continue Studying</h2>
               </div>
-              <p className="text-xs text-white/40 font-medium">Guided by {adminUser?.name || 'Vijay Ninama'}</p>
+              <p className="text-xs text-white/40 font-medium flex items-center flex-wrap gap-1.5 font-sans">
+                <span>Guided by</span>
+                <span className="text-white hover:text-neon-blue transition-colors font-bold">{adminUser?.name || 'Vijay Ninama'}</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[9px] text-emerald-400 font-extrabold tracking-wider uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                  <CheckCircle size={10} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
+                  <span>Admin</span>
+                </span>
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
