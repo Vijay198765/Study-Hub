@@ -459,8 +459,7 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
       </section>
 
       <div className="px-4">
-        {/* Recently Viewed */}
-        {recentChapters.length > 0 && (
+        {/* Recently Viewed & Admin Guide Block */}
         <section className="max-w-7xl mx-auto mb-8 -mt-8">
           <div className="flex items-center gap-4 mb-5">
             {/* Main Admin DP with Most Highlighted Ring */}
@@ -490,40 +489,60 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <History className="text-neon-purple shrink-0" size={16} />
-                <h2 className="text-xl font-display font-bold text-white">Continue Studying</h2>
+                <h2 className="text-xl font-display font-bold text-white">
+                  {recentChapters.length > 0 ? "Continue Studying" : "Your Learning Hub"}
+                </h2>
               </div>
               <p className="text-xs text-white/40 font-medium flex items-center flex-wrap gap-1.5 font-sans">
                 <span>Guided by</span>
-                <span className="text-white hover:text-neon-blue transition-colors font-bold">{adminUser?.name || 'Vijay Ninama'}</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[9px] text-emerald-400 font-extrabold tracking-wider uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                <span className="text-white hover:text-neon-blue transition-colors font-bold">
+                  {adminUser?.name || '✨𝐕𝐢𝐣𝐚𝐲 𝐍𝐢𝐧𝐚𝐦𝐚💫'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[9px] text-emerald-400 font-extrabold tracking-wider uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)] select-none">
                   <CheckCircle size={10} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
                   <span>Admin</span>
                 </span>
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recentChapters.slice(0, 2).map((chapter, idx) => (
-              <motion.div
-                key={chapter.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-              >
-                <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
-                  <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
-                      <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{chapter.subjectName}</p>
+
+          {recentChapters.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recentChapters.slice(0, 2).map((chapter, idx) => (
+                <motion.div
+                  key={chapter.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
+                    <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
+                        <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{chapter.subjectName}</p>
+                      </div>
+                      <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
                     </div>
-                    <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-white/80 font-bold mb-1">Empowering Class 6-10 Students</p>
+                <p className="text-xs text-white/40">Select one of the school classes below to explore live chapters, quizzes, and curated files!</p>
+              </div>
+              <a 
+                href="#classes-section" 
+                className="px-4 py-2 rounded-xl bg-neon-blue/15 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/30 text-xs font-bold transition-all w-fit cursor-pointer flex items-center gap-1.5 active:scale-95"
+              >
+                <span>Browse Classes</span>
+                <ArrowRight size={12} />
+              </a>
+            </div>
+          )}
         </section>
-      )}
 
       {/* Class Grid */}
       <section id="classes-section" className="max-w-7xl mx-auto scroll-mt-24 mb-20">
