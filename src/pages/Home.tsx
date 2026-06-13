@@ -268,6 +268,114 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
     });
   }, [searchTerm, allData]);
 
+  const displayRecentChapters = (() => {
+    const list = [...recentChapters];
+    
+    // De-duplicate list items by ID
+    const unique = list.filter((item, index, self) =>
+      self.findIndex(t => t.id === item.id) === index
+    );
+
+    // If we have at least 2 items, we are fully populated
+    if (unique.length >= 2) {
+      return unique.slice(0, 2);
+    }
+
+    // Attempt to find Chemical Reactions and Equations in the dynamic chapters
+    const chemCh = allData.chapters.find(c => 
+      c.name.toLowerCase().includes('chemical reactions') || 
+      c.name.toLowerCase().includes('reactions and equations')
+    );
+    if (chemCh && !unique.some(item => item.id === chemCh.id)) {
+      const sub = allData.subjects.find(s => s.id === chemCh.subjectId);
+      unique.push({
+        id: chemCh.id,
+        name: chemCh.name,
+        subjectId: chemCh.subjectId,
+        classId: chemCh.classId,
+        subjectName: sub?.name || 'Science'
+      });
+    }
+
+    // Attempt to find Real Numbers in the dynamic chapters
+    const numCh = allData.chapters.find(c => 
+      c.name.toLowerCase().includes('real numbers') || 
+      c.name.toLowerCase().includes('numbers')
+    );
+    if (numCh && !unique.some(item => item.id === numCh.id)) {
+      const sub = allData.subjects.find(s => s.id === numCh.subjectId);
+      unique.push({
+        id: numCh.id,
+        name: numCh.name,
+        subjectId: numCh.subjectId,
+        classId: numCh.classId,
+        subjectName: sub?.name || 'Mathematics'
+      });
+    }
+
+    // If we still don't have 2, grab any chapter from loaded database chapters
+    if (unique.length < 2) {
+      allData.chapters.forEach(c => {
+        if (unique.length < 2 && !unique.some(item => item.id === c.id)) {
+          const sub = allData.subjects.find(s => s.id === c.subjectId);
+          unique.push({
+            id: c.id,
+            name: c.name,
+            subjectId: c.subjectId,
+            classId: c.classId,
+            subjectName: sub?.name || 'Subject'
+          });
+        }
+      });
+    }
+
+    // Smart default fallbacks with dynamically matched class/subject indices if available
+    const class10 = allData.classes.find(c => c.name.toLowerCase().includes('10')) || allData.classes[0];
+    const classIdFallback = class10 ? class10.id : 'class-10';
+
+    if (unique.length < 2) {
+      // Look up subjects of class 10 for science
+      const scienceSub = allData.subjects.find(s => 
+        (s.classId === classIdFallback && s.name.toLowerCase().includes('science')) ||
+        s.name.toLowerCase().includes('science')
+      );
+      const scienceSubId = scienceSub ? scienceSub.id : 'science';
+
+      const chemChId = 'chemical-reactions-equations';
+      if (unique.length < 2 && !unique.some(item => item.name.toLowerCase().includes('chemical reactions'))) {
+        unique.push({
+          id: chemChId,
+          name: '1, Chemical Reactions and Equations',
+          subjectId: scienceSubId,
+          classId: classIdFallback,
+          subjectName: scienceSub?.name || 'Science'
+        });
+      }
+    }
+
+    if (unique.length < 2) {
+      // Look up subjects of class 10 for maths
+      const mathsSub = allData.subjects.find(s => 
+        (s.classId === classIdFallback && s.name.toLowerCase().includes('math')) ||
+        s.name.toLowerCase().includes('math')
+      );
+      const mathsSubId = mathsSub ? mathsSub.id : 'mathematics';
+
+      const realNumChId = 'real-numbers';
+      if (unique.length < 2 && !unique.some(item => item.name.toLowerCase().includes('real numbers'))) {
+        unique.push({
+          id: realNumChId,
+          name: '1, Real Numbers',
+          subjectId: mathsSubId,
+          classId: classIdFallback,
+          subjectName: mathsSub?.name || 'Mathematics'
+        });
+      }
+    }
+
+    return unique.slice(0, 2);
+  })();
+
   const quote = "Find someone who loves you more than you love them.";
 
   return (
@@ -489,14 +597,12 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <History className="text-neon-purple shrink-0" size={16} />
-                <h2 className="text-xl font-display font-bold text-white">
-                  {recentChapters.length > 0 ? "Continue Studying" : "Your Learning Hub"}
-                </h2>
+                <h2 className="text-xl font-display font-bold text-white">Continue Studying</h2>
               </div>
               <p className="text-xs text-white/40 font-medium flex items-center flex-wrap gap-1.5 font-sans">
                 <span>Guided by</span>
                 <span className="text-white hover:text-neon-blue transition-colors font-bold">
-                  {adminUser?.name || '✨𝐕𝐢𝐣𝐚𝐲 𝐍𝐢𝐧𝐚𝐦𝐚💫'}
+                  {adminUser?.name || '✨𝐕𝐢𝐣𝐚𝐲 𝐍𝐢𝐧𝐚𝐦𝐚 💫'}
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-[9px] text-emerald-400 font-extrabold tracking-wider uppercase shadow-[0_0_8px_rgba(16,185,129,0.15)] select-none">
                   <CheckCircle size={10} className="fill-emerald-500/10 text-emerald-400 shrink-0" />
@@ -506,46 +612,30 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
             </div>
           </div>
 
-          {recentChapters.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recentChapters.slice(0, 2).map((chapter, idx) => {
-                const matchedSubject = allData.subjects.find(s => s.id === chapter.subjectId);
-                const displaySubjectName = matchedSubject?.name || chapter.subjectName || 'Subject';
-                return (
-                  <motion.div
-                    key={chapter.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                  >
-                    <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
-                      <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
-                          <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{displaySubjectName}</p>
-                        </div>
-                        <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayRecentChapters.map((chapter, idx) => {
+              const matchedSubject = allData.subjects.find(s => s.id === chapter.subjectId);
+              const displaySubjectName = matchedSubject?.name || chapter.subjectName || 'Subject';
+              return (
+                <motion.div
+                  key={chapter.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
+                    <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
+                        <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{displaySubjectName}</p>
                       </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-white/80 font-bold mb-1">Empowering Class 6-10 Students</p>
-                <p className="text-xs text-white/40">Select one of the school classes below to explore live chapters, quizzes, and curated files!</p>
-              </div>
-              <a 
-                href="#classes-section" 
-                className="px-4 py-2 rounded-xl bg-neon-blue/15 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/30 text-xs font-bold transition-all w-fit cursor-pointer flex items-center gap-1.5 active:scale-95"
-              >
-                <span>Browse Classes</span>
-                <ArrowRight size={12} />
-              </a>
-            </div>
-          )}
+                      <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
         </section>
 
       {/* Class Grid */}
