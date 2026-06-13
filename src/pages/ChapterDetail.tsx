@@ -79,17 +79,47 @@ export default function ChapterDetail() {
         const currentChapter = data.find(c => c.id === chapterId);
         if (currentChapter) {
           const currentSubject = subjects.find(s => s.id === subjectId);
-          const recent = JSON.parse(localStorage.getItem('recentChapters') || '[]');
-          const newItem = {
-            id: currentChapter.id,
-            name: currentChapter.name,
-            subjectId,
-            classId,
-            subjectName: currentSubject?.name || 'Subject'
-          };
-          const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
-          const updated = [newItem, ...filtered].slice(0, 3);
-          localStorage.setItem('recentChapters', safeStringify(updated));
+          if (currentSubject) {
+            const recent = JSON.parse(localStorage.getItem('recentChapters') || '[]');
+            const newItem = {
+              id: currentChapter.id,
+              name: currentChapter.name,
+              subjectId,
+              classId,
+              subjectName: currentSubject.name
+            };
+            const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
+            const updated = [newItem, ...filtered].slice(0, 3);
+            localStorage.setItem('recentChapters', safeStringify(updated));
+          } else {
+            // Fetch subject from Firestore directly to avoid async state race condition
+            getDoc(doc(db, 'subjects', subjectId)).then(subjectDoc => {
+              const name = subjectDoc.exists() ? subjectDoc.data()?.name : 'Subject';
+              const recent = JSON.parse(localStorage.getItem('recentChapters') || '[]');
+              const newItem = {
+                id: currentChapter.id,
+                name: currentChapter.name,
+                subjectId,
+                classId,
+                subjectName: name || 'Subject'
+              };
+              const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
+              const updated = [newItem, ...filtered].slice(0, 3);
+              localStorage.setItem('recentChapters', safeStringify(updated));
+            }).catch(() => {
+              const recent = JSON.parse(localStorage.getItem('recentChapters') || '[]');
+              const newItem = {
+                id: currentChapter.id,
+                name: currentChapter.name,
+                subjectId,
+                classId,
+                subjectName: 'Subject'
+              };
+              const filtered = recent.filter((item: any) => item.id !== currentChapter.id);
+              const updated = [newItem, ...filtered].slice(0, 3);
+              localStorage.setItem('recentChapters', safeStringify(updated));
+            });
+          }
         }
       });
     }

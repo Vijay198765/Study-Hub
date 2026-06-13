@@ -508,24 +508,28 @@ export default function Home({ siteConfig }: { siteConfig?: any }) {
 
           {recentChapters.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recentChapters.slice(0, 2).map((chapter, idx) => (
-                <motion.div
-                  key={chapter.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                >
-                  <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
-                    <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
-                        <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{chapter.subjectName}</p>
+              {recentChapters.slice(0, 2).map((chapter, idx) => {
+                const matchedSubject = allData.subjects.find(s => s.id === chapter.subjectId);
+                const displaySubjectName = matchedSubject?.name || chapter.subjectName || 'Subject';
+                return (
+                  <motion.div
+                    key={chapter.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                  >
+                    <Link to={`/class/${chapter.classId}/subject/${chapter.subjectId}/chapter/${chapter.id}`}>
+                      <div className="glass-card p-6 group hover:neon-border transition-all flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold group-hover:neon-text transition-colors mb-1">{chapter.name}</h3>
+                          <p className="text-xs text-white/40 group-hover:text-neon-blue group-hover:drop-shadow-[0_0_5px_rgba(0,242,255,0.5)] transition-all font-bold">{displaySubjectName}</p>
+                        </div>
+                        <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
                       </div>
-                      <ArrowRight size={16} className="text-white/20 group-hover:text-neon-blue group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           ) : (
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
