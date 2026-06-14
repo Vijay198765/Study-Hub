@@ -289,8 +289,8 @@ export default function App() {
         // If we are currently on the surprise-preview page, "close" it by navigating to home
         if (location.pathname === '/surprise-preview') {
           navigate('/');
-        } else {
-          // If we are else-where, "open" the surprise preview
+        } else if (location.pathname === '/') {
+          // If we are on the home screen, "open" the surprise preview
           const isMobileSize = window.innerWidth < 768;
           const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           const isMobile = isMobileSize || isMobileUA;
