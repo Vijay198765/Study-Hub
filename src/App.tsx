@@ -270,6 +270,75 @@ export default function App() {
     }
   }, [location.pathname]);
 
+  // Handle global keyboard shortcut: '7' key opens & closes the surprise preview
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Avoid triggering when the user is typing inside inputs/textareas
+      const activeEl = document.activeElement;
+      if (activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.hasAttribute('contenteditable')
+      )) {
+        return;
+      }
+
+      if (e.key === '7') {
+        e.preventDefault();
+        
+        // If we are currently on the surprise-preview page, "close" it by navigating to home
+        if (location.pathname === '/surprise-preview') {
+          navigate('/');
+        } else {
+          // If we are else-where, "open" the surprise preview
+          const isMobileSize = window.innerWidth < 768;
+          const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const isMobile = isMobileSize || isMobileUA;
+
+          let links = [];
+          if (siteConfig) {
+            links = isMobile 
+              ? (siteConfig.surpriseDriveLinksMobile || [])
+              : (siteConfig.surpriseDriveLinksDesktop || []);
+            
+            // Secondary Fallbacks
+            if (links.length === 0) {
+              links = isMobile 
+                ? (siteConfig.surpriseDriveLinksDesktop || [])
+                : (siteConfig.surpriseDriveLinksMobile || []);
+            }
+            if (links.length === 0) {
+              links = siteConfig.surpriseDriveLinks || [];
+            }
+          }
+
+          if (links.length > 0) {
+            const randomIndex = Math.floor(Math.random() * links.length);
+            const rawUrl = links[randomIndex] || '';
+            
+            let previewUrl = rawUrl;
+            if (rawUrl.includes('drive.google.com')) {
+              const fileIdMatch = rawUrl.match(/\/d\/([^/&?]+)/) || rawUrl.match(/id=([^&?#]+)/);
+              if (fileIdMatch && fileIdMatch[1]) {
+                previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+              }
+            }
+            
+            navigate('/surprise-preview?url=' + encodeURIComponent(previewUrl));
+          } else {
+            // Fallback to empty preview screen if no links are configured yet
+            navigate('/surprise-preview');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [location.pathname, navigate, siteConfig]);
+
   useEffect(() => {
     console.log("App State: User:", user?.uid, "isAdmin:", isAdmin, "isSpecialAdmin:", isSpecialAdmin, "loading:", loading);
   }, [user, isAdmin, isSpecialAdmin, loading]);
