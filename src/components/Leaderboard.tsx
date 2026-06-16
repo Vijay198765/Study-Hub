@@ -35,7 +35,8 @@ export default function Leaderboard() {
       })) as UserProfile[];
       
       const filtered = users.filter(u => {
-        return u.name && !u.secretLoginLogged;
+        const hasValidName = u.name && !u.name.toLowerCase().includes('guest');
+        return hasValidName && !u.secretLoginLogged;
       });
       
       const finalUsers = [...filtered].sort((a, b) => {

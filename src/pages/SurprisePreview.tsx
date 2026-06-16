@@ -7,6 +7,7 @@ export default function SurprisePreview() {
   const [searchParams] = useSearchParams();
   const rawUrl = searchParams.get('url') || '';
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [isBlackedOut, setIsBlackedOut] = useState(false);
 
   // Parse file/preview ID if drive link
   let previewUrl = rawUrl;
@@ -21,7 +22,7 @@ export default function SurprisePreview() {
     navigate('/');
   };
 
-  // Keyboard shortcut listener to close/exit preview when pressing key '7'
+  // Keyboard shortcut listener to toggle blackout when pressing key '9'
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing values
@@ -34,9 +35,9 @@ export default function SurprisePreview() {
         return;
       }
 
-      if (e.key === '7') {
+      if (e.key === '9') {
         e.preventDefault();
-        handleBack();
+        setIsBlackedOut(prev => !prev);
       }
     };
 
@@ -44,10 +45,15 @@ export default function SurprisePreview() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col overflow-hidden">
+      {/* Blackout overlay for rapid privacy hide of the preview */}
+      {isBlackedOut && (
+        <div id="blackout-curtain" className="fixed inset-0 bg-black z-[100] transition-colors duration-300" />
+      )}
+
       {/* Absolute Header Overlay with Back Button */}
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         <button
