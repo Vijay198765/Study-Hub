@@ -4082,7 +4082,7 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">WA Support</span>
                           </div>
                           <button 
-                            onClick={() => saveImmediate({ supportWhatsApp: editingConfig?.supportWhatsApp ? '' : '910000000000' })}
+                            onClick={() => saveImmediate({ supportWhatsApp: editingConfig?.supportWhatsApp ? '' : '919602717117' })}
                             className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.supportWhatsApp ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.supportWhatsApp ? 'right-0.5' : 'left-0.5'}`} />

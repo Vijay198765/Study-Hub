@@ -994,7 +994,7 @@ export default function App() {
 
               {!isSnakeFullscreen && <Footer siteConfig={siteConfig} />}
               {!isSnakeFullscreen && <RatingModal isOpen={showRatingModal} onClose={() => setShowRatingModal(false)} />}
-              {!isSnakeFullscreen && <WhatsAppFloat />}
+              {!isSnakeFullscreen && <WhatsAppFloat siteConfig={siteConfig} />}
 
               {/* Individual User Message / Alert Overlay */}
               <AnimatePresence>
