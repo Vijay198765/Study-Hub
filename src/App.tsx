@@ -803,8 +803,8 @@ export default function App() {
         e.preventDefault();
       }
 
-      // 3. Number keys 1-9 for quick navigation (only if not in input)
-      if (!isInput && /^[1-9]$/.test(e.key)) {
+      // 3. Number keys 1-9 for quick navigation (only if not in input, excluding 7 and 9)
+      if (!isInput && /^[1-9]$/.test(e.key) && e.key !== '7' && e.key !== '9') {
         const navLinks = document.querySelectorAll('.nav-link');
         const index = parseInt(e.key) - 1;
         if (navLinks[index]) {

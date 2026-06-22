@@ -21,7 +21,7 @@ export default function Footer({ siteConfig }: FooterProps) {
   const adminName = siteConfig?.adminName || 'Tagore Team';
   const coOwnerName = siteConfig?.coOwnerName || 'Project Lead';
   const supportEmail = siteConfig?.supportEmail || 'tagoreteam2025@gmail.com';
-  const supportWhatsApp = siteConfig?.supportWhatsApp;
+  const supportWhatsApp = siteConfig?.supportWhatsApp || '9602717117';
   const supportTelegram = siteConfig?.supportTelegram;
 
   const handleSecretLogin = async () => {
@@ -218,7 +218,7 @@ export default function Footer({ siteConfig }: FooterProps) {
             {supportWhatsApp && (
                <li>
                 <a 
-                  href={`https://wa.me/${supportWhatsApp.replace(/\D/g, '')}`} 
+                  href={`https://wa.me/${supportWhatsApp.replace(/\D/g, '').length === 10 ? '91' + supportWhatsApp.replace(/\D/g, '') : supportWhatsApp.replace(/\D/g, '')}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-emerald-400 font-medium transition-colors group"

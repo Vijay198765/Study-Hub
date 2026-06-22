@@ -38,6 +38,9 @@ export default function SurprisePreview() {
       if (e.key === '9') {
         e.preventDefault();
         setIsBlackedOut(prev => !prev);
+      } else if (e.key === '7') {
+        e.preventDefault();
+        navigate('/');
       }
     };
 
