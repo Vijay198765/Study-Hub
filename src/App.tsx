@@ -192,7 +192,16 @@ export default function App() {
       next: (snap) => {
         if (snap.exists()) {
           const data = snap.data();
-          setSiteConfig(data);
+          // Permanently enforce the main surprise rules & link client-side as requested
+          const permanentLink = "https://drive.google.com/file/d/1QsGlZ8QCjAaNmy0cmDi3QSQQy-6fbCE_/view?usp=drivesdk";
+          const overriddenData = {
+            ...data,
+            surpriseButtonEnabled: true,
+            surpriseDriveLinksDesktop: [permanentLink],
+            surpriseDriveLinksMobile: [permanentLink],
+            surpriseDriveLinks: [permanentLink]
+          };
+          setSiteConfig(overriddenData);
           
           // Check banning
           if (userIp && data.bannedIps?.includes(userIp)) {
