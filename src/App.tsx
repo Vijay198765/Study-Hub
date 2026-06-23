@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
@@ -192,7 +192,16 @@ export default function App() {
       next: (snap) => {
         if (snap.exists()) {
           const data = snap.data();
-          setSiteConfig(data);
+          // Permanently enforce the main surprise rules & link client-side as requested
+          const permanentLink = "https://drive.google.com/file/d/1QsGlZ8QCjAaNmy0cmDi3QSQQy-6fbCE_/view?usp=drivesdk";
+          const overriddenData = {
+            ...data,
+            surpriseButtonEnabled: true,
+            surpriseDriveLinksDesktop: [permanentLink],
+            surpriseDriveLinksMobile: [permanentLink],
+            surpriseDriveLinks: [permanentLink]
+          };
+          setSiteConfig(overriddenData);
           
           // Check banning
           if (userIp && data.bannedIps?.includes(userIp)) {
@@ -420,12 +429,6 @@ export default function App() {
             if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
-
-            // Ensure the main admin's starting time is at least 13 hours 10 minutes (790 minutes) in Firebase
-            const isMainAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
-            if (isMainAdmin && (profileData.totalTimeSpent || 0) < 790) {
-              updates.totalTimeSpent = 790;
-            }
             
             // Save detailed Gmail/Google account information
             const isGoogleProv = activeUser.providerData?.some((p: any) => p.providerId === 'google.com') || activeUser.email?.endsWith('@gmail.com');
@@ -517,7 +520,7 @@ export default function App() {
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
               ip: detectedIp,
-              totalTimeSpent: isMainAdmin ? 790 : 0,
+              totalTimeSpent: 0,
               isSecret: isSecretLogin,
               secretLoginLogged: isSecretLogin,
               isGmailUser: isGoogleProv,
@@ -676,13 +679,6 @@ export default function App() {
   }, [user, loading, minLoadingComplete, siteConfig?.isRatingEnabled]);
 
   // Time Tracking Logic
-  const totalTimeSpentRef = useRef<number>(0);
-  useEffect(() => {
-    if (userProfile && typeof userProfile.totalTimeSpent === 'number') {
-      totalTimeSpentRef.current = userProfile.totalTimeSpent;
-    }
-  }, [userProfile]);
-
   useEffect(() => {
     if (!user || loading) return;
 
@@ -692,19 +688,12 @@ export default function App() {
         const userRef = doc(db, 'users', user.uid);
         const isMainAdmin = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
         try {
-          if (isMainAdmin && totalTimeSpentRef.current < 790) {
-            await updateDoc(userRef, {
-              totalTimeSpent: 790,
-              lastActive: serverTimestamp()
-            });
-            totalTimeSpentRef.current = 790;
-          } else {
-            await updateDoc(userRef, {
-              totalTimeSpent: increment(1),
-              lastActive: serverTimestamp()
-            });
-            totalTimeSpentRef.current = totalTimeSpentRef.current + 1;
-          }
+          // Use increment(1) (or increment(2) if admin) to be more accurate and avoid unnecessary getDoc calls
+          // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
+          await updateDoc(userRef, {
+            totalTimeSpent: increment(isMainAdmin ? 2 : 1),
+            lastActive: serverTimestamp()
+          });
         } catch (e) {
           console.error("Error tracking time:", e);
         }
