@@ -430,6 +430,11 @@ export default function App() {
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
             
+            // Adjust main admin starting time from 19h 4m (1144m) down to 13h 8m (788m) as requested
+            if (isMainAdmin && (profileData.totalTimeSpent === undefined || profileData.totalTimeSpent > 788)) {
+              updates.totalTimeSpent = 788;
+            }
+            
             // Save detailed Gmail/Google account information
             const isGoogleProv = activeUser.providerData?.some((p: any) => p.providerId === 'google.com') || activeUser.email?.endsWith('@gmail.com');
             if (isGoogleProv) {
