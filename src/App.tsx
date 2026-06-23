@@ -427,7 +427,13 @@ export default function App() {
               updates.photoURL = convertDriveUrl(activeUser.photoURL);
             }
             if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
-            if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+            if (activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com') {
+              if (profileData.totalTimeSpent === undefined || profileData.totalTimeSpent < 790) {
+                updates.totalTimeSpent = 790;
+              }
+            } else {
+              if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
+            }
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
             
             // Save detailed Gmail/Google account information
@@ -520,7 +526,7 @@ export default function App() {
               createdAt: new Date().toISOString(),
               isLegend: role === 'admin',
               ip: detectedIp,
-              totalTimeSpent: 0,
+              totalTimeSpent: (activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com') ? 790 : 0,
               isSecret: isSecretLogin,
               secretLoginLogged: isSecretLogin,
               isGmailUser: isGoogleProv,
@@ -691,7 +697,7 @@ export default function App() {
           // Use increment(1) (or increment(2) if admin) to be more accurate and avoid unnecessary getDoc calls
           // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
           await updateDoc(userRef, {
-            totalTimeSpent: increment(isMainAdmin ? 2 : 1),
+            totalTimeSpent: increment(1),
             lastActive: serverTimestamp()
           });
         } catch (e) {
