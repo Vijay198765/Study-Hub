@@ -688,10 +688,10 @@ export default function App() {
         const userRef = doc(db, 'users', user.uid);
         const isMainAdmin = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
         try {
-          // Use increment(1) (or increment(2) if admin) to be more accurate and avoid unnecessary getDoc calls
+          // Use increment(1) to be more accurate and avoid unnecessary getDoc calls
           // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
           await updateDoc(userRef, {
-            totalTimeSpent: increment(isMainAdmin ? 2 : 1),
+            totalTimeSpent: increment(1),
             lastActive: serverTimestamp()
           });
         } catch (e) {
