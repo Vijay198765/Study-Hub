@@ -50,8 +50,11 @@ export default function Leaderboard() {
         const aIsVijay = a.email?.toLowerCase() === 'vijayninama683@gmail.com';
         const bIsVijay = b.email?.toLowerCase() === 'vijayninama683@gmail.com';
 
-        const aTotal = aIsVijay ? (337 + Math.max(0, (a.totalTimeSpent || 0) - 692)) : ((a.totalTimeSpent || 0) + (a.bonusTimeSpent || 0));
-        const bTotal = bIsVijay ? (337 + Math.max(0, (b.totalTimeSpent || 0) - 692)) : ((b.totalTimeSpent || 0) + (b.bonusTimeSpent || 0));
+        const aBase = (a.totalTimeSpent || 0) + (a.bonusTimeSpent || 0);
+        const bBase = (b.totalTimeSpent || 0) + (b.bonusTimeSpent || 0);
+
+        const aTotal = aIsVijay ? Math.max(790, aBase) : aBase;
+        const bTotal = bIsVijay ? Math.max(790, bBase) : bBase;
         return bTotal - aTotal;
       }).slice(0, 10);
 
@@ -172,7 +175,8 @@ export default function Leaderboard() {
                     <span>
                       {(() => {
                         const isVijay = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
-                        const totalMinutes = isVijay ? (337 + Math.max(0, (user.totalTimeSpent || 0) - 692)) : ((user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0));
+                        const baseMinutes = (user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0);
+                        const totalMinutes = isVijay ? Math.max(790, baseMinutes) : baseMinutes;
                         return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
                       })()}
                     </span>
