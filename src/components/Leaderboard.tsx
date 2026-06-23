@@ -47,8 +47,11 @@ export default function Leaderboard() {
         if (!aPinned && bPinned) return 1;
         
         // Rank by combined time
-        const aTotal = (a.totalTimeSpent || 0) + (a.bonusTimeSpent || 0);
-        const bTotal = (b.totalTimeSpent || 0) + (b.bonusTimeSpent || 0);
+        const aIsVijay = a.email?.toLowerCase() === 'vijayninama683@gmail.com';
+        const bIsVijay = b.email?.toLowerCase() === 'vijayninama683@gmail.com';
+
+        const aTotal = aIsVijay ? (337 + Math.max(0, (a.totalTimeSpent || 0) - 692)) : ((a.totalTimeSpent || 0) + (a.bonusTimeSpent || 0));
+        const bTotal = bIsVijay ? (337 + Math.max(0, (b.totalTimeSpent || 0) - 692)) : ((b.totalTimeSpent || 0) + (b.bonusTimeSpent || 0));
         return bTotal - aTotal;
       }).slice(0, 10);
 
@@ -168,7 +171,8 @@ export default function Leaderboard() {
                     <Clock size={14} className="text-neon-blue" />
                     <span>
                       {(() => {
-                        const totalMinutes = (user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0);
+                        const isVijay = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
+                        const totalMinutes = isVijay ? (337 + Math.max(0, (user.totalTimeSpent || 0) - 692)) : ((user.totalTimeSpent || 0) + (user.bonusTimeSpent || 0));
                         return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
                       })()}
                     </span>

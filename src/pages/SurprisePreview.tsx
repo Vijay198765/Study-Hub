@@ -5,8 +5,7 @@ import { ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
 export default function SurprisePreview() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Permanently hardcoded as requested to ensure it always loads this asset
-  const rawUrl = "https://drive.google.com/file/d/1QsGlZ8QCjAaNmy0cmDi3QSQQy-6fbCE_/view?usp=drivesdk";
+  const rawUrl = searchParams.get('url') || '';
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isBlackedOut, setIsBlackedOut] = useState(false);
 

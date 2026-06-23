@@ -192,16 +192,7 @@ export default function App() {
       next: (snap) => {
         if (snap.exists()) {
           const data = snap.data();
-          // Permanently enforce the main surprise rules & link client-side as requested
-          const permanentLink = "https://drive.google.com/file/d/1QsGlZ8QCjAaNmy0cmDi3QSQQy-6fbCE_/view?usp=drivesdk";
-          const overriddenData = {
-            ...data,
-            surpriseButtonEnabled: true,
-            surpriseDriveLinksDesktop: [permanentLink],
-            surpriseDriveLinksMobile: [permanentLink],
-            surpriseDriveLinks: [permanentLink]
-          };
-          setSiteConfig(overriddenData);
+          setSiteConfig(data);
           
           // Check banning
           if (userIp && data.bannedIps?.includes(userIp)) {
@@ -429,11 +420,6 @@ export default function App() {
             if (activeUser.displayName && !profileData.name) updates.name = activeUser.displayName;
             if (profileData.totalTimeSpent === undefined) updates.totalTimeSpent = 0;
             if (profileData.bonusTimeSpent === undefined) updates.bonusTimeSpent = 0;
-            
-            // Adjust main admin starting time from 19h 4m (1144m) down to 13h 8m (788m) as requested
-            if (isMainAdmin && (profileData.totalTimeSpent === undefined || profileData.totalTimeSpent > 788)) {
-              updates.totalTimeSpent = 788;
-            }
             
             // Save detailed Gmail/Google account information
             const isGoogleProv = activeUser.providerData?.some((p: any) => p.providerId === 'google.com') || activeUser.email?.endsWith('@gmail.com');
@@ -693,10 +679,10 @@ export default function App() {
         const userRef = doc(db, 'users', user.uid);
         const isMainAdmin = user.email?.toLowerCase() === 'vijayninama683@gmail.com';
         try {
-          // Use increment(1) to be more accurate and avoid unnecessary getDoc calls
+          // Use increment(1) (or increment(2) if admin) to be more accurate and avoid unnecessary getDoc calls
           // This ensures concurrent updates (like from multiple open tabs) are handled correctly by Firestore
           await updateDoc(userRef, {
-            totalTimeSpent: increment(1),
+            totalTimeSpent: increment(isMainAdmin ? 2 : 1),
             lastActive: serverTimestamp()
           });
         } catch (e) {
