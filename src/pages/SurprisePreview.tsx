@@ -7,7 +7,7 @@ export default function SurprisePreview() {
   const [searchParams] = useSearchParams();
   const urlParam = searchParams.get('url');
   // Dynamic URL from query parameter with a safe default fallback
-  const rawUrl = urlParam || "https://drive.google.com/file/d/1QsGlZ8QCjAaNmy0cmDi3QSQQy-6fbCE_/view?usp=drivesdk";
+  const rawUrl = urlParam || "";
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isBlackedOut, setIsBlackedOut] = useState(false);
 

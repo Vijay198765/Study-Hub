@@ -571,8 +571,9 @@ export default function AdminPanel() {
 
   const saveSiteConfigToFirebase = async (newConfig: any) => {
     try {
+      const { id, ...configToSave } = newConfig;
       await setDoc(doc(db, 'config', 'site'), {
-        ...newConfig,
+        ...configToSave,
         lastUpdated: serverTimestamp()
       }, { merge: true });
       setToast({ message: 'Settings saved to cloud!', type: 'success' });
@@ -593,7 +594,9 @@ export default function AdminPanel() {
   const saveImmediate = (updates: Partial<SiteConfig>) => {
     setEditingConfig(prev => {
       const merged = { ...prev, ...updates };
-      saveSiteConfigToFirebase(merged);
+      setTimeout(() => {
+        saveSiteConfigToFirebase(merged);
+      }, 0);
       return merged;
     });
   };
@@ -933,7 +936,14 @@ export default function AdminPanel() {
   };
 
   const handleAddNotification = async () => {
-    if (!newNotif.title || !newNotif.message) return;
+    if (!newNotif.title.trim()) {
+      setToast({ message: 'Please enter an alert title', type: 'error' });
+      return;
+    }
+    if (!newNotif.message.trim()) {
+      setToast({ message: 'Please enter a message', type: 'error' });
+      return;
+    }
     try {
       // 1. Clear old notifications (Don't save any old)
       const querySnapshot = await getDocs(collection(db, 'notifications'));
@@ -965,7 +975,14 @@ export default function AdminPanel() {
   };
 
   const handleAddUserMessage = async () => {
-    if (!newUserMsg.userId || !newUserMsg.message) return;
+    if (!newUserMsg.userId) {
+      setToast({ message: 'Please select a target user', type: 'error' });
+      return;
+    }
+    if (!newUserMsg.message.trim()) {
+      setToast({ message: 'Please enter a message', type: 'error' });
+      return;
+    }
     try {
       await addDoc(collection(db, 'userMessages'), {
         ...newUserMsg,
@@ -996,15 +1013,22 @@ export default function AdminPanel() {
     if (!deleteConfirm) return;
     const { type, id } = deleteConfirm;
     
-    if (type === 'class') await removeClass(id);
-    else if (type === 'subject') await removeSubject(id);
-    else if (type === 'chapter') await removeChapter(id);
-    else if (type === 'user') await removeUser(id);
-    else if (type === 'test') await removeTest(id);
-    else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
-    else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
-    
-    setDeleteConfirm(null);
+    try {
+      if (type === 'class') await removeClass(id);
+      else if (type === 'subject') await removeSubject(id);
+      else if (type === 'chapter') await removeChapter(id);
+      else if (type === 'user') await removeUser(id);
+      else if (type === 'test') await removeTest(id);
+      else if (type === 'group') await deleteDoc(doc(db, 'groups', id));
+      else if (type === 'rating') await deleteDoc(doc(db, 'ratings', id));
+      
+      setToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully!`, type: 'success' });
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setToast({ message: `Failed to delete ${type}.`, type: 'error' });
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   const handleEdit = (entity: any, type: string) => {
@@ -4059,7 +4083,7 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Footer Credit</span>
                           </div>
                           <button 
-                            onClick={() => saveImmediate({ showFooterCredit: editingConfig?.showFooterCredit !== false })}
+                            onClick={() => saveImmediate({ showFooterCredit: editingConfig?.showFooterCredit === false ? true : false })}
                             className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.showFooterCredit !== false ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.showFooterCredit !== false ? 'right-0.5' : 'left-0.5'}`} />
@@ -4073,7 +4097,7 @@ export default function AdminPanel() {
                             <span className="text-xs font-bold text-white/80">Auto-Approve</span>
                           </div>
                           <button 
-                            onClick={() => saveImmediate({ autoApproveUsers: editingConfig?.autoApproveUsers === true })}
+                            onClick={() => saveImmediate({ autoApproveUsers: editingConfig?.autoApproveUsers === true ? false : true })}
                             className={`w-10 h-5 rounded-full relative transition-all ${editingConfig?.autoApproveUsers === true ? 'bg-neon-blue' : 'bg-white/10'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.autoApproveUsers === true ? 'right-0.5' : 'left-0.5'}`} />
