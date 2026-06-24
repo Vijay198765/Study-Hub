@@ -468,7 +468,7 @@ export default function App() {
             }
 
             if (Object.keys(updates).length > 0) {
-              if (!activeUser.isAnonymous) {
+              if (!activeUser.isAnonymous || profileData.role === 'admin' || updates.role === 'admin') {
                 await updateDoc(userRef, updates);
               }
               // Merge updates into profileData for immediate state use
@@ -527,7 +527,7 @@ export default function App() {
               googleDisplayName: activeUser.displayName || '',
               ...extraData
             };
-            if (!activeUser.isAnonymous) {
+            if (!activeUser.isAnonymous || role === 'admin') {
               await setDoc(userRef, profileData);
             }
           }
