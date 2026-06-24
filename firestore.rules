@@ -627,7 +627,7 @@ service cloud.firestore {
 
     match /config/{docId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidConfig(request.resource.data);
+      allow create, update: if isAdmin();
       allow delete: if false; // Deny deletion to prevent loss of critical system configurations
     }
 

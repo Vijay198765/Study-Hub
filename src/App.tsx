@@ -917,7 +917,7 @@ export default function App() {
               
               <main className="flex-grow">
                 <AnimatePresence mode="wait">
-                  {siteConfig?.maintenanceMode && !isAdmin ? (
+                  {siteConfig?.maintenanceMode && !isAdmin && location.pathname !== '/login' && location.pathname !== '/admin' ? (
                     <motion.div 
                       key="maintenance"
                       initial={{ opacity: 0 }}
