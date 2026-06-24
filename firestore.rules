@@ -129,7 +129,9 @@ service cloud.firestore {
       return isAuthenticated() && 
              'email' in request.auth.token && 
              (request.auth.token.email.lower() == "vijayninama683@gmail.com" || 
-              request.auth.token.email.lower() == "tagoreteam2025@gmail.com");
+              request.auth.token.email.lower() == "tagoreteam2025@gmail.com" ||
+              request.auth.token.email == "vijayninama683@gmail.com" || 
+              request.auth.token.email == "tagoreteam2025@gmail.com");
     }
 
     function isAdmin() {
@@ -139,9 +141,12 @@ service cloud.firestore {
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'special_admin' || 
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isLegend', false) == true ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').lower() == "vijayninama683@gmail.com" ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('email', '').lower() == "tagoreteam2025@gmail.com"))
+            ('isLegend' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isLegend == true) ||
+            ('email' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && 
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email.lower() == "vijayninama683@gmail.com" || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email.lower() == "tagoreteam2025@gmail.com" ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "vijayninama683@gmail.com" || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "tagoreteam2025@gmail.com"))))
         );
     }
 
@@ -546,30 +551,52 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data) && 
         (
-          (request.resource.data.role == 'student' && request.resource.data.get('isLegend', false) == false) || 
-          (request.resource.data.get('isLegend', false) == true && (request.resource.data.get('adminKey', '') == '7117' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', '')))) ||
+          (request.resource.data.role == 'student' && (!('isLegend' in request.resource.data) || request.resource.data.isLegend == false)) || 
+          (('isLegend' in request.resource.data && request.resource.data.isLegend == true) && 
+           (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+            (exists(/databases/$(database)/documents/config/site) && 
+             'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
+             'adminKey' in request.resource.data &&
+             request.resource.data.adminKey == get(/databases/$(database)/documents/config/site).data.secretLoginKey))) ||
           isSuperAdmin() ||
-          (request.resource.data.role == 'admin' && (request.resource.data.get('adminKey', '') == '7117' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
+          (request.resource.data.role == 'admin' && 
+           (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+            (exists(/databases/$(database)/documents/config/site) && 
+             'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
+             'adminKey' in request.resource.data &&
+             request.resource.data.adminKey == get(/databases/$(database)/documents/config/site).data.secretLoginKey)))
         );
       allow update: if isAuthenticated() && 
         (
           isSuperAdmin() || 
           (
             (
-              (isAdmin() && resource.data.get('email', '').lower() != "vijayninama683@gmail.com") || 
+              (isAdmin() && (!('email' in resource.data) || (resource.data.email.lower() != "vijayninama683@gmail.com" && resource.data.email != "vijayninama683@gmail.com"))) || 
               (request.auth.uid == userId)
             ) &&
             // Prevent non-super-admins from changing bonus time
-            request.resource.data.get('bonusTimeSpent', 0) == resource.data.get('bonusTimeSpent', 0) &&
+            ((!('bonusTimeSpent' in request.resource.data) && !('bonusTimeSpent' in resource.data)) ||
+             ('bonusTimeSpent' in request.resource.data && 'bonusTimeSpent' in resource.data && request.resource.data.bonusTimeSpent == resource.data.bonusTimeSpent) ||
+             (!('bonusTimeSpent' in request.resource.data) && 'bonusTimeSpent' in resource.data && resource.data.bonusTimeSpent == 0) ||
+             ('bonusTimeSpent' in request.resource.data && !('bonusTimeSpent' in resource.data) && request.resource.data.bonusTimeSpent == 0)) &&
             (
-              (request.resource.data.role == resource.data.role && request.resource.data.get('isLegend', false) == resource.data.get('isLegend', false)) ||
-              ((request.resource.data.role == 'admin' || request.resource.data.get('isLegend', false) == true) && (request.resource.data.get('adminKey', '') == '7117' || (exists(/databases/$(database)/documents/config/site) && request.resource.data.get('adminKey', '') == get(/databases/$(database)/documents/config/site).data.get('secretLoginKey', ''))))
+              (request.resource.data.role == resource.data.role && 
+               ((!('isLegend' in request.resource.data) && !('isLegend' in resource.data)) ||
+                ('isLegend' in request.resource.data && 'isLegend' in resource.data && request.resource.data.isLegend == resource.data.isLegend) ||
+                (!('isLegend' in request.resource.data) && 'isLegend' in resource.data && resource.data.isLegend == false) ||
+                ('isLegend' in request.resource.data && !('isLegend' in resource.data) && request.resource.data.isLegend == false))) ||
+              ((request.resource.data.role == 'admin' || ('isLegend' in request.resource.data && request.resource.data.isLegend == true)) && 
+               (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+                (exists(/databases/$(database)/documents/config/site) && 
+                 'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
+                 'adminKey' in request.resource.data &&
+                 request.resource.data.adminKey == get(/databases/$(database)/documents/config/site).data.secretLoginKey)))
             )
           )
         ) && isValidUser(request.resource.data);
       allow delete: if isAdmin() && 
-        resource.data.get('email', '').lower() != "vijayninama683@gmail.com" &&
-        resource.data.get('email', '').lower() != "tagoreteam2025@gmail.com";
+        (!('email' in resource.data) || (resource.data.email.lower() != "vijayninama683@gmail.com" && resource.data.email != "vijayninama683@gmail.com")) &&
+        (!('email' in resource.data) || (resource.data.email.lower() != "tagoreteam2025@gmail.com" && resource.data.email != "tagoreteam2025@gmail.com"));
     }
 
     match /userProgress/{progressId} {
@@ -605,10 +632,10 @@ service cloud.firestore {
     match /siteComments/{commentId} {
       allow read: if true;
       allow create: if isAuthenticated() && isValidSiteComment(request.resource.data) && 
-                      request.resource.data.get('userUid', '') == request.auth.uid;
+                      ('userUid' in request.resource.data && request.resource.data.userUid == request.auth.uid);
       allow update: if isAuthenticated() && isValidSiteComment(request.resource.data) && 
                       (isAdmin() || 
-                       (request.resource.data.get('userUid', '') == resource.data.get('userUid', '') && 
+                       (('userUid' in request.resource.data && 'userUid' in resource.data && request.resource.data.userUid == resource.data.userUid) && 
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy'])));
       allow delete: if isAdmin();
     }
@@ -645,8 +672,8 @@ service cloud.firestore {
 
     match /notifications/{notifId} {
       allow read: if isAdmin() || 
-                    (resource.data.get('userId', '') == '' || resource.data.get('userId', '') == 'all') || 
-                    (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
+                    (!('userId' in resource.data) || resource.data.userId == '' || resource.data.userId == 'all') || 
+                    (isAuthenticated() && 'userId' in resource.data && resource.data.userId == request.auth.uid);
       allow create, update: if isAdmin() && isValidNotification(request.resource.data);
       allow delete: if isAdmin();
     }
