@@ -3783,107 +3783,6 @@ export default function AdminPanel() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${siteConfig?.maintenanceMode ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 text-white'}`}>
-                              {siteConfig?.maintenanceMode ? <Lock size={20} /> : <Unlock size={20} />}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white">Maintenance Mode</p>
-                              <p className="text-[10px] text-white/40">Only admins can view the platform</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => saveSiteConfig({ maintenanceMode: !siteConfig?.maintenanceMode })}
-                            className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.maintenanceMode ? 'bg-red-500' : 'bg-white/10'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.maintenanceMode ? 'right-1' : 'left-1'}`} />
-                          </button>
-                        </div>
-                        
-                        {siteConfig?.maintenanceMode && (
-                          <motion.div 
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            className="px-4 pb-4"
-                          >
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Custom Maintenance Message</label>
-                            <textarea 
-                              value={siteConfig?.maintenanceMessage || ''}
-                              onChange={(e) => saveSiteConfig({ maintenanceMessage: e.target.value })}
-                              placeholder="e.g., We are upgrading our servers..."
-                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500 transition-all min-h-[80px]"
-                            />
-                          </motion.div>
-                        )}
-                      </div>
-
-                      {/* Registration Toggle */}
-                      <div className="flex items-center justify-between p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
-                            <UserPlus size={20} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">Student Registration</p>
-                            <p className="text-[10px] text-white/40">Allow new students to join</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => saveSiteConfig({ registrationEnabled: siteConfig?.registrationEnabled === false ? true : false })}
-                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.registrationEnabled !== false ? 'bg-neon-purple' : 'bg-white/10'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.registrationEnabled !== false ? 'right-1' : 'left-1'}`} />
-                        </button>
-                      </div>
-
-                      {/* Leaderboard Toggle */}
-                      <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
-                            <Trophy size={20} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">Public Leaderboard</p>
-                            <p className="text-[10px] text-white/40">Show top students publicly</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => saveSiteConfig({ leaderboardVisible: siteConfig?.leaderboardVisible === false ? true : false })}
-                          className={`w-12 h-6 rounded-full transition-all relative ${siteConfig?.leaderboardVisible !== false ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${siteConfig?.leaderboardVisible !== false ? 'right-1' : 'left-1'}`} />
-                        </button>
-                      </div>
-
-                      {/* Alert Duration Control */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
-                               <Bell size={20} />
-                            </div>
-                            <div>
-                               <p className="text-sm font-bold text-white">Alert Duration (Seconds)</p>
-                               <p className="text-[10px] text-white/40">How long alerts stay on screen</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1 border border-white/10">
-                            <input 
-                               type="number"
-                               min="1"
-                               max="60"
-                               className="w-12 bg-transparent text-white text-center font-bold outline-none"
-                               value={siteConfig?.notificationDuration || 5}
-                               onChange={(e) => saveSiteConfig({ notificationDuration: parseInt(e.target.value) || 5 })}
-                            />
-                            <span className="text-[10px] text-white/20 font-bold uppercase">SEC</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Global Maintenance Mode */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
-                          <div className="flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-red-500/20 text-red-500">
                               <Shield size={20} />
                             </div>
@@ -3910,13 +3809,77 @@ export default function AdminPanel() {
                               <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1 block">Maintenance Message</label>
                               <textarea 
                                 value={editingConfig?.maintenanceMessage || ''}
-                                onChange={(e) => saveSiteConfig({ maintenanceMessage: e.target.value })}
+                                onChange={(e) => saveImmediate({ maintenanceMessage: e.target.value })}
                                 placeholder="Website is under maintenance. We will be back soon!"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500 transition-all min-h-[60px]"
                               />
                             </div>
                           </motion.div>
                         )}
+                      </div>
+
+                      {/* Registration Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
+                            <UserPlus size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Student Registration</p>
+                            <p className="text-[10px] text-white/40">Allow new students to join</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => saveImmediate({ registrationEnabled: editingConfig?.registrationEnabled === false ? true : false })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.registrationEnabled !== false ? 'bg-neon-purple' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.registrationEnabled !== false ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Leaderboard Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-400/20 text-yellow-400">
+                            <Trophy size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Public Leaderboard</p>
+                            <p className="text-[10px] text-white/40">Show top students publicly</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => saveImmediate({ leaderboardVisible: editingConfig?.leaderboardVisible === false ? true : false })}
+                          className={`w-12 h-6 rounded-full transition-all relative ${editingConfig?.leaderboardVisible !== false ? 'bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingConfig?.leaderboardVisible !== false ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Alert Duration Control */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-neon-blue/5 border border-neon-blue/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-neon-blue/20 text-neon-blue">
+                               <Bell size={20} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-white">Alert Duration (Seconds)</p>
+                               <p className="text-[10px] text-white/40">How long alerts stay on screen</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1 border border-white/10">
+                            <input 
+                               type="number"
+                               min="1"
+                               max="60"
+                               className="w-12 bg-transparent text-white text-center font-bold outline-none"
+                               value={editingConfig?.notificationDuration || 5}
+                               onChange={(e) => saveImmediate({ notificationDuration: parseInt(e.target.value) || 5 })}
+                            />
+                            <span className="text-[10px] text-white/20 font-bold uppercase">SEC</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Global Announcement Bar */}
