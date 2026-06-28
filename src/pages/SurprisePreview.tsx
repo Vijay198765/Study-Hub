@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, AlertCircle, ExternalLink } from 'lucide-react';
 
 export default function SurprisePreview() {
   const navigate = useNavigate();
@@ -68,6 +68,17 @@ export default function SurprisePreview() {
           <ArrowLeft size={14} className="text-neon-blue" />
           <span>Exit Preview</span>
         </button>
+        {rawUrl && (
+          <a
+            href={rawUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2.5 rounded-xl bg-neon-blue/20 hover:bg-neon-blue/35 text-white border border-neon-blue/50 text-xs font-bold font-sans uppercase tracking-wider transition-all flex items-center gap-2 backdrop-blur-md shadow-[0_4px_20px_rgba(0,242,255,0.25)] active:scale-95 cursor-pointer"
+          >
+            <ExternalLink size={14} className="text-neon-blue" />
+            <span>Open in New Tab</span>
+          </a>
+        )}
       </div>
 
       {/* Main Preview Container */}
@@ -107,6 +118,7 @@ export default function SurprisePreview() {
               className="w-full h-full border-0 absolute inset-0 bg-transparent z-0"
               allow="autoplay; encrypted-media"
               referrerPolicy="no-referrer"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"
               onLoad={() => setIframeLoaded(true)}
               title="Google Drive Web Preview"
             />
