@@ -20,13 +20,13 @@ export default function Footer({ siteConfig }: FooterProps) {
   const siteName = siteConfig?.siteName || 'Study-hub';
   const adminName = siteConfig?.adminName || 'Tagore Team';
   const coOwnerName = siteConfig?.coOwnerName || 'Project Lead';
-  const supportEmail = siteConfig?.supportEmail || 'tagoreteam2025@gmail.com';
+  const supportEmail = siteConfig?.supportEmail || 'vijayninama683@gmail.com';
   const supportWhatsApp = siteConfig?.supportWhatsApp || '9602717117';
   const supportTelegram = siteConfig?.supportTelegram;
 
   const handleSecretLogin = async () => {
     const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
-    const legacySecretKey = siteConfig?.secretLoginKey || '7117';
+    const legacySecretKey = siteConfig?.secretLoginKey || 'siya';
     const secretProfiles = siteConfig?.secretProfiles || [];
 
     if (!isSecretEnabled) {

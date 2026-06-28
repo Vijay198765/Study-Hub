@@ -20,21 +20,11 @@ export default function ClassDetail() {
     // Direct query by email to avoid any role mapping issues
     const q = query(
       collection(db, 'users'),
-      where('email', 'in', ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'])
+      where('email', '==', 'vijayninama683@gmail.com')
     );
     const unsubscribe = onSnapshot(q, (snap) => {
       if (!snap.empty) {
-        let matchDoc = snap.docs.find(d => {
-          const email = (d.data().email || '').toLowerCase();
-          return email === 'vijayninama683@gmail.com';
-        });
-        
-        if (!matchDoc) {
-          matchDoc = snap.docs.find(d => {
-            const email = (d.data().email || '').toLowerCase();
-            return email === 'tagoreteam2025@gmail.com';
-          });
-        }
+        const matchDoc = snap.docs[0];
         
         const adminDoc = matchDoc || snap.docs[0];
         const docData = adminDoc.data();
@@ -188,11 +178,11 @@ export default function ClassDetail() {
                       <path d="M22 6V18C2 19.1 21.1 20 20 20H16V11L22 6Z" fill="#34A853" />
                     </svg>
                     <a 
-                      href="mailto:tagoreteam2025@gmail.com" 
+                      href="mailto:vijayninama683@gmail.com" 
                       className="text-xs font-mono font-medium text-white/50 hover:text-neon-blue transition-all"
                       title="Contact Support via Gmail"
                     >
-                      tagoreteam2025@gmail.com
+                      vijayninama683@gmail.com
                     </a>
                   </div>
                 </div>

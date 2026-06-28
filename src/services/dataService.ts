@@ -274,9 +274,9 @@ export const saveUser = async (user: User) => {
     user.photoURL = convertDriveUrl(user.photoURL);
   }
 
-  // Specific constraint for tagged email
-  if (user.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
-    user.name = 'Hania Aamir';
+  // Specific constraint for admin
+  if (user.email?.toLowerCase() === 'vijayninama683@gmail.com') {
+    user.role = 'admin';
   }
 
   try {

@@ -449,7 +449,7 @@ export default function AdminPanel() {
     }
   }, [siteConfig, hasUnsavedSiteChanges]);
 
-  const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+  const isSuperAdmin = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
 
   useEffect(() => {
     if (isUnlocked && isLimitedAdmin && siteConfig) {
@@ -480,7 +480,7 @@ export default function AdminPanel() {
               const isAdminRole = data.role === 'admin';
               setIsAdmin(isAdminRole);
               
-              const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com' || auth.currentUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+              const isSuper = auth.currentUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
 
               // Auto-unlock promoted admins as limited admins
               if (isAdminRole && !isSuper) {
@@ -796,7 +796,7 @@ export default function AdminPanel() {
           id: snap.id, 
           welcomeEmailSubject: '',
           welcomeEmailTemplate: '',
-          welcomeEmailSender: 'tagoreteam2025@gmail.com',
+          welcomeEmailSender: 'vijayninama683@gmail.com',
           emailjsServiceId: '',
           emailjsTemplateId: '',
           emailjsPublicKey: '',
@@ -817,7 +817,7 @@ export default function AdminPanel() {
           isRatingEnabled: true,
           welcomeEmailSubject: 'Welcome to Study-hub!',
           welcomeEmailTemplate: 'Hello {name}, welcome to Study-hub! We are glad to have you here.',
-          welcomeEmailSender: 'tagoreteam2025@gmail.com',
+          welcomeEmailSender: 'vijayninama683@gmail.com',
           announcement: '',
           isAnnouncementActive: false,
           lastUpdated: serverTimestamp()
@@ -1308,8 +1308,8 @@ export default function AdminPanel() {
       const adminEmail = auth.currentUser?.email?.toLowerCase();
       const isSuperAdmin = adminEmail === 'vijayninama683@gmail.com';
       
-      const mainKey = siteConfig?.adminUnlockKey || '7117';
-      const limitedKey = siteConfig?.secretLoginKey || '7117';
+      const mainKey = siteConfig?.adminUnlockKey || 'siya';
+      const limitedKey = siteConfig?.secretLoginKey || 'siya';
       const isSecretEnabled = siteConfig?.secretLoginEnabled !== false;
 
       // Check for secret profiles
@@ -2392,7 +2392,7 @@ export default function AdminPanel() {
                   onClick={() => {
                     const headers = ['Name', 'Email', 'Role', 'Natural Time (Min)', 'Bonus Time (Min)', 'Total Time (Min)', 'Created At', 'Photo URL', 'User Agent', 'Platform', 'Language', 'Resolution', 'Location'];
                     const csvData = users
-                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
+                      .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                       .map(u => [
                         u.name || 'Guest',
                         u.email,
@@ -2472,8 +2472,7 @@ export default function AdminPanel() {
                     {users
                       .filter(u => 
                         (u.email.toLowerCase().includes(searchQuery.toLowerCase()) || (u.name?.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-                        u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && 
-                        u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com'
+                        u.email?.toLowerCase() !== 'vijayninama683@gmail.com'
                       )
                       .map((user) => (
                         <React.Fragment key={user.uid}>
@@ -3277,7 +3276,6 @@ export default function AdminPanel() {
                       const csvData = activityLogs
                         .filter(log => 
                           log.userEmail?.toLowerCase() !== 'vijayninama683@gmail.com' && 
-                          log.userEmail?.toLowerCase() !== 'tagoreteam2025@gmail.com' && 
                           !log.userName?.includes('Admin')
                         )
                         .map(log => {
@@ -4591,7 +4589,7 @@ export default function AdminPanel() {
                           <label className="text-[10px] uppercase font-bold text-white/20">Admin Unlock Key (Dashboard Pass)</label>
                           <input 
                             type="text" 
-                            placeholder="Default: 7117"
+                            placeholder="Default: siya"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             value={editingConfig?.adminUnlockKey || ''}
                             onChange={(e) => saveSiteConfig({ adminUnlockKey: e.target.value })}
@@ -4602,7 +4600,7 @@ export default function AdminPanel() {
                           <label className="text-[10px] uppercase font-bold text-white/20">Legacy Master Key</label>
                           <input 
                             type="text" 
-                            placeholder="Default: 7117"
+                            placeholder="Default: siya"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-neon-blue"
                             value={editingConfig?.secretLoginKey || ''}
                             onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
@@ -4845,7 +4843,7 @@ export default function AdminPanel() {
                               <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Legacy Global Secret Key (Backward Compatibility)</label>
                               <input 
                                 type="text"
-                                placeholder="e.g. 7117"
+                                placeholder="e.g. siya"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white focus:border-neon-pink outline-none transition-all font-mono"
                                 value={editingConfig?.secretLoginKey || ''}
                                 onChange={(e) => saveSiteConfig({ secretLoginKey: e.target.value })}
@@ -5324,7 +5322,7 @@ export default function AdminPanel() {
                       >
                         <option value="" className="bg-zinc-900 text-white/40">Choose a user to manage...</option>
                         {users
-                          .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com' && u.email?.toLowerCase() !== 'tagoreteam2025@gmail.com')
+                          .filter(u => u.email?.toLowerCase() !== 'vijayninama683@gmail.com')
                           .map(u => (
                           <option key={u.uid} value={u.uid} className="bg-zinc-900">
                              {u.name} ({u.email || u.uid.substring(0, 8)})

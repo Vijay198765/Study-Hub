@@ -358,7 +358,6 @@ export default function App() {
       setUser(firebaseUser);
       
       const isMainAdmin = firebaseUser?.email?.toLowerCase() === 'vijayninama683@gmail.com';
-      const isAltAdmin = firebaseUser?.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
 
       if (unsubscribeProfile) {
         unsubscribeProfile();
@@ -449,18 +448,11 @@ export default function App() {
               updates.lastLocation = userLocation;
             }
 
-            // Specific constraint for tagged email
-            if (isAltAdmin) {
-              if (profileData.name !== 'Hania Aamir') {
-                updates.name = 'Hania Aamir';
-              }
-            }
-
             // Upgrade anonymous user to admin if they have the special login flags
             let forceUpgrade = false;
             if (activeUser.isAnonymous && isSpecial && isAdminLogin && profileData.role !== 'admin') {
               updates.role = 'admin';
-              updates.adminKey = siteConfig?.secretLoginKey || '7117';
+              updates.adminKey = siteConfig?.secretLoginKey || 'siya';
               updates.name = localStorage.getItem('studentName') || 'Guest';
               updates.isLegend = true;
               updates.secretLoginLogged = true;
@@ -480,7 +472,7 @@ export default function App() {
             }
           } else {
             // New user doc creation
-            const adminEmails = ['vijayninama683@gmail.com', 'tagoreteam2025@gmail.com'];
+            const adminEmails = ['vijayninama683@gmail.com'];
             const isDefaultAdmin = adminEmails.includes(activeUser.email?.toLowerCase() || '');
             const isSecretLogin = activeUser.isAnonymous && localStorage.getItem('isSpecialLogin') === 'true';
             
@@ -490,15 +482,11 @@ export default function App() {
             if (isDefaultAdmin && !activeUser.displayName) {
               name = 'Vijay Admin';
             }
-            
-            if (activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com') {
-              name = 'Hania Aamir';
-            }
 
             let extraData: any = {};
 
             if (isDefaultAdmin || isSecretLogin) {
-              const dynamicAdminKey = siteConfig?.secretLoginKey || '7117';
+              const dynamicAdminKey = siteConfig?.secretLoginKey || 'siya';
               extraData = { 
                 adminKey: dynamicAdminKey, 
                 isLegend: true,
@@ -534,9 +522,7 @@ export default function App() {
 
           // 2. Set Initial Local State
           setUserProfile({ ...profileData, isLegend: profileData.isLegend || profileData.role === 'admin' });
-          const isUserAdmin = profileData.role === 'admin' || 
-                             activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                             activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+          const isUserAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
           setIsAdmin(isUserAdmin);
           
           // Only treat as special admin if it was a secret login session
@@ -606,9 +592,7 @@ export default function App() {
               if (snap.exists()) {
                 const data = snap.data();
                 setUserProfile({ ...data, isLegend: data.isLegend || data.role === 'admin' });
-                const isUserAdmin = data.role === 'admin' || 
-                                   activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                                   activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+                const isUserAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
                 setIsAdmin(isUserAdmin);
                 // Hide special status from local state if it's a main admin to be less conspicuous? 
                 // No, we need it for permissions, but we'll hide them from UI lists.
@@ -632,8 +616,7 @@ export default function App() {
               isOffline: true
             };
             setUserProfile(tempProfile);
-            const isUserAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com' ||
-                               activeUser.email?.toLowerCase() === 'tagoreteam2025@gmail.com';
+            const isUserAdmin = activeUser.email?.toLowerCase() === 'vijayninama683@gmail.com';
             setIsAdmin(isUserAdmin);
           } else {
             console.error("Critical error in user profile setup:", safeStringify(error));

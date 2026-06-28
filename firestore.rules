@@ -129,9 +129,7 @@ service cloud.firestore {
       return isAuthenticated() && 
              'email' in request.auth.token && 
              (request.auth.token.email.lower() == "vijayninama683@gmail.com" || 
-              request.auth.token.email.lower() == "tagoreteam2025@gmail.com" ||
-              request.auth.token.email == "vijayninama683@gmail.com" || 
-              request.auth.token.email == "tagoreteam2025@gmail.com");
+              request.auth.token.email == "vijayninama683@gmail.com");
     }
 
     function isAdmin() {
@@ -144,9 +142,7 @@ service cloud.firestore {
             ('isLegend' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isLegend == true) ||
             ('email' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && 
              (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email.lower() == "vijayninama683@gmail.com" || 
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email.lower() == "tagoreteam2025@gmail.com" ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "vijayninama683@gmail.com" || 
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "tagoreteam2025@gmail.com"))))
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "vijayninama683@gmail.com"))))
         );
     }
 
@@ -553,14 +549,14 @@ service cloud.firestore {
         (
           (request.resource.data.role == 'student' && (!('isLegend' in request.resource.data) || request.resource.data.isLegend == false)) || 
           (('isLegend' in request.resource.data && request.resource.data.isLegend == true) && 
-           (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+           (('adminKey' in request.resource.data && request.resource.data.adminKey == 'siya') || 
             (exists(/databases/$(database)/documents/config/site) && 
              'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
              'adminKey' in request.resource.data &&
              request.resource.data.adminKey == get(/databases/$(database)/documents/config/site).data.secretLoginKey))) ||
           isSuperAdmin() ||
           (request.resource.data.role == 'admin' && 
-           (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+           (('adminKey' in request.resource.data && request.resource.data.adminKey == 'siya') || 
             (exists(/databases/$(database)/documents/config/site) && 
              'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
              'adminKey' in request.resource.data &&
@@ -586,7 +582,7 @@ service cloud.firestore {
                 (!('isLegend' in request.resource.data) && 'isLegend' in resource.data && resource.data.isLegend == false) ||
                 ('isLegend' in request.resource.data && !('isLegend' in resource.data) && request.resource.data.isLegend == false))) ||
               ((request.resource.data.role == 'admin' || ('isLegend' in request.resource.data && request.resource.data.isLegend == true)) && 
-               (('adminKey' in request.resource.data && request.resource.data.adminKey == '7117') || 
+               (('adminKey' in request.resource.data && request.resource.data.adminKey == 'siya') || 
                 (exists(/databases/$(database)/documents/config/site) && 
                  'secretLoginKey' in get(/databases/$(database)/documents/config/site).data && 
                  'adminKey' in request.resource.data &&
@@ -595,8 +591,7 @@ service cloud.firestore {
           )
         ) && isValidUser(request.resource.data);
       allow delete: if isAdmin() && 
-        (!('email' in resource.data) || (resource.data.email.lower() != "vijayninama683@gmail.com" && resource.data.email != "vijayninama683@gmail.com")) &&
-        (!('email' in resource.data) || (resource.data.email.lower() != "tagoreteam2025@gmail.com" && resource.data.email != "tagoreteam2025@gmail.com"));
+        (!('email' in resource.data) || (resource.data.email.lower() != "vijayninama683@gmail.com" && resource.data.email != "vijayninama683@gmail.com"));
     }
 
     match /userProgress/{progressId} {
